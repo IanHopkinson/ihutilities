@@ -8,7 +8,7 @@ import sqlite3
 from collections import OrderedDict
 from nose.tools import assert_equal
 
-from db_utils import configure_db, write_to_db, update_to_db, finalise_db
+from ihutilities.db_utils import configure_db, write_to_db, update_to_db, finalise_db
 
 class DatabaseUtilitiesTests(unittest.TestCase):
     @classmethod
