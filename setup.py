@@ -21,7 +21,7 @@ conf = dict(
     author_email='ianhopkinson@googlemail.com',
     url='http://www.ianhopkinson.org.uk',
     license='MIT',
-    packages=find_packages(exclude=['ez_setup', 'examples', 'tests']),
+    packages=["ihutilities"],
     namespace_packages=[],
     include_package_data=False,
     zip_safe=False,
