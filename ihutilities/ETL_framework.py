@@ -9,7 +9,7 @@ import sys
 import time
 
 from collections import OrderedDict
-from db_utilities import configure_db, write_to_db
+from ihutilities.db_utils import configure_db, write_to_db
 
 # This dictionary has field names and field types. It should be reuseable between the configure_db and 
 # write_to_db functions
@@ -50,7 +50,7 @@ def do_etl(db_fields, db_file_path, data_path, data_field_lookup, mode="producti
         if headers:
             rows = csv.DictReader(f)
         else:
-            rows = csv.csvreader(f)
+            rows = csv.reader(f)
         # Loop over input rows
         for i, row in enumerate(rows):
             new_row = OrderedDict([(x,None) for x in db_fields.keys()]) 
