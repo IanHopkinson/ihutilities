@@ -196,11 +196,13 @@ def write_to_mariadb(data, db_fields, table="property_data"):
 
     for k in db_fields.keys():
         DB_FIELDS = DB_FIELDS + k + ","
-        DB_PLACEHOLDERS = DB_PLACEHOLDERS + "%s,"
+        DB_PLACEHOLDERS = DB_PLACEHOLDERS + "{},"
 
     for row in data:
-        INSERT_statement = (DB_FIELDS[0:-1] + DB_PLACEHOLDERS[0:-1] + DB_INSERT_TAIL)
-        tmp = [v for k,v in row.items()]
-        cursor.execute(INSERT_statement, tmp)
+        tmp = [v for k, v in row.items()]
+        INSERT_statement = (DB_FIELDS[0:-1] + DB_PLACEHOLDERS[0:-1] + DB_INSERT_TAIL).format(*tmp)
+        #tmp = [v for k,v in row.items()]
+        #print(tmp)
+        cursor.execute(INSERT_statement)
 
     cnx.commit()
