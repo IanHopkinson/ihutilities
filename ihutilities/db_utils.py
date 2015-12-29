@@ -3,6 +3,9 @@
 
 import os
 import sqlite3
+import mysql.connector
+from mysql.connector import errorcode
+
 
 def configure_db(file_path, db_fields, tables="property_data", force=False):
     """
@@ -123,3 +126,81 @@ def finalise_db(file_path, index_name="idx_postcode", table="property_data", col
         .format(index_name=index_name, table=table, colname=colname))
     conn.commit()
     conn.close()
+
+# These functions create a mariadb database, ultimately we want to merge them with the
+# sqlite routines above 
+DB_NAME = "property_data"
+
+def create_database_mariadb(cursor):
+    try:
+        cursor.execute(
+            "CREATE DATABASE {} DEFAULT CHARACTER SET 'utf8'".format(DB_NAME))
+    except mysql.connector.Error as err:
+        print("Failed creating database: {}".format(err))
+        exit(1)
+
+def create_table_mariadb(cursor, db_fields, table="listed_buildings"):
+    """
+    We build a database using an ordered dict of field: type entries and a file_path
+    this assumes a sqlite3 database which is removed if it already exists
+    """
+
+    DB_CREATE_ROOT = "CREATE TABLE {} (".format(table)
+    DB_CREATE_TAIL = ") ENGINE = MyISAM"
+    DB_CREATE = DB_CREATE_ROOT
+    for k,v in db_fields.items():
+        DB_CREATE = DB_CREATE + " ".join([k,v]) + ","
+
+    DB_CREATE = DB_CREATE[0:-1] + DB_CREATE_TAIL
+
+    cursor.execute('DROP TABLE IF EXISTS {}'.format(table))
+    cursor.execute(DB_CREATE) 
+
+def configure_mariadb(db_fields, tables="table1", force=False):
+    password = os.environ['MARIA_DB_PASSWORD']
+    cnx = mysql.connector.connect(user='root', password=password,
+                                 host='127.0.0.1')
+    cursor = cnx.cursor()
+
+    # This creates the database if it doesn't exist
+    try:
+        cnx.database = DB_NAME    
+    except mysql.connector.Error as err:
+        if err.errno == errorcode.ER_BAD_DB_ERROR:
+            create_database_mariadb(cursor)
+            cnx.database = DB_NAME
+        else:
+            print(err)
+            exit(1)
+
+    # This creates the appropriate table in the database
+    create_table_mariadb(cursor, db_fields, table=tables)
+
+def write_to_mariadb(data, db_fields, table="property_data"):
+    """
+    we write data into the property_data table from an array of dictionaries of
+    field: value entries 
+    """
+    password = os.environ['MARIA_DB_PASSWORD']
+    cnx = mysql.connector.connect(user='root', password=password,
+                                 host='127.0.0.1',
+                                 database='property_data')
+    cursor = cnx.cursor()
+
+    DB_INSERT_ROOT = "INSERT INTO {} (".format(table)
+    DB_INSERT_MIDDLE = ") VALUES ("
+    DB_INSERT_TAIL = ")"
+
+    DB_FIELDS = DB_INSERT_ROOT
+    DB_PLACEHOLDERS = DB_INSERT_MIDDLE
+
+    for k in db_fields.keys():
+        DB_FIELDS = DB_FIELDS + k + ","
+        DB_PLACEHOLDERS = DB_PLACEHOLDERS + "%s,"
+
+    for row in data:
+        INSERT_statement = (DB_FIELDS[0:-1] + DB_PLACEHOLDERS[0:-1] + DB_INSERT_TAIL)
+        tmp = [v for k,v in row.items()]
+        cursor.execute(INSERT_statement, tmp)
+
+    cnx.commit()
