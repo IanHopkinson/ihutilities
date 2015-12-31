@@ -12,7 +12,7 @@ from collections import OrderedDict
 from nose.tools import assert_equal
 
 from ihutilities.db_utils import (db_config_template, configure_db, write_to_db,
-                                  _make_connection,
+                                  _make_connection, read_db,
                                   update_to_db, finalise_db)
 
 class DatabaseUtilitiesTests(unittest.TestCase):
@@ -228,7 +228,33 @@ class DatabaseUtilitiesTests(unittest.TestCase):
         finalise_db(db_config, index_name="idx_propertyID", table="test", colname="propertyID")
 
     def test_read_db(self):
-        raise NotImplementedError
+        db_filename = "test_finalise_db.sqlite"
+        db_config = os.path.join(self.db_dir, db_filename)
+        if os.path.isfile(db_config):
+            os.remove(db_config)
+        data = [(1, 2, "hello"),
+                (2, 3, "Fred"),
+                (3, 3, "Beans")]
+        configure_db(db_config, self.db_fields, tables="test")
+        write_to_db(data, db_config, self.db_fields, table="test")
+
+        sql_query = "select * from test;"
+
+        for i, row in enumerate(read_db(sql_query, db_config)):
+            test_data = OrderedDict(zip(self.db_fields.keys(), data[i]))
+            assert_equal(row, test_data)
 
     def test_read_mariadb(self):
-        raise NotImplementedError
+        db_config = db_config_template.copy()
+
+        data = [(1, 2, "hello"),
+                (2, 3, "Fred"),
+                (3, 3, "Beans")]
+        configure_db(db_config, self.db_fields, tables="test", force=True)
+        write_to_db(data, db_config, self.db_fields, table="test")
+
+        sql_query = "select * from test;"
+
+        for i, row in enumerate(read_db(sql_query, db_config)):
+            test_data = OrderedDict(zip(self.db_fields.keys(), data[i]))
+            assert_equal(row, test_data)

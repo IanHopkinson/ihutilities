@@ -6,6 +6,7 @@ import sqlite3
 import mysql.connector
 from mysql.connector import errorcode
 
+from collections import OrderedDict
 
 db_config_template = {"db_name": "test",
              "db_user": "root",
@@ -221,3 +222,20 @@ def finalise_db(db_config, index_name="idx_postcode", table="property_data", col
         .format(index_name=index_name, table=table, colname=colname))
     conn.commit()
     conn.close()
+
+def read_db(sql_query, db_config):
+    db_config = _normalise_config(db_config)
+    conn = _make_connection(db_config)
+    cursor = conn.cursor()
+
+    cursor.execute(sql_query)
+
+    colnames = [x[0] for x in cursor.description]
+
+    while True:
+        row = cursor.fetchone()
+        if row is not None:
+            labelled_row = OrderedDict(zip(colnames, row))
+            yield labelled_row
+        else:
+            raise StopIteration
