@@ -12,6 +12,7 @@ from collections import OrderedDict
 from nose.tools import assert_equal
 
 from ihutilities.db_utils import (db_config_template, configure_db, write_to_db,
+                                  _make_connection,
                                   update_to_db, finalise_db)
 
 class DatabaseUtilitiesTests(unittest.TestCase):
@@ -65,6 +66,13 @@ class DatabaseUtilitiesTests(unittest.TestCase):
         except mysql.connector.Error as err:
             raise
         # Do a schema query
+        cursor = conn.cursor()
+        cursor.execute("""
+            select * from test;
+        """)
+        exp_columns = set([x for x in self.db_fields.keys()]) 
+        obs_columns = set([x[0] for x in cursor.description])
+        assert_equal(exp_columns, obs_columns)
         # SELECT SCHEMA_NAME FROM INFORMATION_SCHEMA.SCHEMATA WHERE SCHEMA_NAME = 'DBName'
         conn.close()
         
@@ -102,18 +110,30 @@ class DatabaseUtilitiesTests(unittest.TestCase):
         data = [(1, 2, "hello"),
                 (2, 3, "Fred"),
                 (3, 3, "Beans")]
-        configure_db(db_file_path, self.db_fields)
-        write_to_db(data, db_file_path, self.db_fields)
+        configure_db(db_file_path, self.db_fields, tables="test")
+        write_to_db(data, db_file_path, self.db_fields, table="test")
         with sqlite3.connect(db_file_path) as c:
             cursor = c.cursor()
             cursor.execute("""
-                select * from property_data;
+                select * from test;
             """)
             rows = cursor.fetchall()
             assert_equal(data, rows)
 
     def test_write_to_mariadb(self):
-        raise NotImplementedError
+        db_config = db_config_template.copy()
+        db_config = configure_db(db_config, self.db_fields, tables="test")
+        data = [(1, 2, "hello"),
+                (2, 3, "Fred"),
+                (3, 3, "Beans")]
+        write_to_db(data, db_config, self.db_fields, table="test")
+        conn = _make_connection(db_config)
+        cursor = conn.cursor()
+        cursor.execute("""
+            select * from test;
+        """)
+        rows = cursor.fetchall()
+        assert_equal(data, rows)
 
     def test_update_to_db(self):
         db_filename = "test_update_db.sqlite"

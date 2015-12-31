@@ -28,28 +28,20 @@ def configure_db(db_config, db_fields, tables="property_data", force=False):
     if isinstance(tables, str):
         tables = [tables]
         db_fields = {tables[0]: db_fields}
-    # Convert db_path to db_config
-    if isinstance(db_config, str):
-        db_path = db_config
-        db_config = db_config_template.copy()
-        db_config["db_type"] = "sqlite"
-        db_config["db_path"] = db_path
+    # Convert old db_path string to db_config dictionary
+    db_config = _normalise_config(db_config)
 
     # Delete database if force is true
     if db_config["db_type"] == "sqlite":
-        if os.path.isfile(db_path) and force:
-            os.remove(db_path)
-        db_config["conn"] = sqlite3.connect(db_path)
+        if os.path.isfile(db_config["db_path"]) and force:
+            os.remove(db_config["db_path"])
+        conn = _make_connection(db_config)
+    # Default behaviour for mysql/mariadb is not to drop database
     elif db_config["db_type"] == "mysql" or db_config["db_type"] == "mariadb":
-        password = os.environ[db_config["db_pw_environ"]]
-        conn = mysql.connector.connect( user=db_config["db_user"], 
-                                        password=password,
-                                        host=db_config["db_host"])
-
-        db_config["conn"] = conn
+        conn = _make_connection(db_config)
         cursor = conn.cursor()
-        cursor.execute("DROP DATABASE IF EXISTS {}".format(db_config["db_name"]))
-        conn.commit()
+        #cursor.execute("DROP DATABASE IF EXISTS {}".format(db_config["db_name"]))
+        #conn.commit()
             # This creates the database if it doesn't exist
         try:
             conn.database = db_config["db_name"]   
@@ -72,6 +64,35 @@ def configure_db(db_config, db_fields, tables="property_data", force=False):
     
     db_config["conn"].commit()
     db_config["conn"].close()
+
+    return db_config
+
+def _normalise_config(db_config):
+    if isinstance(db_config, str):
+        db_path = db_config
+        db_config = db_config_template.copy()
+        db_config["db_type"] = "sqlite"
+        db_config["db_path"] = db_path
+    return db_config
+
+def _make_connection(db_config):
+    if db_config["db_type"] == "sqlite":
+        db_config["conn"] = sqlite3.connect(db_config["db_path"])
+    elif db_config["db_type"] == "mariadb" or db_config["db_type"] == "mysql":
+        password = os.environ[db_config["db_pw_environ"]]
+        conn = mysql.connector.connect( user=db_config["db_user"], 
+                                        password=password,
+                                        host=db_config["db_host"])
+        db_config["conn"] = conn
+        # Bit messy, sometimes we make a connection without db existing
+        try:
+            conn.database = db_config["db_name"]
+        except mysql.connector.Error as err:
+            if err.errno != errorcode.ER_BAD_DB_ERROR:
+                raise
+
+
+    return db_config["conn"]
 
 def _create_tables_db(db_config, db_fields, tables, force):
     if db_config["db_type"] == "sqlite":
@@ -106,12 +127,20 @@ def _create_tables_db(db_config, db_fields, tables, force):
 
     db_config["conn"].commit()
 
-def write_to_db(data, file_path, db_fields, table="property_data"):
+def write_to_db(data, db_config, db_fields, table="property_data"):
     """
     we write data into the property_data table from an array of dictionaries of
     field: value entries 
     """
-    conn = sqlite3.connect(file_path)
+    db_config = _normalise_config(db_config)
+    if db_config["db_type"] == "sqlite":
+        ONE_PLACEHOLDER = "?,"
+    elif db_config["db_type"] == "mariadb" or db_config["db_type"] == "mysql":
+        ONE_PLACEHOLDER = "%s,"
+
+   
+    conn = _make_connection(db_config)
+    cursor = conn.cursor()
 
     DB_INSERT_ROOT = "INSERT INTO {} (".format(table)
     DB_INSERT_MIDDLE = ") VALUES ("
@@ -122,12 +151,12 @@ def write_to_db(data, file_path, db_fields, table="property_data"):
 
     for k in db_fields.keys():
         DB_FIELDS = DB_FIELDS + k + ","
-        DB_PLACEHOLDERS = DB_PLACEHOLDERS + "?,"
+        DB_PLACEHOLDERS = DB_PLACEHOLDERS + ONE_PLACEHOLDER
 
 
     INSERT_statement = DB_FIELDS[0:-1] + DB_PLACEHOLDERS[0:-1] + DB_INSERT_TAIL
 
-    conn.executemany(INSERT_statement, data)
+    cursor.executemany(INSERT_statement, data)
 
     conn.commit()
     conn.close()
