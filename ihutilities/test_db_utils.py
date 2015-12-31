@@ -49,18 +49,24 @@ class DatabaseUtilitiesTests(unittest.TestCase):
     def test_configure_mariadb(self):
         # Connect to engine and delete test table if it exists
         db_config = db_config_template.copy()
+        db_config["db_name"] = "test"
         password = os.environ['MARIA_DB_PASSWORD']
-        cnx = mysql.connector.connect(user='root', password=password,
+        conn = mysql.connector.connect(user='root', password=password,
                                  host='127.0.0.1')
 
-        cursor = cnx.cursor()
+        cursor = conn.cursor()
         cursor.execute("DROP DATABASE IF EXISTS test")
-        cnx.commit()
+        conn.commit()
         configure_db(db_config, self.db_fields, tables="test")
 
-        #  
+        # Test database exists
+        try:
+            conn.database = db_config["db_name"]   
+        except mysql.connector.Error as err:
+            raise
+        # Do a schema query
         # SELECT SCHEMA_NAME FROM INFORMATION_SCHEMA.SCHEMATA WHERE SCHEMA_NAME = 'DBName'
-        cnx.close()
+        conn.close()
         
 
     def test_configure_multi_db(self):
