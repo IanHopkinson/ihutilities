@@ -76,13 +76,15 @@ def configure_db(db_config, db_fields, tables="property_data", force=False):
 def _create_tables_db(db_config, db_fields, tables, force):
     if db_config["db_type"] == "sqlite":
         table_check_query = "SELECT name FROM sqlite_master WHERE type='table' AND name='{}';"
+        DB_CREATE_TAIL = ")"
     elif db_config["db_type"] == "mariadb" or db_config["db_type"] == "mysql":
         table_check_query = "SELECT table_name as name FROM information_schema.tables WHERE table_name = '{}';"
+        DB_CREATE_TAIL = ") ENGINE = MyISAM"
 
     conn = db_config["conn"]
     for table in tables:
         DB_CREATE_ROOT = "CREATE TABLE {} (".format(table)
-        DB_CREATE_TAIL = ")"
+        
         DB_CREATE = DB_CREATE_ROOT
         for k,v in db_fields[table].items():
             DB_CREATE = DB_CREATE + " ".join([k,v]) + ","
@@ -184,52 +186,6 @@ def finalise_db(file_path, index_name="idx_postcode", table="property_data", col
 # These functions create a mariadb database, ultimately we want to merge them with the
 # sqlite routines above 
 DB_NAME = "property_data"
-
-# def configure_mariadb(db_fields, tables="table1", force=False):
-#     password = os.environ['MARIA_DB_PASSWORD']
-#     cnx = mysql.connector.connect(user='root', password=password,
-#                                  host='127.0.0.1')
-#     cursor = cnx.cursor()
-
-#     # This creates the database if it doesn't exist
-#     try:
-#         cnx.database = DB_NAME    
-#     except mysql.connector.Error as err:
-#         if err.errno == errorcode.ER_BAD_DB_ERROR:
-#             try:
-#                 cursor.execute(
-#                     "CREATE DATABASE {} DEFAULT CHARACTER SET 'utf8'".format(DB_NAME))
-#             except mysql.connector.Error as err:
-#                 print("Failed creating database: {}".format(err))
-#                 exit(1)
-#             cnx.database = DB_NAME
-#         else:
-#             print(err)
-#             exit(1)
-
-#     # This creates the appropriate table in the database
-#     create_table_mariadb(cursor, db_fields, table=tables)
-
-# def create_database_mariadb(cursor):
-    
-
-def create_table_mariadb(cursor, db_fields, table="listed_buildings"):
-    """
-    We build a database using an ordered dict of field: type entries and a file_path
-    this assumes a sqlite3 database which is removed if it already exists
-    """
-
-    DB_CREATE_ROOT = "CREATE TABLE {} (".format(table)
-    DB_CREATE_TAIL = ") ENGINE = MyISAM"
-    DB_CREATE = DB_CREATE_ROOT
-    for k,v in db_fields.items():
-        DB_CREATE = DB_CREATE + " ".join([k,v]) + ","
-
-    DB_CREATE = DB_CREATE[0:-1] + DB_CREATE_TAIL
-
-    cursor.execute('DROP TABLE IF EXISTS {}'.format(table))
-    cursor.execute(DB_CREATE) 
-
 
 def write_to_mariadb(data, db_fields, table="property_data"):
     """
