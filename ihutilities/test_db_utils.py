@@ -161,7 +161,7 @@ class DatabaseUtilitiesTests(unittest.TestCase):
 
     def test_update_mariadb(self):
         db_config = db_config_template.copy()
-        db_config = configure_db(db_config, self.db_fields, tables="test")
+        db_config = configure_db(db_config, self.db_fields, tables="test", force=True)
         data = [(1, 2, "hello"),
                 (2, 3, "Fred"),
                 (3, 3, "Beans")]
@@ -188,7 +188,7 @@ class DatabaseUtilitiesTests(unittest.TestCase):
         data = [(1, 2, "hello"),
                 (2, 3, "Fred"),
                 (3, 3, "Beans")]
-        configure_db(db_file_path, self.db_fields, tables="test")
+        configure_db(db_file_path, self.db_fields, tables="test", force=True)
         write_to_db(data, db_file_path, self.db_fields, table="test")
 
         update_fields = ["Addr1", "PropertyID", "UPRN"]
@@ -218,7 +218,14 @@ class DatabaseUtilitiesTests(unittest.TestCase):
         finalise_db(db_file_path, index_name="idx_addr1", table="test", colname="Addr1")
 
     def test_finalise_mariadb(self):
-        raise NotImplementedError
+        db_config = db_config_template.copy()
+
+        data = [(1, 2, "hello"),
+                (2, 3, "Fred"),
+                (3, 3, "Beans")]
+        configure_db(db_config, self.db_fields, tables="test", force=True)
+        write_to_db(data, db_config, self.db_fields, table="test")
+        finalise_db(db_config, index_name="idx_propertyID", table="test", colname="propertyID")
 
     def test_read_db(self):
         raise NotImplementedError

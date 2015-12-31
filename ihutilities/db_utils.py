@@ -212,44 +212,12 @@ def drop_db_tables(file_path, tables):
         conn.execute('DROP TABLE IF EXISTS {}'.format(table))
     conn.close()
 
-def finalise_db(file_path, index_name="idx_postcode", table="property_data", colname="postcode" ):
-    conn = sqlite3.connect(file_path)
-    conn.execute('CREATE INDEX {index_name} on {table}({colname})'
+def finalise_db(db_config, index_name="idx_postcode", table="property_data", colname="postcode" ):
+    db_config = _normalise_config(db_config)
+
+    conn = _make_connection(db_config)
+    cursor = conn.cursor()
+    cursor.execute('CREATE INDEX {index_name} on {table}({colname})'
         .format(index_name=index_name, table=table, colname=colname))
     conn.commit()
     conn.close()
-
-# These functions create a mariadb database, ultimately we want to merge them with the
-# sqlite routines above 
-DB_NAME = "property_data"
-
-def write_to_mariadb(data, db_fields, table="property_data"):
-    """
-    we write data into the property_data table from an array of dictionaries of
-    field: value entries 
-    """
-    password = os.environ['MARIA_DB_PASSWORD']
-    cnx = mysql.connector.connect(user='root', password=password,
-                                 host='127.0.0.1',
-                                 database='property_data')
-    cursor = cnx.cursor()
-
-    DB_INSERT_ROOT = "INSERT INTO {} (".format(table)
-    DB_INSERT_MIDDLE = ") VALUES ("
-    DB_INSERT_TAIL = ")"
-
-    DB_FIELDS = DB_INSERT_ROOT
-    DB_PLACEHOLDERS = DB_INSERT_MIDDLE
-
-    for k in db_fields.keys():
-        DB_FIELDS = DB_FIELDS + k + ","
-        DB_PLACEHOLDERS = DB_PLACEHOLDERS + "{},"
-
-    for row in data:
-        tmp = [v for k, v in row.items()]
-        INSERT_statement = (DB_FIELDS[0:-1] + DB_PLACEHOLDERS[0:-1] + DB_INSERT_TAIL).format(*tmp)
-        #tmp = [v for k,v in row.items()]
-        #print(tmp)
-        cursor.execute(INSERT_statement)
-
-    cnx.commit()
