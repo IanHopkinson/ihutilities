@@ -7,7 +7,7 @@ import mysql.connector
 from mysql.connector import errorcode
 
 
-def configure_db(file_path, db_fields, tables="property_data", force=False):
+def configure_db(db_path, db_fields, tables="property_data", force=False):
     """
     We build a database using an ordered dict of field: type entries and a file_path
     this assumes a sqlite3 database which is removed if it already exists
@@ -21,10 +21,10 @@ def configure_db(file_path, db_fields, tables="property_data", force=False):
 
         #any(isinstance(el, list) for el in input_list)
 
-    if os.path.isfile(file_path) and force:
-        os.remove(file_path)
+    if os.path.isfile(db_path) and force:
+        os.remove(db_path)
 
-    conn = sqlite3.connect(file_path)
+    conn = sqlite3.connect(db_path)
 
     for table in tables:
         DB_CREATE_ROOT = "CREATE TABLE {} (".format(table)
@@ -49,6 +49,9 @@ def configure_db(file_path, db_fields, tables="property_data", force=False):
 
     conn.commit()
     conn.close()
+
+def create_tables_db(db_path, db_fields, table):
+    pass
 
 def write_to_db(data, file_path, db_fields, table="property_data"):
     """
@@ -131,6 +134,26 @@ def finalise_db(file_path, index_name="idx_postcode", table="property_data", col
 # sqlite routines above 
 DB_NAME = "property_data"
 
+def configure_mariadb(db_fields, tables="table1", force=False):
+    password = os.environ['MARIA_DB_PASSWORD']
+    cnx = mysql.connector.connect(user='root', password=password,
+                                 host='127.0.0.1')
+    cursor = cnx.cursor()
+
+    # This creates the database if it doesn't exist
+    try:
+        cnx.database = DB_NAME    
+    except mysql.connector.Error as err:
+        if err.errno == errorcode.ER_BAD_DB_ERROR:
+            create_database_mariadb(cursor)
+            cnx.database = DB_NAME
+        else:
+            print(err)
+            exit(1)
+
+    # This creates the appropriate table in the database
+    create_table_mariadb(cursor, db_fields, table=tables)
+
 def create_database_mariadb(cursor):
     try:
         cursor.execute(
@@ -156,25 +179,6 @@ def create_table_mariadb(cursor, db_fields, table="listed_buildings"):
     cursor.execute('DROP TABLE IF EXISTS {}'.format(table))
     cursor.execute(DB_CREATE) 
 
-def configure_mariadb(db_fields, tables="table1", force=False):
-    password = os.environ['MARIA_DB_PASSWORD']
-    cnx = mysql.connector.connect(user='root', password=password,
-                                 host='127.0.0.1')
-    cursor = cnx.cursor()
-
-    # This creates the database if it doesn't exist
-    try:
-        cnx.database = DB_NAME    
-    except mysql.connector.Error as err:
-        if err.errno == errorcode.ER_BAD_DB_ERROR:
-            create_database_mariadb(cursor)
-            cnx.database = DB_NAME
-        else:
-            print(err)
-            exit(1)
-
-    # This creates the appropriate table in the database
-    create_table_mariadb(cursor, db_fields, table=tables)
 
 def write_to_mariadb(data, db_fields, table="property_data"):
     """

@@ -5,6 +5,9 @@ import unittest
 import os
 import sqlite3
 
+import mysql.connector
+from mysql.connector import errorcode
+
 from collections import OrderedDict
 from nose.tools import assert_equal
 
@@ -42,6 +45,28 @@ class DatabaseUtilitiesTests(unittest.TestCase):
             obs_columns = set([x[0] for x in cursor.description])
             assert_equal(exp_columns, obs_columns)
 
+    def test_configure_mariadb(self):
+        db_config = {"db_name": "test",
+                     "db_user": "root",
+                     "db_pw_environ": "MARIA_DB_PASSWORD",
+                     "db_host": "127.0.0.1",
+                     "db_conn": None
+                    }
+
+        # Connect to engine and delete test table if it exists
+        password = os.environ['MARIA_DB_PASSWORD']
+        cnx = mysql.connector.connect(user='root', password=password,
+                                 host='127.0.0.1')
+
+        cursor = cnx.cursor()
+        cursor.execute("DROP DATABASE IF EXISTS test")
+        cnx.commit()
+        # configure_db(db_config, self.db_fields, tables="test")
+
+        #  
+        # SELECT SCHEMA_NAME FROM INFORMATION_SCHEMA.SCHEMATA WHERE SCHEMA_NAME = 'DBName'
+        cnx.close()
+        
 
     def test_configure_multi_db(self):
         db_filename = "test_config_multi_db.sqlite"
