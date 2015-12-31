@@ -103,6 +103,7 @@ def _create_tables_db(db_config, db_fields, tables, force):
         DB_CREATE_TAIL = ") ENGINE = MyISAM"
 
     conn = db_config["conn"]
+    cursor = conn.cursor()
     for table in tables:
         DB_CREATE_ROOT = "CREATE TABLE {} (".format(table)
         
@@ -112,9 +113,8 @@ def _create_tables_db(db_config, db_fields, tables, force):
 
         DB_CREATE = DB_CREATE[0:-1] + DB_CREATE_TAIL
         if force:
-            conn.execute('DROP TABLE IF EXISTS {}'.format(table))
-        cursor = conn.cursor()
-
+            cursor.execute('DROP TABLE IF EXISTS {}'.format(table))
+        
         cursor.execute(table_check_query.format(table))
         result = cursor.fetchall()
         if len(result) != 0 and result[0][0] == table:
@@ -161,7 +161,7 @@ def write_to_db(data, db_config, db_fields, table="property_data"):
     conn.commit()
     conn.close()
 
-def update_to_db(data, file_path, db_fields, table="property_data", key="UPRN"):
+def update_to_db(data, db_config, db_fields, table="property_data", key="UPRN"):
     """
     We *update* data into the property_data table from an array of dictionaries of
     field: value entries
@@ -169,11 +169,18 @@ def update_to_db(data, file_path, db_fields, table="property_data", key="UPRN"):
     db_fields is a list of field names, the last in the list is the join keys
     data is a list of lists of the elements to be inserted 
     """
-    conn = sqlite3.connect(file_path)
+    db_config = _normalise_config(db_config)
+    if db_config["db_type"] == "sqlite":
+        DB_UPDATE_TAIL = " WHERE {} = ?".format(key)
+        PLACEHOLDER = " = ?,"
+    elif db_config["db_type"] == "mariadb" or db_config["db_type"] == "mysql":
+        DB_UPDATE_TAIL = " WHERE {} = %s".format(key)
+        PLACEHOLDER = " = %s,"
 
+    conn = _make_connection(db_config)
+    cursor = conn.cursor()
     DB_UPDATE_ROOT = "UPDATE {} SET ".format(table)
-    DB_UPDATE_TAIL = " WHERE {} = ?".format(key)
-
+    
     key_index = db_fields.index(key)
 
     
@@ -189,12 +196,12 @@ def update_to_db(data, file_path, db_fields, table="property_data", key="UPRN"):
                 
         DB_FIELDS = DB_UPDATE_ROOT
         for k in update_fields:
-            DB_FIELDS = DB_FIELDS + k + " = ?,"
+            DB_FIELDS = DB_FIELDS + k + PLACEHOLDER 
             update_statement = DB_FIELDS[0:-1] + DB_UPDATE_TAIL
 
         update_data.append(key_val)
         if len(update_fields) != 0:
-            conn.execute(update_statement, update_data)
+            cursor.execute(update_statement, update_data)
 
     conn.commit()
     conn.close()

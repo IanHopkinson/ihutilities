@@ -122,7 +122,7 @@ class DatabaseUtilitiesTests(unittest.TestCase):
 
     def test_write_to_mariadb(self):
         db_config = db_config_template.copy()
-        db_config = configure_db(db_config, self.db_fields, tables="test")
+        db_config = configure_db(db_config, self.db_fields, tables="test", force=True)
         data = [(1, 2, "hello"),
                 (2, 3, "Fred"),
                 (3, 3, "Beans")]
@@ -143,7 +143,7 @@ class DatabaseUtilitiesTests(unittest.TestCase):
         data = [(1, 2, "hello"),
                 (2, 3, "Fred"),
                 (3, 3, "Beans")]
-        configure_db(db_file_path, self.db_fields, tables="test")
+        configure_db(db_file_path, self.db_fields, tables="test", force=True)
         write_to_db(data, db_file_path, self.db_fields, table="test")
 
         update_fields = ["Addr1", "UPRN"]
@@ -160,7 +160,25 @@ class DatabaseUtilitiesTests(unittest.TestCase):
             assert_equal(expected, rows[0])
 
     def test_update_mariadb(self):
-        raise NotImplementedError
+        db_config = db_config_template.copy()
+        db_config = configure_db(db_config, self.db_fields, tables="test")
+        data = [(1, 2, "hello"),
+                (2, 3, "Fred"),
+                (3, 3, "Beans")]
+        write_to_db(data, db_config, self.db_fields, table="test")
+
+        update_fields = ["Addr1", "UPRN"]
+        update = [("Some", 3)] 
+        update_to_db(update, db_config, update_fields, table="test", key="UPRN")
+
+        conn = _make_connection(db_config)
+        cursor = conn.cursor()
+        cursor.execute("""
+            select Addr1 from test where UPRN = 3 ;
+        """)
+        rows = cursor.fetchall()
+        expected = ("Some", )
+        assert_equal(expected, rows[0])
 
     def test_update_to_db_no_nones(self):
         db_filename = "test_update_db2.sqlite"
