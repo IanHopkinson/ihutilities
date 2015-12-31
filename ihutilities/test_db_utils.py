@@ -112,6 +112,9 @@ class DatabaseUtilitiesTests(unittest.TestCase):
             rows = cursor.fetchall()
             assert_equal(data, rows)
 
+    def test_write_to_mariadb(self):
+        raise NotImplementedError
+
     def test_update_to_db(self):
         db_filename = "test_update_db.sqlite"
         db_file_path = os.path.join(self.db_dir, db_filename)
@@ -135,6 +138,9 @@ class DatabaseUtilitiesTests(unittest.TestCase):
             rows = cursor.fetchall()
             expected = ("Some", )
             assert_equal(expected, rows[0])
+
+    def test_update_mariadb(self):
+        raise NotImplementedError
 
     def test_update_to_db_no_nones(self):
         db_filename = "test_update_db2.sqlite"
@@ -172,3 +178,12 @@ class DatabaseUtilitiesTests(unittest.TestCase):
         configure_db(db_file_path, self.db_fields, tables="test")
         write_to_db(data, db_file_path, self.db_fields, table="test")
         finalise_db(db_file_path, index_name="idx_addr1", table="test", colname="Addr1")
+
+    def test_finalise_mariadb(self):
+        raise NotImplementedError
+
+    def test_read_db(self):
+        raise NotImplementedError
+
+    def test_read_mariadb(self):
+        raise NotImplementedError
