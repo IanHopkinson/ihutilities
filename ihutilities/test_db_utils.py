@@ -11,7 +11,8 @@ from mysql.connector import errorcode
 from collections import OrderedDict
 from nose.tools import assert_equal
 
-from ihutilities.db_utils import configure_db, write_to_db, update_to_db, finalise_db
+from ihutilities.db_utils import (db_config_template, configure_db, write_to_db,
+                                  update_to_db, finalise_db)
 
 class DatabaseUtilitiesTests(unittest.TestCase):
     @classmethod
@@ -46,14 +47,8 @@ class DatabaseUtilitiesTests(unittest.TestCase):
             assert_equal(exp_columns, obs_columns)
 
     def test_configure_mariadb(self):
-        db_config = {"db_name": "test",
-                     "db_user": "root",
-                     "db_pw_environ": "MARIA_DB_PASSWORD",
-                     "db_host": "127.0.0.1",
-                     "db_conn": None
-                    }
-
         # Connect to engine and delete test table if it exists
+        db_config = db_config_template.copy()
         password = os.environ['MARIA_DB_PASSWORD']
         cnx = mysql.connector.connect(user='root', password=password,
                                  host='127.0.0.1')
@@ -61,7 +56,7 @@ class DatabaseUtilitiesTests(unittest.TestCase):
         cursor = cnx.cursor()
         cursor.execute("DROP DATABASE IF EXISTS test")
         cnx.commit()
-        # configure_db(db_config, self.db_fields, tables="test")
+        configure_db(db_config, self.db_fields, tables="test")
 
         #  
         # SELECT SCHEMA_NAME FROM INFORMATION_SCHEMA.SCHEMATA WHERE SCHEMA_NAME = 'DBName'

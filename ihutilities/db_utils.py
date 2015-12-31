@@ -7,7 +7,16 @@ import mysql.connector
 from mysql.connector import errorcode
 
 
-def configure_db(db_path, db_fields, tables="property_data", force=False):
+db_config_template = {"db_name": "test",
+             "db_user": "root",
+             "db_pw_environ": "MARIA_DB_PASSWORD",
+             "db_host": "127.0.0.1",
+             "db_conn": None,
+             "db_type": "mysql",
+             "db_path": None
+            }
+
+def configure_db(db_config, db_fields, tables="property_data", force=False):
     """
     We build a database using an ordered dict of field: type entries and a file_path
     this assumes a sqlite3 database which is removed if it already exists
@@ -15,17 +24,62 @@ def configure_db(db_path, db_fields, tables="property_data", force=False):
     # Cunning polymorphism: 
     # If we get a list and string then we convert them to a dictionary and a list
     # for backward compatibility
+
     if isinstance(tables, str):
         tables = [tables]
         db_fields = {tables[0]: db_fields}
+    # Convert db_path to db_config
+    if isinstance(db_config, str):
+        db_path = db_config
+        db_config = db_config_template.copy()
+        db_config["db_type"] = "sqlite"
+        db_config["db_path"] = db_path
 
-        #any(isinstance(el, list) for el in input_list)
+    # Delete database if force is true
+    if db_config["db_type"] == "sqlite":
+        if os.path.isfile(db_path) and force:
+            os.remove(db_path)
+        db_config["conn"] = sqlite3.connect(db_path)
+    elif db_config["db_type"] == "mysql" or db_config["db_type"] == "mariadb":
+        password = os.environ[db_config["db_pw_environ"]]
+        conn = mysql.connector.connect( user=db_config["db_user"], 
+                                        password=password,
+                                        host=db_config["db_host"])
 
-    if os.path.isfile(db_path) and force:
-        os.remove(db_path)
+        db_config["conn"] = conn
+        cursor = conn.cursor()
+        cursor.execute("DROP DATABASE IF EXISTS {}".format(db_config["db_name"]))
+        conn.commit()
+            # This creates the database if it doesn't exist
+        try:
+            conn.database = db_config["db_name"]   
+        except mysql.connector.Error as err:
+            if err.errno == errorcode.ER_BAD_DB_ERROR:
+                try:
+                    cursor.execute(
+                        "CREATE DATABASE {} DEFAULT CHARACTER SET 'utf8'".format(db_config["db_name"]))
+                except mysql.connector.Error as err:
+                    print("Failed creating database: {}".format(err))
+                    exit(1)
+                conn.database = db_config["db_name"]
+            else:
+                print(err)
+                exit(1)
 
-    conn = sqlite3.connect(db_path)
+    # Create tables, as specified
+    _create_tables_db(db_config, db_fields, tables, force)
+    # Close connection? or return db_config
+    
+    db_config["conn"].commit()
+    db_config["conn"].close()
 
+def _create_tables_db(db_config, db_fields, tables, force):
+    if db_config["db_type"] == "sqlite":
+        table_check_query = "SELECT name FROM sqlite_master WHERE type='table' AND name='{}';"
+    elif db_config["db_type"] == "mariadb" or db_config["db_type"] == "mysql":
+        table_check_query = "SELECT table_name as name FROM information_schema.tables WHERE table_name = '{}';"
+
+    conn = db_config["conn"]
     for table in tables:
         DB_CREATE_ROOT = "CREATE TABLE {} (".format(table)
         DB_CREATE_TAIL = ")"
@@ -37,7 +91,8 @@ def configure_db(db_path, db_fields, tables="property_data", force=False):
         if force:
             conn.execute('DROP TABLE IF EXISTS {}'.format(table))
         cursor = conn.cursor()
-        cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='{}';".format(table))
+
+        cursor.execute(table_check_query.format(table))
         result = cursor.fetchall()
         if len(result) != 0 and result[0][0] == table:
             table_exists = True
@@ -45,13 +100,9 @@ def configure_db(db_path, db_fields, tables="property_data", force=False):
             table_exists = False
 
         if not table_exists:    
-            cursor.execute(DB_CREATE) 
+            cursor.execute(DB_CREATE)
 
-    conn.commit()
-    conn.close()
-
-def create_tables_db(db_path, db_fields, table):
-    pass
+    db_config["conn"].commit()
 
 def write_to_db(data, file_path, db_fields, table="property_data"):
     """
@@ -134,33 +185,33 @@ def finalise_db(file_path, index_name="idx_postcode", table="property_data", col
 # sqlite routines above 
 DB_NAME = "property_data"
 
-def configure_mariadb(db_fields, tables="table1", force=False):
-    password = os.environ['MARIA_DB_PASSWORD']
-    cnx = mysql.connector.connect(user='root', password=password,
-                                 host='127.0.0.1')
-    cursor = cnx.cursor()
+# def configure_mariadb(db_fields, tables="table1", force=False):
+#     password = os.environ['MARIA_DB_PASSWORD']
+#     cnx = mysql.connector.connect(user='root', password=password,
+#                                  host='127.0.0.1')
+#     cursor = cnx.cursor()
 
-    # This creates the database if it doesn't exist
-    try:
-        cnx.database = DB_NAME    
-    except mysql.connector.Error as err:
-        if err.errno == errorcode.ER_BAD_DB_ERROR:
-            create_database_mariadb(cursor)
-            cnx.database = DB_NAME
-        else:
-            print(err)
-            exit(1)
+#     # This creates the database if it doesn't exist
+#     try:
+#         cnx.database = DB_NAME    
+#     except mysql.connector.Error as err:
+#         if err.errno == errorcode.ER_BAD_DB_ERROR:
+#             try:
+#                 cursor.execute(
+#                     "CREATE DATABASE {} DEFAULT CHARACTER SET 'utf8'".format(DB_NAME))
+#             except mysql.connector.Error as err:
+#                 print("Failed creating database: {}".format(err))
+#                 exit(1)
+#             cnx.database = DB_NAME
+#         else:
+#             print(err)
+#             exit(1)
 
-    # This creates the appropriate table in the database
-    create_table_mariadb(cursor, db_fields, table=tables)
+#     # This creates the appropriate table in the database
+#     create_table_mariadb(cursor, db_fields, table=tables)
 
-def create_database_mariadb(cursor):
-    try:
-        cursor.execute(
-            "CREATE DATABASE {} DEFAULT CHARACTER SET 'utf8'".format(DB_NAME))
-    except mysql.connector.Error as err:
-        print("Failed creating database: {}".format(err))
-        exit(1)
+# def create_database_mariadb(cursor):
+    
 
 def create_table_mariadb(cursor, db_fields, table="listed_buildings"):
     """
