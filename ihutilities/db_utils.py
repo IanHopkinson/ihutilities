@@ -63,8 +63,8 @@ def configure_db(db_config, db_fields, tables="property_data", force=False):
     _create_tables_db(db_config, db_fields, tables, force)
     # Close connection? or return db_config
     
-    db_config["conn"].commit()
-    db_config["conn"].close()
+    db_config["db_conn"].commit()
+    #db_config["db_conn"].close()
 
     return db_config
 
@@ -77,14 +77,21 @@ def _normalise_config(db_config):
     return db_config
 
 def _make_connection(db_config):
+
     if db_config["db_type"] == "sqlite":
-        db_config["conn"] = sqlite3.connect(db_config["db_path"])
+        db_config["db_conn"] = sqlite3.connect(db_config["db_path"])
     elif db_config["db_type"] == "mariadb" or db_config["db_type"] == "mysql":
-        password = os.environ[db_config["db_pw_environ"]]
-        conn = mysql.connector.connect( user=db_config["db_user"], 
+
+        if db_config["db_conn"] is None:
+            password = os.environ[db_config["db_pw_environ"]]
+            conn = mysql.connector.connect( user=db_config["db_user"], 
                                         password=password,
                                         host=db_config["db_host"])
-        db_config["conn"] = conn
+
+            db_config["db_conn"] = conn
+        else:
+            conn = db_config["db_conn"]
+
         # Bit messy, sometimes we make a connection without db existing
         try:
             conn.database = db_config["db_name"]
@@ -93,7 +100,7 @@ def _make_connection(db_config):
                 raise
 
 
-    return db_config["conn"]
+    return db_config["db_conn"]
 
 def _create_tables_db(db_config, db_fields, tables, force):
     if db_config["db_type"] == "sqlite":
@@ -103,7 +110,7 @@ def _create_tables_db(db_config, db_fields, tables, force):
         table_check_query = "SELECT table_name as name FROM information_schema.tables WHERE table_name = '{}';"
         DB_CREATE_TAIL = ") ENGINE = MyISAM"
 
-    conn = db_config["conn"]
+    conn = db_config["db_conn"]
     cursor = conn.cursor()
     for table in tables:
         DB_CREATE_ROOT = "CREATE TABLE {} (".format(table)
@@ -126,7 +133,7 @@ def _create_tables_db(db_config, db_fields, tables, force):
         if not table_exists:    
             cursor.execute(DB_CREATE)
 
-    db_config["conn"].commit()
+    db_config["db_conn"].commit()
 
 def write_to_db(data, db_config, db_fields, table="property_data"):
     """
@@ -157,10 +164,11 @@ def write_to_db(data, db_config, db_fields, table="property_data"):
             DB_PLACEHOLDERS = DB_PLACEHOLDERS + ONE_PLACEHOLDER
 
     INSERT_statement = DB_FIELDS[0:-1] + DB_PLACEHOLDERS[0:-1] + DB_INSERT_TAIL
+
     cursor.executemany(INSERT_statement, data)
 
     conn.commit()
-    conn.close()
+    # conn.close()
 
 def update_to_db(data, db_config, db_fields, table="property_data", key="UPRN"):
     """
@@ -205,7 +213,7 @@ def update_to_db(data, db_config, db_fields, table="property_data", key="UPRN"):
             cursor.execute(update_statement, update_data)
 
     conn.commit()
-    conn.close()
+    #conn.close()
 
 def drop_db_tables(file_path, tables):
     conn = sqlite3.connect(file_path)
@@ -221,7 +229,7 @@ def finalise_db(db_config, index_name="idx_postcode", table="property_data", col
     cursor.execute('CREATE INDEX {index_name} on {table}({colname})'
         .format(index_name=index_name, table=table, colname=colname))
     conn.commit()
-    conn.close()
+    #conn.close()
 
 def read_db(sql_query, db_config):
     db_config = _normalise_config(db_config)
