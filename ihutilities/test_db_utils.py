@@ -135,6 +135,33 @@ class DatabaseUtilitiesTests(unittest.TestCase):
         rows = cursor.fetchall()
         assert_equal(data, rows)
 
+    def test_write_geom_to_mariadb(self):
+        db_config = db_config_template.copy()
+
+        db_fields = OrderedDict([
+              ("UPRN","INTEGER PRIMARY KEY"),
+              ("PropertyID", "INT"),
+              ("points", "POINT"),                   
+        ])
+
+        db_config = configure_db(db_config, db_fields, tables="test", force=True)
+        data = [(1, 2, "POINT(0 10)"),
+                (2, 3, "POINT(20 20)"),
+                (3, 3, "POINT(5 15)")]
+
+        expected = [(1, 2, 0.0, 10.0),
+                    (2, 3, 20.0, 20.0),
+                    (3, 3, 5.0, 15.0)]
+
+        write_to_db(data, db_config, db_fields, table="test")
+        conn = _make_connection(db_config)
+        cursor = conn.cursor()
+        cursor.execute("""
+            select UPRN, PropertyID, X(points), Y(points) from test;
+        """)
+        rows = cursor.fetchall()
+        assert_equal(expected, rows)
+
     def test_update_to_db(self):
         db_filename = "test_update_db.sqlite"
         db_file_path = os.path.join(self.db_dir, db_filename)
