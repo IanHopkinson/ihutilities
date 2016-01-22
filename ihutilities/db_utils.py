@@ -130,15 +130,14 @@ def _create_tables_db(db_config, db_fields, tables, force):
 
 def write_to_db(data, db_config, db_fields, table="property_data"):
     """
-    we write data into the property_data table from an array of dictionaries of
-    field: value entries 
+    we write data into the property_data table from an array of tuples of
+    value entries 
     """
     db_config = _normalise_config(db_config)
     if db_config["db_type"] == "sqlite":
         ONE_PLACEHOLDER = "?,"
     elif db_config["db_type"] == "mariadb" or db_config["db_type"] == "mysql":
         ONE_PLACEHOLDER = "%s,"
-
    
     conn = _make_connection(db_config)
     cursor = conn.cursor()
@@ -152,11 +151,12 @@ def write_to_db(data, db_config, db_fields, table="property_data"):
 
     for k in db_fields.keys():
         DB_FIELDS = DB_FIELDS + k + ","
-        DB_PLACEHOLDERS = DB_PLACEHOLDERS + ONE_PLACEHOLDER
-
+        if db_fields[k] in ["POINT", "POLYGON", "LINESTRING"]:
+            DB_PLACEHOLDERS = DB_PLACEHOLDERS + "(GeomFromText(%s)),"
+        else:
+            DB_PLACEHOLDERS = DB_PLACEHOLDERS + ONE_PLACEHOLDER
 
     INSERT_statement = DB_FIELDS[0:-1] + DB_PLACEHOLDERS[0:-1] + DB_INSERT_TAIL
-
     cursor.executemany(INSERT_statement, data)
 
     conn.commit()
