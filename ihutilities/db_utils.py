@@ -18,20 +18,22 @@ db_config_template = {"db_name": "test",
             }
 
 def configure_db(db_config, db_fields, tables="property_data", force=False):
-    """This function does something.
+    """This function sets up a sqlite or MariaDB/MySQL database
 
     Args:
-       name (str):  The name to use.
+       db_config (str or dict): 
+            For sqlite a file path in a string is sufficient
+       db_fields (OrderedDict or dictionary of OrderedDicts):
+            A dictionary of fieldnames and types per table
 
     Kwargs:
-       state (bool): Current state to be in.
+       tables (string or list of strings): 
+            names of tables required, keys to db_fields
+       force (bool): 
+            If using sqlite, force=True deletes existing files of db_config 
 
     Returns:
-       int.  The return code::
-
-          0 -- Success!
-          1 -- No good.
-          2 -- Try again.
+       db_config structure
 
     Raises:
        AttributeError, KeyError
