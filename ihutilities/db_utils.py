@@ -22,7 +22,8 @@ def configure_db(db_config, db_fields, tables="property_data", force=False):
 
     Args:
        db_config (str or dict): 
-            For sqlite a file path in a string is sufficient
+            For sqlite a file path in a string is sufficient, MariaDB/MySQL require
+            a dictionary and example of which is found in db_config_template
        db_fields (OrderedDict or dictionary of OrderedDicts):
             A dictionary of fieldnames and types per table
 
@@ -33,17 +34,11 @@ def configure_db(db_config, db_fields, tables="property_data", force=False):
             If using sqlite, force=True deletes existing files of db_config 
 
     Returns:
-       db_config structure
+       db_config structure, in particular with the db_conn field populated for MariaDB/MySQL
 
     Raises:
-       AttributeError, KeyError
 
-    A really great idea.  A way you might use me is
-
-    >>> print public_fn_with_googley_docstring(name='foo', state=None)
-    0
-
-    BTW, this always returns 0.  **NEVER** use with :class:`MyPublicClass`.
+    Usage:
 
     """
     # Cunning polymorphism: 
@@ -93,6 +88,10 @@ def configure_db(db_config, db_fields, tables="property_data", force=False):
     return db_config
 
 def _normalise_config(db_config):
+    """This is a private function which will expand a db_config string into 
+    the dictionary format.
+    """
+
     if isinstance(db_config, str):
         db_path = db_config
         db_config = db_config_template.copy()
@@ -101,7 +100,8 @@ def _normalise_config(db_config):
     return db_config
 
 def _make_connection(db_config):
-
+    """This is a private function responsible for making a connection to the database
+    """
     if db_config["db_type"] == "sqlite":
         db_config["db_conn"] = sqlite3.connect(db_config["db_path"])
     elif db_config["db_type"] == "mariadb" or db_config["db_type"] == "mysql":
