@@ -1,6 +1,8 @@
 #!/usr/bin/env python
 # encoding: utf-8
-
+"""
+This package contains functions relating to databases
+"""
 import os
 import sqlite3
 import mysql.connector
