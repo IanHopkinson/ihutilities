@@ -41,7 +41,15 @@ def configure_db(db_config, db_fields, tables="property_data", force=False):
     Raises:
 
     Usage:
-
+        >>> db_fields = OrderedDict([
+              ("UPRN","INTEGER PRIMARY KEY"),
+              ("PropertyID", "INT"),
+              ("Addr1", "TEXT"),                   
+        ])
+        >>> db_filename = "test_config_db.sqlite"
+        >>> db_dir = "ihutilities\\fixtures"
+        >>> db_file_path = os.path.join(db_dir, db_filename)
+        >>> configure_db(db_file_path, self.db_fields, tables="test")
     """
     # Cunning polymorphism: 
     # If we get a list and string then we convert them to a dictionary and a list
@@ -163,9 +171,42 @@ def _create_tables_db(db_config, db_fields, tables, force):
 
 def write_to_db(data, db_config, db_fields, table="property_data"):
     """
-    we write data into the property_data table from an array of tuples of
-    value entries 
-    """
+    This function writes a list of rows to a sqlite or MariaDB/MySQL database
+
+    Args:
+       data (list of lists):
+            List of lists to write to database.
+       db_config (str or dict): 
+            For sqlite a file path in a string is sufficient, MariaDB/MySQL require
+            a dictionary and example of which is found in db_config_template
+       db_fields (OrderedDict or dictionary of OrderedDicts):
+            A dictionary of fieldnames and types per table
+
+    Kwargs:
+       table (str): 
+            names of tables required, keys to db_fields
+       force (bool): 
+            If using sqlite, force=True deletes existing files of db_config 
+
+    Returns:
+       No return value
+
+    Raises:
+
+    Usage:
+        >>> db_fields = OrderedDict([
+              ("UPRN","INTEGER PRIMARY KEY"),
+              ("PropertyID", "INT"),
+              ("Addr1", "TEXT"),                   
+        ])
+        >>> db_filename = "test_write_db.sqlite"
+        >>> db_dir = "ihutilities\\fixtures"
+        >>> db_file_path = os.path.join(db_dir, db_filename)
+        >>> data = [(1, 2, "hello"),
+                    (2, 3, "Fred"),
+                    (3, 3, "Beans")]
+        >>> write_to_db(data, db_file_path, db_fields, table="test")
+    """ 
     db_config = _normalise_config(db_config)
     if db_config["db_type"] == "sqlite":
         ONE_PLACEHOLDER = "?,"
