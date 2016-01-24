@@ -5,6 +5,21 @@ from __future__ import unicode_literals
 import subprocess
     
 def git_sha(repo_dir):
+    """
+    This function returns the short SHA-1 hash of a repo
+
+    Args:
+       repo_dir (str):
+            A string containing the repo_dir of interest
+
+    Returns:
+       A string containing the short SHA-1 hash of the repo
+    Raises:
+
+    Usage:
+        >>> sha = git_sha(".")
+    """
+
     cmd = ['git','rev-parse','--short', 'HEAD']
     pr = subprocess.Popen(cmd,                  
             cwd=repo_dir, 
@@ -19,6 +34,23 @@ def git_sha(repo_dir):
     return out.strip().decode("utf-8")
 
 def git_uncommitted_changes(filename, repo_dir):
+    """
+    This checks the committed state of a file in a repo
+
+    Args:
+       repo_dir (str):
+            A string containing the repo_dir of interest
+       filename (str):
+            A string containing the filename of interest. A empty or blank string
+            indicates the committed state for the whole repository
+
+    Returns:
+       True if there are uncommitted changes on the requested filename
+    Raises:
+
+    Usage:
+        >>> sha = git_sha(".")
+    """
     if filename == ' ' or filename == '':
         filename = '--'
     cmd = ['git', 'diff', filename]

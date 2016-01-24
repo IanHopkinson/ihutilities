@@ -6,7 +6,6 @@ from ihutilities import git_sha, git_uncommitted_changes
 
 def test_git_sha():
     sha = git_sha(".")
-    print(type(sha))
     assert_equal(isinstance(sha, str), True)
     assert_greater(len(sha), 5)
 

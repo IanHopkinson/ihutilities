@@ -30,11 +30,10 @@
 
 # TODO
 
-* Add logging
+* Add logging particularly useful for db functions
 * Document functions with a docstring (prepare for Sphinx, even if we don't use it now https://pythonhosted.org/an_example_pypi_project/sphinx.html). Start with configure_db 
 * read_db should take templated queries (using the appropriate placeholder and data supplied separately)
 * read_db should only allow select statements
-* Extend testing to git_utils
 * Extend testing to io_utils
 * Get ETL_framework to accept a function as a data source
 * Add in some ngram functionality
