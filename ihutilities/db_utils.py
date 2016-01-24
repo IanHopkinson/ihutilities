@@ -97,78 +97,6 @@ def configure_db(db_config, db_fields, tables="property_data", force=False):
 
     return db_config
 
-def _normalise_config(db_config):
-    """This is a private function which will expand a db_config string into 
-    the dictionary format.
-    """
-
-    if isinstance(db_config, str):
-        db_path = db_config
-        db_config = db_config_template.copy()
-        db_config["db_type"] = "sqlite"
-        db_config["db_path"] = db_path
-    return db_config
-
-def _make_connection(db_config):
-    """This is a private function responsible for making a connection to the database
-    """
-    if db_config["db_type"] == "sqlite":
-        db_config["db_conn"] = sqlite3.connect(db_config["db_path"])
-    elif db_config["db_type"] == "mariadb" or db_config["db_type"] == "mysql":
-
-        if db_config["db_conn"] is None:
-            password = os.environ[db_config["db_pw_environ"]]
-            conn = mysql.connector.connect( user=db_config["db_user"], 
-                                        password=password,
-                                        host=db_config["db_host"])
-
-            db_config["db_conn"] = conn
-        else:
-            conn = db_config["db_conn"]
-
-        # Bit messy, sometimes we make a connection without db existing
-        try:
-            conn.database = db_config["db_name"]
-        except mysql.connector.Error as err:
-            if err.errno != errorcode.ER_BAD_DB_ERROR:
-                raise
-
-
-    return db_config["db_conn"]
-
-def _create_tables_db(db_config, db_fields, tables, force):
-    if db_config["db_type"] == "sqlite":
-        table_check_query = "SELECT name FROM sqlite_master WHERE type='table' AND name='{}';"
-        DB_CREATE_TAIL = ")"
-    elif db_config["db_type"] == "mariadb" or db_config["db_type"] == "mysql":
-        table_check_query = "SELECT table_name as name FROM information_schema.tables WHERE table_name = '{}';"
-        DB_CREATE_TAIL = ") ENGINE = MyISAM"
-
-    conn = db_config["db_conn"]
-    cursor = conn.cursor()
-    for table in tables:
-        DB_CREATE_ROOT = "CREATE TABLE {} (".format(table)
-        
-        DB_CREATE = DB_CREATE_ROOT
-        for k,v in db_fields[table].items():
-            DB_CREATE = DB_CREATE + " ".join([k,v]) + ","
-
-        DB_CREATE = DB_CREATE[0:-1] + DB_CREATE_TAIL
-        if force:
-            cursor.execute('DROP TABLE IF EXISTS {}'.format(table))
-        
-        cursor.execute(table_check_query.format(table))
-        result = cursor.fetchall()
-        if len(result) != 0 and result[0][0] == table:
-            table_exists = True
-        else:
-            table_exists = False
-
-        if not table_exists:    
-            cursor.execute(DB_CREATE)
-
-    db_config["db_conn"].commit()
-
 def write_to_db(data, db_config, db_fields, table="property_data"):
     """
     This function writes a list of rows to a sqlite or MariaDB/MySQL database
@@ -184,9 +112,7 @@ def write_to_db(data, db_config, db_fields, table="property_data"):
 
     Kwargs:
        table (str): 
-            names of tables required, keys to db_fields
-       force (bool): 
-            If using sqlite, force=True deletes existing files of db_config 
+            name of table to which we are writing, key to db_fields
 
     Returns:
        No return value
@@ -314,3 +240,77 @@ def read_db(sql_query, db_config):
             yield labelled_row
         else:
             raise StopIteration
+
+def _normalise_config(db_config):
+    """This is a private function which will expand a db_config string into 
+    the dictionary format.
+    """
+
+    if isinstance(db_config, str):
+        db_path = db_config
+        db_config = db_config_template.copy()
+        db_config["db_type"] = "sqlite"
+        db_config["db_path"] = db_path
+    return db_config
+
+def _make_connection(db_config):
+    """This is a private function responsible for making a connection to the database
+    """
+    if db_config["db_type"] == "sqlite":
+        db_config["db_conn"] = sqlite3.connect(db_config["db_path"])
+    elif db_config["db_type"] == "mariadb" or db_config["db_type"] == "mysql":
+
+        if db_config["db_conn"] is None:
+            password = os.environ[db_config["db_pw_environ"]]
+            conn = mysql.connector.connect( user=db_config["db_user"], 
+                                        password=password,
+                                        host=db_config["db_host"])
+
+            db_config["db_conn"] = conn
+        else:
+            conn = db_config["db_conn"]
+
+        # Bit messy, sometimes we make a connection without db existing
+        try:
+            conn.database = db_config["db_name"]
+        except mysql.connector.Error as err:
+            if err.errno != errorcode.ER_BAD_DB_ERROR:
+                raise
+
+
+    return db_config["db_conn"]
+
+def _create_tables_db(db_config, db_fields, tables, force):
+    if db_config["db_type"] == "sqlite":
+        table_check_query = "SELECT name FROM sqlite_master WHERE type='table' AND name='{}';"
+        DB_CREATE_TAIL = ")"
+    elif db_config["db_type"] == "mariadb" or db_config["db_type"] == "mysql":
+        table_check_query = "SELECT table_name as name FROM information_schema.tables WHERE table_name = '{}';"
+        DB_CREATE_TAIL = ") ENGINE = MyISAM"
+
+    conn = db_config["db_conn"]
+    cursor = conn.cursor()
+    for table in tables:
+        DB_CREATE_ROOT = "CREATE TABLE {} (".format(table)
+        
+        DB_CREATE = DB_CREATE_ROOT
+        for k,v in db_fields[table].items():
+            DB_CREATE = DB_CREATE + " ".join([k,v]) + ","
+
+        DB_CREATE = DB_CREATE[0:-1] + DB_CREATE_TAIL
+        if force:
+            cursor.execute('DROP TABLE IF EXISTS {}'.format(table))
+        
+        cursor.execute(table_check_query.format(table))
+        result = cursor.fetchall()
+        if len(result) != 0 and result[0][0] == table:
+            table_exists = True
+        else:
+            table_exists = False
+
+        if not table_exists:    
+            cursor.execute(DB_CREATE)
+
+    db_config["db_conn"].commit()
+
+
