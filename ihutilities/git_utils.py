@@ -16,7 +16,7 @@ def git_sha(repo_dir):
     if len(error) > 0:
         print(error)
 
-    return out.strip()
+    return out.strip().decode("utf-8")
 
 def git_uncommitted_changes(filename, repo_dir):
     if filename == ' ' or filename == '':
