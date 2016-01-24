@@ -165,11 +165,44 @@ def write_to_db(data, db_config, db_fields, table="property_data"):
 
 def update_to_db(data, db_config, db_fields, table="property_data", key="UPRN"):
     """
-    We *update* data into the property_data table from an array of dictionaries of
-    field: value entries
+    This function updates rows in a sqlite or MariaDB/MySQL database
 
-    db_fields is a list of field names, the last in the list is the join keys
-    data is a list of lists of the elements to be inserted 
+    Args:
+       data (list of lists):
+            List of lists of data to update to database, order matches db_fields
+       db_config (str or dict): 
+            For sqlite a file path in a string is sufficient, MariaDB/MySQL require
+            a dictionary and example of which is found in db_config_template
+       db_fields (OrderedDict):
+            A list of fieldnames in an OrderedDict containing the fields to update and
+            the key field in the order in which the fields are presented in the data lists
+
+    Kwargs:
+       table (str): 
+            name of table to which we are writing, key to db_fields
+       key (str):
+            the field which forms the key of the update
+
+    Returns:
+       No return value
+
+    Raises:
+
+    Usage:
+        >>> db_fields = OrderedDict([
+              ("UPRN","INTEGER PRIMARY KEY"),
+              ("PropertyID", "INT"),
+              ("Addr1", "TEXT"),                   
+        ])
+        >>> db_filename = "test_write_db.sqlite"
+        >>> db_dir = "ihutilities\\fixtures"
+        >>> db_file_path = os.path.join(db_dir, db_filename)
+        >>> data = [(1, 2, "hello"),
+                    (2, 3, "Fred"),
+                    (3, 3, "Beans")]
+        >>> update_fields = ["Addr1", "UPRN"]
+        >>> update = [("Some", 3)] 
+        >>> update_to_db(update, db_file_path, update_fields, table="test", key="UPRN")
     """
     db_config = _normalise_config(db_config)
     if db_config["db_type"] == "sqlite":
@@ -242,7 +275,8 @@ def read_db(sql_query, db_config):
             raise StopIteration
 
 def _normalise_config(db_config):
-    """This is a private function which will expand a db_config string into 
+    """
+    This is a private function which will expand a db_config string into 
     the dictionary format.
     """
 
@@ -254,7 +288,8 @@ def _normalise_config(db_config):
     return db_config
 
 def _make_connection(db_config):
-    """This is a private function responsible for making a connection to the database
+    """
+    This is a private function responsible for making a connection to the database
     """
     if db_config["db_type"] == "sqlite":
         db_config["db_conn"] = sqlite3.connect(db_config["db_path"])
@@ -281,6 +316,9 @@ def _make_connection(db_config):
     return db_config["db_conn"]
 
 def _create_tables_db(db_config, db_fields, tables, force):
+    """
+    This is a private function responsible for creating a database table
+    """
     if db_config["db_type"] == "sqlite":
         table_check_query = "SELECT name FROM sqlite_master WHERE type='table' AND name='{}';"
         DB_CREATE_TAIL = ")"
