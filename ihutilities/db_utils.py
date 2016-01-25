@@ -343,10 +343,12 @@ def _create_tables_db(db_config, db_fields, tables, force):
         DB_CREATE = DB_CREATE[0:-1] + DB_CREATE_TAIL
         if force:
             cursor.execute('DROP TABLE IF EXISTS {}'.format(table))
+            logging.warning("Force is True, so dropping table {} in database {}".format(table, db_config["db_name"]))
         
         cursor.execute(table_check_query.format(table))
         result = cursor.fetchall()
-        if len(result) != 0 and result[0][0] == table:
+        logging.debug("table_check_query result: {}".format(result))
+        if len(result) != 0 and result[0][0].lower() == table.lower():
             table_exists = True
         else:
             table_exists = False
@@ -354,6 +356,8 @@ def _create_tables_db(db_config, db_fields, tables, force):
         if not table_exists:
             logging.debug("Creating table {} with statement: \n{}".format(table, DB_CREATE))    
             cursor.execute(DB_CREATE)
+        else:
+            logging.warning("Table {} already exists in database {}".format(table, db_config["db_name"]))
 
     db_config["db_conn"].commit()
 
