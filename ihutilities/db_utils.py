@@ -5,6 +5,7 @@ This package contains functions relating to databases
 """
 import os
 import sqlite3
+import logging
 import mysql.connector
 from mysql.connector import errorcode
 
@@ -333,7 +334,11 @@ def _create_tables_db(db_config, db_fields, tables, force):
         
         DB_CREATE = DB_CREATE_ROOT
         for k,v in db_fields[table].items():
-            DB_CREATE = DB_CREATE + " ".join([k,v]) + ","
+            if v in ["POINT", "POLYGON", "LINESTRING"]:
+                logging.debug("Appending NOT NULL to {} in {} to allow spatial indexing in MariaDB/MySQL [_create_tables_db]".format(v, table))
+                DB_CREATE = DB_CREATE + " ".join([k,v]) + " NOT NULL,"
+            else:    
+                DB_CREATE = DB_CREATE + " ".join([k,v]) + ","
 
         DB_CREATE = DB_CREATE[0:-1] + DB_CREATE_TAIL
         if force:
@@ -346,7 +351,8 @@ def _create_tables_db(db_config, db_fields, tables, force):
         else:
             table_exists = False
 
-        if not table_exists:    
+        if not table_exists:
+            logging.debug("Creating table {} with statement: \n{}".format(table, DB_CREATE))    
             cursor.execute(DB_CREATE)
 
     db_config["db_conn"].commit()
