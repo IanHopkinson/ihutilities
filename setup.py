@@ -27,6 +27,7 @@ conf = dict(
     zip_safe=False,
     install_requires=[],
     tests_require=[],
+    scripts=['ihutilities/survey_csv.py'],
     entry_points={}
     )
 

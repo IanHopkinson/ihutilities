@@ -37,3 +37,4 @@
 * Get ETL_framework to accept a function as a data source
 * Add in some ngram functionality
 * make a survey_csv.py function
+* Currently using scripts for survey_csv, could use console scripts: http://python-packaging.readthedocs.org/en/latest/command-line-scripts.html
