@@ -15,23 +15,23 @@ from ihutilities.db_utils import configure_db, write_to_db
 # write_to_db functions
 
 def do_etl(db_fields, db_file_path, data_path, data_field_lookup, mode="production", headers=True):
-    print("Starting ETL to database at {}".format(datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")))
+    print("Starting ETL to database at {}".format(datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")), flush=True)
     # Scan parameters
     if mode == "production":
         test_line_limit = float('inf') # float('inf')
         chunk_size = 10000 # 10000
         report_size = 10000 # 10000
+        print("Measuring length of input file...", flush=True)
+        file_length = report_input_length(data_path, test_line_limit)   
     elif mode == "test":
         test_line_limit = 10000 # float('inf')
         chunk_size = 1000 # 10000
         report_size = 1000 # 10000
+        print("Test mode so file_length is set to test_line_limit of {}".format(test_line_limit), flush=True)
+        file_length = test_line_limit
     else:
         print("Mode should be either 'test' or 'production', mode supplied was '{}'".format(mode))
         sys.exit()
-
-    
-    print("Measuring length of input file...")
-    file_length = report_input_length(data_path, test_line_limit)
 
     configure_db(db_file_path, db_fields, force=True)
 
@@ -58,7 +58,12 @@ def do_etl(db_fields, db_file_path, data_path, data_field_lookup, mode="producti
             for output_key in new_row.keys():
                 # This inserts blank fields
                 if data_field_lookup[output_key] is not None:
-                    new_row[output_key] = row[data_field_lookup[output_key]]
+                    # If output_key corresponds to a POINT field we need to process a two element array
+                    if db_fields[output_key] == "POINT":
+                        new_row[output_key] = make_point(row, data_field_lookup[output_key])
+                    else:
+                        if row[data_field_lookup[output_key]] != "":
+                            new_row[output_key] = row[data_field_lookup[output_key]]
                 # If we have a field called ID as Primary Key and there is no lookup
                 # for it we assume it is a synthetic key and put in an autoincrement value
                 if primary_key == "ID" and data_field_lookup["ID"] is None:
@@ -102,6 +107,10 @@ def do_etl(db_fields, db_file_path, data_path, data_field_lookup, mode="producti
     elapsed = t1 - t0
     print("\nWrote a total {} lines to the database in {:.2f}s".format(line_count, elapsed), flush=True)
     print("Dropped {} lines because they contained duplicate primary key ({})".format(lines_dropped, primary_key))
+
+def make_point(row, data_field_lookup):
+    point = "POINT({} {})".format(row[data_field_lookup[0]], row[data_field_lookup[1]])
+    return point
 
 def get_primary_key_from_db_fields(db_fields):
     primary_key = ""
