@@ -46,7 +46,7 @@ def do_etl(db_fields, db_file_path, data_path, data_field_lookup, mode="producti
     duplicate_primary_keys = set()
     primary_key = get_primary_key_from_db_fields(db_fields)
 
-    with open(data_path, encoding='utf-8') as f:
+    with open(data_path, encoding='utf-8-sig') as f:
         if headers:
             rows = csv.DictReader(f)
         else:
