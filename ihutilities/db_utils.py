@@ -4,6 +4,7 @@
 This package contains functions relating to databases
 """
 import os
+import time
 import sqlite3
 import logging
 import mysql.connector
@@ -259,11 +260,24 @@ def finalise_db(db_config, index_name="idx_postcode", table="property_data", col
     #conn.close()
 
 def read_db(sql_query, db_config):
+    # For MariaDB we need to trap this error:
+    # mysql.connector.errors.InterfaceError: 2003: Can't connect to MySQL server on '127.0.0.1:3306' 
+    # (10055 An operation on a socket could not be performed because the system lacked sufficient buffer space or because a queue was full)
     db_config = _normalise_config(db_config)
-    conn = _make_connection(db_config)
-    cursor = conn.cursor()
 
-    cursor.execute(sql_query)
+    try:
+        conn = _make_connection(db_config)
+        cursor = conn.cursor()
+        cursor.execute(sql_query)
+    except mysql.connector.Error as err:
+        if err.errno == 2003:
+            logging.warning("Caught exception '{}'. errno = '{}', waiting 30 seconds and having another go".format(err, err.errno))
+            time.sleep(30)
+            conn = _make_connection(db_config)
+            cursor = conn.cursor()
+            cursor.execute(sql_query)
+        else:
+            raise
 
     colnames = [x[0] for x in cursor.description]
 
