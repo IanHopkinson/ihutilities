@@ -109,7 +109,15 @@ def do_etl(db_fields, db_file_path, data_path, data_field_lookup, mode="producti
     print("Dropped {} lines because they contained duplicate primary key ({})".format(lines_dropped, primary_key))
 
 def make_point(row, data_field_lookup):
-    point = "POINT({} {})".format(row[data_field_lookup[0]], row[data_field_lookup[1]])
+    try:
+        easting = float(row[data_field_lookup[0]])
+    except ValueError:
+        easting = 0
+    try:
+        northing = float(row[data_field_lookup[1]])
+    except ValueError:
+        northing = 0
+    point = "POINT({} {})".format(easting, northing)
     return point
 
 def get_primary_key_from_db_fields(db_fields):
