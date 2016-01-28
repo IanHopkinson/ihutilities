@@ -270,7 +270,7 @@ def read_db(sql_query, db_config):
         cursor = conn.cursor()
         cursor.execute(sql_query)
     except mysql.connector.Error as err:
-        if err.errno == 2003:
+        if err.errno == errorcode.CR_CONN_HOST_ERROR:
             logging.warning("Caught exception '{}'. errno = '{}', waiting 30 seconds and having another go".format(err, err.errno))
             time.sleep(30)
             conn = _make_connection(db_config)
