@@ -14,7 +14,41 @@ from ihutilities.db_utils import configure_db, write_to_db
 # This dictionary has field names and field types. It should be reuseable between the configure_db and 
 # write_to_db functions
 
-def do_etl(db_fields, db_file_path, data_path, data_field_lookup, mode="production", headers=True):
+def do_etl(db_fields, db_config, data_path, data_field_lookup, mode="production", headers=True):
+    """This function uploads CSV files to a sqlite or MariaDB/MySQL database
+
+    Args:
+       db_config (str or dict): 
+            For sqlite a file path in a string is sufficient, MariaDB/MySQL require
+            a dictionary and example of which is found in db_config_template
+       db_fields (OrderedDict or dictionary of OrderedDicts):
+            A dictionary of fieldnames and types per table. 
+       data_path (str):
+            A file path to the input CSV data
+       data_field_lookup (dict):
+            A dictionary linking database fields (as the key) to CSV columns (the value),
+            if headers exist the values are column names. If headers do not exist then the 
+            values are column numbers. If a field ID is specified with value None then it creates
+            autoincrement unique key
+
+    Kwargs:
+       mode (str): 
+            "production" or "test". 
+            "test" loads 10000 lines to the database in 1000 line chunks.
+            "test" loads 10000 lines to the database in 1000 line chunks. 
+       headers (bool): 
+            Indicates whether headers are present in the input CSV file
+            True indicates headers are present, DictReader is used for import and the data_field_lookup is to field names
+            False indicates no headers, csvreader is used for import and the data_field_lookup lookup is to column numbers 
+
+    Returns:
+       No return value
+
+    Raises:
+
+    Usage:
+
+    """
     print("Starting ETL to database at {}".format(datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")), flush=True)
     # Scan parameters
     if mode == "production":
@@ -33,7 +67,7 @@ def do_etl(db_fields, db_file_path, data_path, data_field_lookup, mode="producti
         print("Mode should be either 'test' or 'production', mode supplied was '{}'".format(mode))
         sys.exit()
 
-    configure_db(db_file_path, db_fields, force=True)
+    configure_db(db_config, db_fields, force=True)
 
     # Get on with the main business
     t0 = time.time()
@@ -92,7 +126,7 @@ def do_etl(db_fields, db_file_path, data_path, data_field_lookup, mode="producti
 
             # Write a chunk to the database            
             if (line_count % chunk_size) == 0:
-                write_to_db(data, db_file_path, db_fields)
+                write_to_db(data, db_config, db_fields)
                 data = []
 
             # Break if we have reached test_line_limit
@@ -100,7 +134,7 @@ def do_etl(db_fields, db_file_path, data_path, data_field_lookup, mode="producti
                 break
 
     # Final write to database
-    write_to_db(data, db_file_path, db_fields)
+    write_to_db(data, db_config, db_fields)
 
     # Write a final report
     t1 = time.time()
