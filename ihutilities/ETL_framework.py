@@ -14,7 +14,7 @@ from ihutilities.db_utils import configure_db, write_to_db
 # This dictionary has field names and field types. It should be reuseable between the configure_db and 
 # write_to_db functions
 
-def do_etl(db_fields, db_config, data_path, data_field_lookup, mode="production", headers=True):
+def do_etl(db_fields, db_config, data_path, data_field_lookup, mode="production", headers=True, null_equivalents=[""]):
     """This function uploads CSV files to a sqlite or MariaDB/MySQL database
 
     Args:
@@ -40,6 +40,8 @@ def do_etl(db_fields, db_config, data_path, data_field_lookup, mode="production"
             Indicates whether headers are present in the input CSV file
             True indicates headers are present, DictReader is used for import and the data_field_lookup is to field names
             False indicates no headers, csvreader is used for import and the data_field_lookup lookup is to column numbers 
+       null_equivalents (list of strings):
+            cell contents which should be considered equivalent of null i.e ["-"]
 
     Returns:
        No return value
@@ -92,12 +94,18 @@ def do_etl(db_fields, db_config, data_path, data_field_lookup, mode="production"
             for output_key in new_row.keys():
                 # This inserts blank fields
                 if data_field_lookup[output_key] is not None:
+                    value = row[data_field_lookup[output_key]]
+                    if value in null_equivalents:
+                        value = None
                     # If output_key corresponds to a POINT field we need to process a two element array
                     if db_fields[output_key] == "POINT":
                         new_row[output_key] = make_point(row, data_field_lookup[output_key])
+                    # If output_key corresponds to an INTEGER then remove any commas in input
+                    elif db_fields[output_key].lower() == "integer" and value is not None:
+                        new_row[output_key] = int(value.replace(",", ""))
                     else:
                         if row[data_field_lookup[output_key]] != "":
-                            new_row[output_key] = row[data_field_lookup[output_key]]
+                            new_row[output_key] = value
                 # If we have a field called ID as Primary Key and there is no lookup
                 # for it we assume it is a synthetic key and put in an autoincrement value
                 if primary_key == "ID" and data_field_lookup["ID"] is None:
