@@ -88,58 +88,62 @@ def do_etl(db_fields, db_config, data_path, data_field_lookup, mode="production"
         else:
             rows = csv.reader(f)
         # Loop over input rows
-        for i, row in enumerate(rows):
-            new_row = OrderedDict([(x,None) for x in db_fields.keys()]) 
-            # zip input row into output row
-            for output_key in new_row.keys():
-                # This inserts blank fields
-                if data_field_lookup[output_key] is not None:
-                    value = row[data_field_lookup[output_key]]
-                    if value in null_equivalents:
-                        value = None
-                    # If output_key corresponds to a POINT field we need to process a two element array
-                    if db_fields[output_key] == "POINT":
-                        new_row[output_key] = make_point(row, data_field_lookup[output_key])
-                    # If output_key corresponds to an INTEGER then remove any commas in input
-                    elif db_fields[output_key].lower() == "integer" and value is not None:
-                        new_row[output_key] = int(value.replace(",", ""))
-                    else:
-                        if row[data_field_lookup[output_key]] != "":
-                            new_row[output_key] = value
-                # If we have a field called ID as Primary Key and there is no lookup
-                # for it we assume it is a synthetic key and put in an autoincrement value
-                if primary_key == "ID" and data_field_lookup["ID"] is None:
-                    new_row[primary_key] = i
-            # Decide whether or not to write new_row
-            if new_row[primary_key] not in primary_key_set:
-                line_count += 1
-                data.append(([x for x in new_row.values()]))
-                primary_key_set.add(new_row[primary_key])
-            else:
-                #print("UPRN is a duplicate: {}".format(new_row["UPRN"]))
-                duplicate_primary_keys.add(new_row[primary_key])
-                lines_dropped += 1
-                #print("UPRN = {} has already been seen".format(row[0])) 
+        try:
+            for i, row in enumerate(rows):
+                new_row = OrderedDict([(x,None) for x in db_fields.keys()]) 
+                # zip input row into output row
+                for output_key in new_row.keys():
+                    # This inserts blank fields
+                    if data_field_lookup[output_key] is not None:
+                        value = row[data_field_lookup[output_key]]
+                        if value in null_equivalents:
+                            value = None
+                        # If output_key corresponds to a POINT field we need to process a two element array
+                        if db_fields[output_key] == "POINT":
+                            new_row[output_key] = make_point(row, data_field_lookup[output_key])
+                        # If output_key corresponds to an INTEGER then remove any commas in input
+                        elif db_fields[output_key].lower() == "integer" and value is not None:
+                            new_row[output_key] = int(value.replace(",", ""))
+                        else:
+                            if row[data_field_lookup[output_key]] != "":
+                                new_row[output_key] = value
+                    # If we have a field called ID as Primary Key and there is no lookup
+                    # for it we assume it is a synthetic key and put in an autoincrement value
+                    if primary_key == "ID" and data_field_lookup["ID"] is None:
+                        new_row[primary_key] = i
+                # Decide whether or not to write new_row
+                if new_row[primary_key] not in primary_key_set:
+                    line_count += 1
+                    data.append(([x for x in new_row.values()]))
+                    primary_key_set.add(new_row[primary_key])
+                else:
+                    #print("UPRN is a duplicate: {}".format(new_row["UPRN"]))
+                    duplicate_primary_keys.add(new_row[primary_key])
+                    lines_dropped += 1
+                    #print("UPRN = {} has already been seen".format(row[0])) 
 
-            # Write an interim report
-            if (line_count % report_size) ==0:
-                est_completion_time = ((time.time() - t0) / line_count) * (min(file_length, test_line_limit) - line_count)
-                completion_str = (datetime.datetime.now() + datetime.timedelta(seconds=est_completion_time)).strftime("%Y-%m-%d %H:%M:%S")
-                print("Wrote {}/{} at ({}). Estimated completion time: {}".format(
-                        line_count, 
-                        file_length,
-                        datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-                        completion_str), flush=True)
-                t_last = time.time()
+                # Write an interim report
+                if (line_count % report_size) ==0:
+                    est_completion_time = ((time.time() - t0) / line_count) * (min(file_length, test_line_limit) - line_count)
+                    completion_str = (datetime.datetime.now() + datetime.timedelta(seconds=est_completion_time)).strftime("%Y-%m-%d %H:%M:%S")
+                    print("Wrote {}/{} at ({}). Estimated completion time: {}".format(
+                            line_count, 
+                            file_length,
+                            datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                            completion_str), flush=True)
+                    t_last = time.time()
 
-            # Write a chunk to the database            
-            if (line_count % chunk_size) == 0:
-                write_to_db(data, db_config, db_fields)
-                data = []
+                # Write a chunk to the database            
+                if (line_count % chunk_size) == 0:
+                    write_to_db(data, db_config, db_fields)
+                    data = []
 
-            # Break if we have reached test_line_limit
-            if i > test_line_limit:
-                break
+                # Break if we have reached test_line_limit
+                if i > test_line_limit:
+                    break
+        except Exception as ex:
+            print("Encountered exception '{}' at line_count = {}".format(ex, line_count))
+            print("Carrying on regardless")    
 
     # Final write to database
     write_to_db(data, db_config, db_fields)
