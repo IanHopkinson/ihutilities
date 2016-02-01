@@ -26,31 +26,37 @@ def survey_csv(file_path, line_limit=1000):
 
     with open(file_path, encoding='utf-8-sig') as f:
         rows = csv.DictReader(f)
-        for i, row in enumerate(rows):
-            line_count += 1
-            for field in headers:
-                if len(row[field]) == 0:
-                    empty_count[field] += 1
-            if i > line_limit:
-                break
+        try:
+            for i, row in enumerate(rows):
+                line_count += 1
+                for field in headers:
+                    if len(row[field]) == 0:
+                        empty_count[field] += 1
+                if i > line_limit:
+                    break
 
-            if (line_count % report_size) == 0:
-                    print("\nSurvey interim results")
-                    print("==============")
-                    t1 = time.time()
-                    elapsed = t1 - t0
-                    print_report(file_path, elapsed, line_limit, line_count, headers, empty_count)               
+                if (line_count % report_size) == 0:
+                        print("\nSurvey interim results")
+                        print("==============")
+                        t1 = time.time()
+                        elapsed = t1 - t0
+                        print_report(file_path, elapsed, line_limit, line_count, headers, empty_count)
+        except Exception as ex:
+            print("Encountered exception '{}' at line_count = {}".format(ex, line_count))
+            print("Carrying on regardless")
+
     print("\nSurvey final results")
     print("==============")
     t1 = time.time()
     elapsed = t1 - t0
+    line_count = line_count - 2
     print_report(file_path, elapsed, line_limit, line_count, headers, empty_count)
 
 def print_report(file_path, elapsed, line_limit, line_count, headers, empty_count):
 
     print("\nFile path: {}".format(file_path), flush=True)
     print("Time to survey: {0:.2f} seconds".format(elapsed), flush=True)
-    if line_limit == float("inf"):
+    if line_count <= line_limit:
         print("Number of lines: {}".format(line_count), flush=True)
     else:
         print("Line limit set to: {}".format(line_limit), flush=True)
