@@ -121,6 +121,9 @@ def write_to_db(data, db_config, db_fields, table="property_data"):
 
     Raises:
 
+    Comments:
+        If data is prepared as a dictionary then it can be converted using:
+        >>> ([x for x in new_row.values()])
     Usage:
         >>> db_fields = OrderedDict([
               ("UPRN","INTEGER PRIMARY KEY"),
