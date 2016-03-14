@@ -167,10 +167,14 @@ def make_point(row, data_field_lookup):
     return point
 
 def get_primary_key_from_db_fields(db_fields):
-    primary_key = ""
+    primary_key = None
     for key, value in db_fields.items():
         if value.upper().endswith("PRIMARY KEY"):
             primary_key = key
+
+    if primary_key is None:
+        raise RuntimeError("No primary key found")
+
     return primary_key
 
 def report_input_length(data_path, test_line_limit):
