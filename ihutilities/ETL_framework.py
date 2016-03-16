@@ -14,7 +14,7 @@ from ihutilities.db_utils import configure_db, write_to_db
 # This dictionary has field names and field types. It should be reuseable between the configure_db and 
 # write_to_db functions
 
-def do_etl(db_fields, db_config, data_path, data_field_lookup, mode="production", headers=True, null_equivalents=[""]):
+def do_etl(db_fields, db_config, data_path, data_field_lookup, mode="production", headers=True, null_equivalents=[""], force=False):
     """This function uploads CSV files to a sqlite or MariaDB/MySQL database
 
     Args:
@@ -69,7 +69,7 @@ def do_etl(db_fields, db_config, data_path, data_field_lookup, mode="production"
         print("Mode should be either 'test' or 'production', mode supplied was '{}'".format(mode))
         sys.exit()
 
-    configure_db(db_config, db_fields, force=True)
+    configure_db(db_config, db_fields, force=force)
 
     # Get on with the main business
     t0 = time.time()
@@ -82,6 +82,11 @@ def do_etl(db_fields, db_config, data_path, data_field_lookup, mode="production"
     duplicate_primary_keys = set()
     primary_key = get_primary_key_from_db_fields(db_fields)
 
+    if primary_key == "ID" and data_field_lookup["ID"] is None:
+        autoinc = True
+    else:
+        autoinc = False
+
     with open(data_path, encoding='utf-8-sig') as f:
         if headers:
             rows = csv.DictReader(f)
@@ -90,6 +95,7 @@ def do_etl(db_fields, db_config, data_path, data_field_lookup, mode="production"
         # Loop over input rows
         try:
             for i, row in enumerate(rows):
+                # print("Read row {}".format(i), flush=True)
                 new_row = OrderedDict([(x,None) for x in db_fields.keys()]) 
                 # zip input row into output row
                 for output_key in new_row.keys():
@@ -109,10 +115,10 @@ def do_etl(db_fields, db_config, data_path, data_field_lookup, mode="production"
                                 new_row[output_key] = value
                     # If we have a field called ID as Primary Key and there is no lookup
                     # for it we assume it is a synthetic key and put in an autoincrement value
-                    if primary_key == "ID" and data_field_lookup["ID"] is None:
-                        new_row[primary_key] = i
+                    if autoinc:
+                        new_row[primary_key] = None
                 # Decide whether or not to write new_row
-                if new_row[primary_key] not in primary_key_set:
+                if autoinc or (new_row[primary_key] not in primary_key_set):
                     line_count += 1
                     data.append(([x for x in new_row.values()]))
                     primary_key_set.add(new_row[primary_key])
@@ -142,8 +148,8 @@ def do_etl(db_fields, db_config, data_path, data_field_lookup, mode="production"
                 if i > test_line_limit:
                     break
         except Exception as ex:
-            print("Encountered exception '{}' at line_count = {}".format(ex, line_count))
-            print("Carrying on regardless")    
+            print("Encountered exception '{}' at line_count = {}".format(ex, line_count), flush=True)
+            print("Carrying on regardless", flush=True)    
 
     # Final write to database
     write_to_db(data, db_config, db_fields)
@@ -152,7 +158,7 @@ def do_etl(db_fields, db_config, data_path, data_field_lookup, mode="production"
     t1 = time.time()
     elapsed = t1 - t0
     print("\nWrote a total {} lines to the database in {:.2f}s".format(line_count, elapsed), flush=True)
-    print("Dropped {} lines because they contained duplicate primary key ({})".format(lines_dropped, primary_key))
+    print("Dropped {} lines because they contained duplicate primary key ({})".format(lines_dropped, primary_key), flush=True)
 
 def make_point(row, data_field_lookup):
     try:
@@ -169,7 +175,7 @@ def make_point(row, data_field_lookup):
 def get_primary_key_from_db_fields(db_fields):
     primary_key = None
     for key, value in db_fields.items():
-        if value.upper().endswith("PRIMARY KEY"):
+        if "PRIMARY KEY" in value.upper():
             primary_key = key
 
     if primary_key is None:
@@ -183,8 +189,8 @@ def report_input_length(data_path, test_line_limit):
         rows = csv.reader(f)
         file_length = sum(1 for row in rows) - 1 #Take off the header line
         data_file = os.path.basename(data_path)
-        print("Importing '{}'. {} lines available, limit set to {}".format(data_file, file_length, test_line_limit))
-        print("{:.2f}s taken to count lines\n".format(time.time() - t0))
+        print("Importing '{}'. {} lines available, limit set to {}".format(data_file, file_length, test_line_limit), flush=True)
+        print("{:.2f}s taken to count lines\n".format(time.time() - t0), flush=True)
         return file_length
 
 if __name__ == "__main__":
