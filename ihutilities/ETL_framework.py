@@ -87,11 +87,16 @@ def do_etl(db_fields, db_config, data_path, data_field_lookup, mode="production"
     else:
         autoinc = False
 
+    if data_path.endswith(".pdl"):
+        sep = "|"
+    else:
+        sep = ","
+
     with open(data_path, encoding='utf-8-sig') as f:
         if headers:
-            rows = csv.DictReader(f)
+            rows = csv.DictReader(f, delimiter=sep)
         else:
-            rows = csv.reader(f)
+            rows = csv.reader(f, delimiter=sep)
         # Loop over input rows
         try:
             for i, row in enumerate(rows):
