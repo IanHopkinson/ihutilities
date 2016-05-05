@@ -341,7 +341,7 @@ def _create_tables_db(db_config, db_fields, tables, force):
         table_check_query = "SELECT name FROM sqlite_master WHERE type='table' AND name='{}';"
         DB_CREATE_TAIL = ")"
     elif db_config["db_type"] == "mariadb" or db_config["db_type"] == "mysql":
-        table_check_query = "SELECT table_name as name FROM information_schema.tables WHERE table_name = '{}';"
+        table_check_query = "SELECT table_name as name FROM information_schema.tables WHERE table_schema = '{}'".format(db_config["db_name"]) + " AND table_name = '{}';"
         DB_CREATE_TAIL = ") ENGINE = MyISAM"
 
     conn = db_config["db_conn"]
@@ -354,12 +354,16 @@ def _create_tables_db(db_config, db_fields, tables, force):
             if v in ["POINT", "POLYGON", "LINESTRING"]:
                 logging.debug("Appending NOT NULL to {} in {} to allow spatial indexing in MariaDB/MySQL [_create_tables_db]".format(v, table))
                 DB_CREATE = DB_CREATE + " ".join([k,v]) + " NOT NULL,"
-            else:    
+            else:
                 DB_CREATE = DB_CREATE + " ".join([k,v]) + ","
 
         DB_CREATE = DB_CREATE[0:-1] + DB_CREATE_TAIL
-        if force:
+        if force and db_config["db_type"] == "sqlite":
             cursor.execute('DROP TABLE IF EXISTS {}'.format(table))
+            logging.warning("Force is True, so dropping table {} in database {}".format(table, db_config["db_name"]))
+        elif force and db_config["db_type"] == "mariadb" or db_config["db_type"] == "mysql":
+            cursor.execute('DROP TABLE IF EXISTS `{}`.`{}`;'.format(db_config["db_name"], table))
+            #logging.warning("Drop in mysql/mariadb is not yet supported")
             logging.warning("Force is True, so dropping table {} in database {}".format(table, db_config["db_name"]))
         
         cursor.execute(table_check_query.format(table))
