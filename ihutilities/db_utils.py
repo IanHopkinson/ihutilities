@@ -266,16 +266,20 @@ def read_db(sql_query, db_config):
     # For MariaDB we need to trap this error:
     # mysql.connector.errors.InterfaceError: 2003: Can't connect to MySQL server on '127.0.0.1:3306' 
     # (10055 An operation on a socket could not be performed because the system lacked sufficient buffer space or because a queue was full)
+    # This post explains the problem, we're creating too many ephemeral ports (and not discarding of them properly)
+    # https://blogs.msdn.microsoft.com/sql_protocols/2009/03/09/understanding-the-error-an-operation-on-a-socket-could-not-be-performed-because-the-system-lacked-sufficient-buffer-space-or-because-a-queue-was-full/
+    # At the moment we do this by just adding in a wait
     db_config = _normalise_config(db_config)
-
+    err_wait = 30.0
+    
     try:
         conn = _make_connection(db_config)
         cursor = conn.cursor()
         cursor.execute(sql_query)
     except mysql.connector.Error as err:
         if err.errno == errorcode.CR_CONN_HOST_ERROR:
-            logging.warning("Caught exception '{}'. errno = '{}', waiting 30 seconds and having another go".format(err, err.errno))
-            time.sleep(30)
+            logging.warning("Caught exception '{}'. errno = '{}', waiting {} seconds and having another go".format(err, err.errno, err_wait))
+            time.sleep(err_wait)
             conn = _make_connection(db_config)
             cursor = conn.cursor()
             cursor.execute(sql_query)
@@ -290,6 +294,7 @@ def read_db(sql_query, db_config):
             labelled_row = OrderedDict(zip(colnames, row))
             yield labelled_row
         else:
+            conn.close()
             raise StopIteration
 
 def _normalise_config(db_config):
