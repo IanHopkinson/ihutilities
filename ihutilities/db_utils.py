@@ -252,13 +252,43 @@ def drop_db_tables(file_path, tables):
         conn.execute('DROP TABLE IF EXISTS {}'.format(table))
     conn.close()
 
-def finalise_db(db_config, index_name="idx_postcode", table="property_data", colname="postcode" ):
+def finalise_db(db_config, index_name="idx_postcode", table="property_data", colname="postcode", spatial=False):
+    """
+    This function creates an index in a sqlite or MariaDB/MySQL database
+
+    Args:
+       db_config (str or dict): 
+            For sqlite a file path in a string is sufficient, MariaDB/MySQL require
+            a dictionary and example of which is found in db_config_template
+
+    Kwargs:
+       index_name (str): 
+            name of the index to be created
+       table (str):
+            the table on which the index is to be created
+       colname (str):
+            the column on which the index is to be created
+       spatial (bool):
+            True for a spatial index, false otherwise
+
+    Returns:
+       No return value
+
+    Raises:
+
+    Usage:
+    """
+
     db_config = _normalise_config(db_config)
 
     conn = _make_connection(db_config)
     cursor = conn.cursor()
-    cursor.execute('CREATE INDEX {index_name} on {table}({colname})'
-        .format(index_name=index_name, table=table, colname=colname))
+    if spatial:
+        cursor.execute('CREATE SPATIAL INDEX {index_name} on {table}({colname})'
+            .format(index_name=index_name, table=table, colname=colname))
+    else:
+        cursor.execute('CREATE INDEX {index_name} on {table}({colname})'
+            .format(index_name=index_name, table=table, colname=colname))
     conn.commit()
     #conn.close()
 
@@ -318,15 +348,18 @@ def _make_connection(db_config):
         db_config["db_conn"] = sqlite3.connect(db_config["db_path"])
     elif db_config["db_type"] == "mariadb" or db_config["db_type"] == "mysql":
 
-        if db_config["db_conn"] is None:
-            password = os.environ[db_config["db_pw_environ"]]
-            conn = mysql.connector.connect( user=db_config["db_user"], 
+        #if db_config["db_conn"] is None:
+        password = os.environ[db_config["db_pw_environ"]]
+        conn = mysql.connector.connect( database=db_config["db_name"],
+                                        user=db_config["db_user"], 
                                         password=password,
-                                        host=db_config["db_host"])
+                                        host=db_config["db_host"],
+                                        pool_name=db_config["db_name"],
+                                        pool_size=32)
 
-            db_config["db_conn"] = conn
-        else:
-            conn = db_config["db_conn"]
+        db_config["db_conn"] = conn
+        #else:
+        #    conn = db_config["db_conn"]
 
         # Bit messy, sometimes we make a connection without db existing
         try:
@@ -334,7 +367,6 @@ def _make_connection(db_config):
         except mysql.connector.Error as err:
             if err.errno != errorcode.ER_BAD_DB_ERROR:
                 raise
-
 
     return db_config["db_conn"]
 
