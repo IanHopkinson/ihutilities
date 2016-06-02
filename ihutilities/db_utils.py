@@ -348,18 +348,17 @@ def _make_connection(db_config):
         db_config["db_conn"] = sqlite3.connect(db_config["db_path"])
     elif db_config["db_type"] == "mariadb" or db_config["db_type"] == "mysql":
 
-        #if db_config["db_conn"] is None:
-        password = os.environ[db_config["db_pw_environ"]]
-        conn = mysql.connector.connect( database=db_config["db_name"],
-                                        user=db_config["db_user"], 
-                                        password=password,
-                                        host=db_config["db_host"],
-                                        pool_name=db_config["db_name"],
-                                        pool_size=32)
-
-        db_config["db_conn"] = conn
-        #else:
-        #    conn = db_config["db_conn"]
+        if db_config["db_conn"] is None:
+            password = os.environ[db_config["db_pw_environ"]]
+            conn = mysql.connector.connect( #database=db_config["db_name"],
+                                            user=db_config["db_user"], 
+                                            password=password,
+                                            host=db_config["db_host"])
+                                            #pool_name=db_config["db_name"],
+                                            #pool_size=32)
+            db_config["db_conn"] = conn
+        else:
+            conn = db_config["db_conn"]
 
         # Bit messy, sometimes we make a connection without db existing
         try:
