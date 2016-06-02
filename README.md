@@ -24,8 +24,7 @@
 * sort_dict_by_value
 
 # Issues
-
-* Attempting to write in chunks of more than 1000 lines produces a "force closed connection" error on MariaDB 
+ 
 * report_input_length in ETL_framework can be really slow for a large file
 
 # TODO
