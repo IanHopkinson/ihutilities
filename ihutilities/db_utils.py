@@ -397,7 +397,7 @@ def _create_tables_db(db_config, db_fields, tables, force):
         if force and db_config["db_type"] == "sqlite":
             cursor.execute('DROP TABLE IF EXISTS {}'.format(table))
             logging.warning("Force is True, so dropping table {} in database {}".format(table, db_config["db_name"]))
-        elif force and db_config["db_type"] == "mariadb" or db_config["db_type"] == "mysql":
+        elif force and (db_config["db_type"] == "mariadb" or db_config["db_type"] == "mysql"):
             cursor.execute('DROP TABLE IF EXISTS `{}`.`{}`;'.format(db_config["db_name"], table))
             #logging.warning("Drop in mysql/mariadb is not yet supported")
             logging.warning("Force is True, so dropping table {} in database {}".format(table, db_config["db_name"]))
