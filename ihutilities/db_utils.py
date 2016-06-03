@@ -70,25 +70,9 @@ def configure_db(db_config, db_fields, tables="property_data", force=False):
         conn = _make_connection(db_config)
     # Default behaviour for mysql/mariadb is not to drop database
     elif db_config["db_type"] == "mysql" or db_config["db_type"] == "mariadb":
+        # Make connection now wraps in creation of a new database if it doesn't exist
         conn = _make_connection(db_config)
         cursor = conn.cursor()
-        #cursor.execute("DROP DATABASE IF EXISTS {}".format(db_config["db_name"]))
-        #conn.commit()
-            # This creates the database if it doesn't exist
-        try:
-            conn.database = db_config["db_name"]   
-        except mysql.connector.Error as err:
-            if err.errno == errorcode.ER_BAD_DB_ERROR:
-                try:
-                    cursor.execute(
-                        "CREATE DATABASE {} DEFAULT CHARACTER SET 'utf8'".format(db_config["db_name"]))
-                except mysql.connector.Error as err:
-                    print("Failed creating database: {}".format(err))
-                    exit(1)
-                conn.database = db_config["db_name"]
-            else:
-                print(err)
-                exit(1)
 
     # Create tables, as specified
     _create_tables_db(db_config, db_fields, tables, force)
@@ -344,9 +328,12 @@ def _make_connection(db_config):
     """
     This is a private function responsible for making a connection to the database
     """
+
     if db_config["db_type"] == "sqlite":
         db_config["db_conn"] = sqlite3.connect(db_config["db_path"])
     elif db_config["db_type"] == "mariadb" or db_config["db_type"] == "mysql":
+        if not check_mysql_database_exists(db_config):
+            create_mysql_database(db_config)
 
         if db_config["db_conn"] is None:
             password = os.environ[db_config["db_pw_environ"]]
@@ -368,6 +355,20 @@ def _make_connection(db_config):
                 raise
 
     return db_config["db_conn"]
+
+def create_mysql_database(db_config):
+    password = os.environ[db_config["db_pw_environ"]]
+    conn = mysql.connector.connect(user=db_config["db_user"], 
+                                   password=password,
+                                   host=db_config["db_host"])
+    cursor = conn.cursor()
+    try:
+        cursor.execute(
+            "CREATE DATABASE {} DEFAULT CHARACTER SET 'utf8'".format(db_config["db_name"]))
+    except mysql.connector.Error as err:
+        print("Failed creating database: {}".format(err))
+        exit(1)
+
 
 def check_mysql_database_exists(db_config):
     sql_query = "SELECT SCHEMA_NAME FROM INFORMATION_SCHEMA.SCHEMATA WHERE SCHEMA_NAME = '{}'".format(db_config["db_name"])
