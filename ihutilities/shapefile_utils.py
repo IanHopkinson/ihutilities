@@ -6,6 +6,24 @@ This package contains functions relating to shapefiles
 
 import shapefile
 
+from collections import OrderedDict
+
+# ShapeType lookup from here: https://en.wikipedia.org/wiki/Shapefile
+shapetype_lookup = {0: "Null shape",
+                    1: "Point",
+                    3: "Polyline",
+                    5: "Polygon",
+                    8: "Multipoint",
+                    11: "PointZ",
+                    13: "PolylineZ",
+                    15: "PolygonZ",
+                    18: "MultipointZ",
+                    21: "PointM",
+                    23: "PolylineM",
+                    25: "PolygonM",
+                    28: "MultipointM",
+                    31: "MultiPatch"}
+
 def load_shapefile_data(data_path):
     """This function loads a shapefile into a reader
 
@@ -77,5 +95,47 @@ def make_linestring(shp_points):
 def make_point(shp_point):
     point = "POINT({} {})".format(shp_point[0], shp_point[1])
     return point
+
+def summarise_shapefile(sf):
+    fieldnames = [x[0] for x in sf.fields[1:]]
+
+    shapes = sf.shapes()
+    file_length = len(shapes)
+
+    print("\nShapefile contains {} records".format(file_length), flush=True)
+    print("Fieldnames: {}\n".format(fieldnames), flush=True)
+    print("First 10 records:", flush=True)
+
+    shapetypes = set()
+
+    fieldnames_header = ",".join(fieldnames)
+
+    #print("{} {}".format("number", fieldnames_header))
+    for i, sr in enumerate(sf.iterShapeRecords()):
+
+        # Populate from shape
+        fields = [f for f in dir(sr.shape) if not f.startswith("_")]
+
+        shapetypes.add(sr.shape.shapeType)
+
+        data_dict = OrderedDict(zip(fieldnames, sr.record))
+
+        content_str = ",".join(sr.record)
+        # for field in fields:
+        #     # print(field, getattr(sr.shape, field))
+        #     values = getattr(sr.shape, field)
+        #     if not isinstance(values, int):
+        #         #print(field, values[0:9])
+        #         print("{}. Length = {}".format(field, len(values)))
+        #     else:
+        #         print(field, values, flush=True)
+        print("{}. {}".format(i + 1, content_str))
+        if i >= 9: 
+            break
+
+
+    print("\nShapefile attributes: {}".format(fields), flush=True)
+    shapetypes_str = [shapetype_lookup[s] for s in shapetypes]
+    print("Shapetypes found: {}\n".format(shapetypes_str), flush=True)
 
 
