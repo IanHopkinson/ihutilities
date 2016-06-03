@@ -350,12 +350,12 @@ def _make_connection(db_config):
 
         if db_config["db_conn"] is None:
             password = os.environ[db_config["db_pw_environ"]]
-            conn = mysql.connector.connect( #database=db_config["db_name"],
+            conn = mysql.connector.connect( database=db_config["db_name"],
                                             user=db_config["db_user"], 
                                             password=password,
-                                            host=db_config["db_host"])
-                                            #pool_name=db_config["db_name"],
-                                            #pool_size=32)
+                                            host=db_config["db_host"],
+                                            pool_name=db_config["db_name"],
+                                            pool_size=32)
             db_config["db_conn"] = conn
         else:
             conn = db_config["db_conn"]
@@ -368,6 +368,26 @@ def _make_connection(db_config):
                 raise
 
     return db_config["db_conn"]
+
+def check_mysql_database_exists(db_config):
+    sql_query = "SELECT SCHEMA_NAME FROM INFORMATION_SCHEMA.SCHEMATA WHERE SCHEMA_NAME = '{}'".format(db_config["db_name"])
+    password = os.environ[db_config["db_pw_environ"]]
+    conn = mysql.connector.connect(user=db_config["db_user"], 
+                                   password=password,
+                                   host=db_config["db_host"])
+    cursor = conn.cursor()
+    cursor.execute(sql_query)
+    #conn.commit()
+
+    results = cursor.fetchall()
+    if len(results) == 1:
+        exists = True
+    elif len(results) ==0:
+        exists = False
+    else:
+        raise ValueError("Found multiple databases with the same name")
+
+    return exists
 
 def _create_tables_db(db_config, db_fields, tables, force):
     """

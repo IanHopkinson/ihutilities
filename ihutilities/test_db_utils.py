@@ -13,7 +13,8 @@ from nose.tools import assert_equal
 
 from ihutilities.db_utils import (db_config_template, configure_db, write_to_db,
                                   _make_connection, read_db,
-                                  update_to_db, finalise_db)
+                                  update_to_db, finalise_db,
+                                  check_mysql_database_exists)
 
 class DatabaseUtilitiesTests(unittest.TestCase):
     @classmethod
@@ -285,3 +286,12 @@ class DatabaseUtilitiesTests(unittest.TestCase):
         for i, row in enumerate(read_db(sql_query, db_config)):
             test_data = OrderedDict(zip(self.db_fields.keys(), data[i]))
             assert_equal(row, test_data)
+
+    def test_check_mysql_database_exists(self):
+        db_config = db_config_template.copy()
+        db_config["db_name"] = "djnfsjnf"
+
+        assert_equal(check_mysql_database_exists(db_config), False)
+
+        db_config["db_name"] = "INFORMATION_SCHEMA"
+        assert_equal(check_mysql_database_exists(db_config), True)
