@@ -73,14 +73,22 @@ def make_bbox_polygon(shp_bbox):
     return polygon 
 
 def make_multipolygon(points, parts):
-    bb_str = [str(x) for x in points]
-    bb_polygon = (" ".join([bb_str[0], bb_str[1]]) + "," +
-                  " ".join([bb_str[2], bb_str[1]]) + "," +
-                  " ".join([bb_str[2], bb_str[3]]) + "," +
-                  " ".join([bb_str[0], bb_str[3]]) + "," +
-                  " ".join([bb_str[0], bb_str[1]]))
-    
-    polygon = "POLYGON(({}))".format(bb_polygon)
+    # MULTIPOLYGON(((0 0,10 0,10 10,0 10,0 0)),((5 5,7 5,7 7,5 7, 5 5)))
+    #print(parts, flush=True)
+    #print(points, flush=True)
+
+    polygon = "MULTIPOLYGON((("
+
+    origin = points[0]
+    if len(parts) == 1:
+        for i, point in enumerate(points):
+            polygon = polygon + str(point[0]) + " " + str(point[1]) + ", "
+    else:
+        print(parts, flush=True)
+        print(len(points), flush=True)
+
+
+    polygon = polygon + str(origin[0]) + " " + str(origin[1]) + ")))"
 
     return polygon
 
