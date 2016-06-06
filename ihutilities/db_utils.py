@@ -140,7 +140,7 @@ def write_to_db(data, db_config, db_fields, table="property_data"):
 
     for k in db_fields.keys():
         DB_FIELDS = DB_FIELDS + k + ","
-        if db_fields[k] in ["POINT", "POLYGON", "LINESTRING"]:
+        if db_fields[k] in ["POINT", "POLYGON", "LINESTRING", "MULTIPOLYGON"]:
             DB_PLACEHOLDERS = DB_PLACEHOLDERS + "(GeomFromText(%s)),"
         else:
             DB_PLACEHOLDERS = DB_PLACEHOLDERS + ONE_PLACEHOLDER
@@ -408,7 +408,7 @@ def _create_tables_db(db_config, db_fields, tables, force):
         
         DB_CREATE = DB_CREATE_ROOT
         for k,v in db_fields[table].items():
-            if v in ["POINT", "POLYGON", "LINESTRING"]:
+            if v in ["POINT", "POLYGON", "LINESTRING", "MULTIPOLYGON"]:
                 logging.debug("Appending NOT NULL to {} in {} to allow spatial indexing in MariaDB/MySQL [_create_tables_db]".format(v, table))
                 DB_CREATE = DB_CREATE + " ".join([k,v]) + " NOT NULL,"
             else:
