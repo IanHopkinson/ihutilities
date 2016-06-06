@@ -76,6 +76,8 @@ def make_multipolygon(points, parts):
     # MULTIPOLYGON(((0 0,10 0,10 10,0 10,0 0)),((5 5,7 5,7 7,5 7, 5 5)))
     #print(parts, flush=True)
     #print(points, flush=True)
+    polygon = "MULTIPOLYGON(((0 0,10 0,10 10,0 10,0 0)))"
+    return polygon
 
     polygon = "MULTIPOLYGON((("
 
@@ -83,12 +85,14 @@ def make_multipolygon(points, parts):
     if len(parts) == 1:
         for i, point in enumerate(points):
             polygon = polygon + str(point[0]) + " " + str(point[1]) + ", "
+        polygon = polygon + str(origin[0]) + " " + str(origin[1]) + ")))"
+        print(polygon[:20], flush=True)
     else:
-        print(parts, flush=True)
+        print("{} parts = {}".format(len(parts), parts), flush=True)
         print(len(points), flush=True)
+        polygon = ""
 
-
-    polygon = polygon + str(origin[0]) + " " + str(origin[1]) + ")))"
+    #
 
     return polygon
 
