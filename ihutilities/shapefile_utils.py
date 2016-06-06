@@ -108,7 +108,7 @@ def make_point(shp_point):
     point = "POINT({} {})".format(shp_point[0], shp_point[1])
     return point
 
-def summarise_shapefile(sf):
+def summarise_shapefile(sf, limit=9):
     fieldnames = [x[0] for x in sf.fields[1:]]
 
     shapes = sf.shapes()
@@ -116,7 +116,7 @@ def summarise_shapefile(sf):
 
     print("\nShapefile contains {} records".format(file_length), flush=True)
     print("Fieldnames: {}\n".format(fieldnames), flush=True)
-    print("First 10 records:", flush=True)
+    print("First {} records:".format(limit), flush=True)
 
     shapetypes = set()
 
@@ -142,7 +142,7 @@ def summarise_shapefile(sf):
         #     else:
         #         print(field, values, flush=True)
         print("{}. {}".format(i + 1, content_str))
-        if i >= 9: 
+        if i >= limit: 
             break
 
 
