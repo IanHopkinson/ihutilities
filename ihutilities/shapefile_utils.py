@@ -6,6 +6,8 @@ This package contains functions relating to shapefiles
 
 import shapefile
 
+from matplotlib import pyplot as plt
+
 from collections import OrderedDict
 
 # ShapeType lookup from here: https://en.wikipedia.org/wiki/Shapefile
@@ -147,5 +149,30 @@ def summarise_shapefile(sf, limit=9):
     print("\nShapefile attributes: {}".format(fields), flush=True)
     shapetypes_str = [shapetype_lookup[s] for s in shapetypes]
     print("Shapetypes found: {}\n".format(shapetypes_str), flush=True)
+
+def plot_shapefile(sf):
+    fig = plt.figure(0)
+
+    for i, sr in enumerate(sf.iterShapeRecords()):
+        x = []
+        y = []
+        if len(sr.shape.parts) == 1:
+            for point in sr.shape.points:
+                x.append(point[0])
+                y.append(point[1])
+        #print(sr.shape.points, flush=True)
+            plt.plot(x,y)
+        #if i > 5:
+        #    break
+
+# Quick plot of bounding boxes
+    #for polygon in polygon_list:
+    #    x, y = convert_db_polygon_to_coords(polygon["bounding_box"])
+    #    plt.plot(x, y, 'k')        
+
+    plt.axes().set_aspect('equal', 'datalim')
+    plt.xlabel('eastings')
+    plt.ylabel('northings')
+    plt.show()
 
 
