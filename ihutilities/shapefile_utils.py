@@ -79,23 +79,29 @@ def make_multipolygon(points, parts):
     #print(parts, flush=True)
     #print(points, flush=True)
 
-    polygon = "MULTIPOLYGON((("
+    prefix = "MULTIPOLYGON("
+    suffix = ")"
 
-    origin = points[0]
-    if len(parts) == 1:
+    list_of_polygons = _convert_parts(points, parts)
+
+    polygons = ""
+
+    for points in list_of_polygons:
+        origin = points[0]
+        polygon = "(("
         for i, point in enumerate(points):
-            polygon = polygon + str(round(point[0], 1)) + " " + str(round(point[1], 1)) + ", "
-        polygon = polygon + str(round(origin[0], 1)) + " " + str(round(origin[1], 1)) + ")))"
-        #print(polygon[:100], flush=True)
-    else:
-        #for part in parts:
-        #print("{} parts = {}".format(len(parts), parts), flush=True)
-        #print(len(points), flush=True)
-        polygon = polygon = "MULTIPOLYGON(((0 0,10 0,10 10,0 10,0 0)))"
+            polygon = polygon + str(round(point[0], 0)) + " " + str(round(point[1], 0)) + ", "
+            
+        polygon = polygon + str(round(origin[0], 0)) + " " + str(round(origin[1], 0)) + ")),"
 
-    #
+        polygons = polygons + polygon
+            #print(polygon[:100], flush=True)
+        
+    
+    output_polygon = prefix + polygons[:-1] + suffix
 
-    return polygon
+    # print(output_polygon)
+    return output_polygon
 
 def make_linestring(shp_points):
     linestring = "LineString("
