@@ -88,6 +88,7 @@ def make_multipolygon(points, parts):
         polygon = polygon + str(round(origin[0], 1)) + " " + str(round(origin[1], 1)) + ")))"
         #print(polygon[:100], flush=True)
     else:
+        #for part in parts:
         #print("{} parts = {}".format(len(parts), parts), flush=True)
         #print(len(points), flush=True)
         polygon = polygon = "MULTIPOLYGON(((0 0,10 0,10 10,0 10,0 0)))"
@@ -150,37 +151,30 @@ def summarise_shapefile(sf, limit=9):
     shapetypes_str = [shapetype_lookup[s] for s in shapetypes]
     print("Shapetypes found: {}\n".format(shapetypes_str), flush=True)
 
-def plot_shapefile(sf):
+def plot_shapefile(sf, limit=9):
     fig = plt.figure(0)
 
     for i, sr in enumerate(sf.iterShapeRecords()):
-        x = []
-        y = []
-        if len(sr.shape.parts) == 1:
-            for point in sr.shape.points:
+        if sr.shape.shapeType not in [15]:
+            print("ihutilities.plot_shapefile does not currently handle shapeType {} ({})".format(sr.shape.shapeType, shapetype_lookup[sr.shape.shapeType]), flush=True)
+            break
+
+        list_of_polygons = _convert_parts(sr.shape.points, sr.shape.parts)
+
+        ps = []
+        for polygon in list_of_polygons:        
+            x = []
+            y = []
+            for point in polygon:
                 x.append(point[0])
                 y.append(point[1])
-            plt.plot(x,y)
-        else:
-            ps = []
-            for j in range(len(sr.shape.parts)):
-                start_index = sr.shape.parts[j]
-                try:
-                    end_index = sr.shape.parts[j + 1]
-                except IndexError:
-                    end_index = len(sr.shape.points)
+            if len(ps) == 0:
+                ps = plt.plot(x,y)
+            else:
+                ps = plt.plot(x,y, color=ps[0].get_color())   
 
-                x = []
-                y = []
-                for point in sr.shape.points[start_index: end_index]:
-                    x.append(point[0])
-                    y.append(point[1])
-                if len(ps) == 0:
-                    ps = plt.plot(x,y)
-                else:
-                    ps = plt.plot(x,y, color=ps[0].get_color())   
-        #if i > 5:
-        #    break
+        if i > limit:
+            break
 
 # Quick plot of bounding boxes
     #for polygon in polygon_list:
@@ -192,4 +186,18 @@ def plot_shapefile(sf):
     plt.ylabel('northings')
     plt.show()
 
+def _convert_parts(points, parts):
+    # Takes a points array and a parts array and returns a list of lists of x,y coordinates
+    list_of_parts = []
+    for j in range(len(parts)):
+        start_index = parts[j]
+        try:
+            end_index = parts[j + 1]
+        except IndexError:
+            end_index = len(points)
+        chunk = []
+        for point in points[start_index: end_index]:
+            chunk.append(point)
+        list_of_parts.append(chunk)
 
+    return list_of_parts
