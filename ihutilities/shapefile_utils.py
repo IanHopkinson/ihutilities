@@ -162,6 +162,20 @@ def plot_shapefile(sf):
                 y.append(point[1])
         #print(sr.shape.points, flush=True)
             plt.plot(x,y)
+        else:
+            for j in range(len(sr.shape.parts)):
+                start_index = sr.shape.parts[j]
+                try:
+                    end_index = sr.shape.parts[j + 1]
+                except IndexError:
+                    end_index = len(sr.shape.points)
+
+                x = []
+                y = []
+                for point in sr.shape.points[start_index: end_index]:
+                    x.append(point[0])
+                    y.append(point[1])
+                plt.plot(x,y)   
         #if i > 5:
         #    break
 
