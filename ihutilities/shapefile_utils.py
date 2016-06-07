@@ -62,7 +62,7 @@ def make_bbox_polygon(shp_bbox):
     Usage:
         >>> 
     """
-    bb_str = [str(x) for x in shp_bbox]
+    bb_str = [str(round(x,1)) for x in shp_bbox]
     bb_polygon = (" ".join([bb_str[0], bb_str[1]]) + "," +
                   " ".join([bb_str[2], bb_str[1]]) + "," +
                   " ".join([bb_str[2], bb_str[3]]) + "," +
@@ -76,21 +76,19 @@ def make_multipolygon(points, parts):
     # MULTIPOLYGON(((0 0,10 0,10 10,0 10,0 0)),((5 5,7 5,7 7,5 7, 5 5)))
     #print(parts, flush=True)
     #print(points, flush=True)
-    polygon = "MULTIPOLYGON(((0 0,10 0,10 10,0 10,0 0)))"
-    return polygon
 
     polygon = "MULTIPOLYGON((("
 
     origin = points[0]
     if len(parts) == 1:
         for i, point in enumerate(points):
-            polygon = polygon + str(point[0]) + " " + str(point[1]) + ", "
-        polygon = polygon + str(origin[0]) + " " + str(origin[1]) + ")))"
-        print(polygon[:20], flush=True)
+            polygon = polygon + str(round(point[0], 1)) + " " + str(round(point[1], 1)) + ", "
+        polygon = polygon + str(round(origin[0], 1)) + " " + str(round(origin[1], 1)) + ")))"
+        #print(polygon[:100], flush=True)
     else:
-        print("{} parts = {}".format(len(parts), parts), flush=True)
-        print(len(points), flush=True)
-        polygon = ""
+        #print("{} parts = {}".format(len(parts), parts), flush=True)
+        #print(len(points), flush=True)
+        polygon = polygon = "MULTIPOLYGON(((0 0,10 0,10 10,0 10,0 0)))"
 
     #
 
