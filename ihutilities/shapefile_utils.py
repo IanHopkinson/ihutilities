@@ -160,9 +160,9 @@ def plot_shapefile(sf):
             for point in sr.shape.points:
                 x.append(point[0])
                 y.append(point[1])
-        #print(sr.shape.points, flush=True)
             plt.plot(x,y)
         else:
+            ps = []
             for j in range(len(sr.shape.parts)):
                 start_index = sr.shape.parts[j]
                 try:
@@ -175,7 +175,10 @@ def plot_shapefile(sf):
                 for point in sr.shape.points[start_index: end_index]:
                     x.append(point[0])
                     y.append(point[1])
-                plt.plot(x,y)   
+                if len(ps) == 0:
+                    ps = plt.plot(x,y)
+                else:
+                    ps = plt.plot(x,y, color=ps[0].get_color())   
         #if i > 5:
         #    break
 
