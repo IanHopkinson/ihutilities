@@ -157,8 +157,13 @@ def summarise_shapefile(sf, limit=9):
     shapetypes_str = [shapetype_lookup[s] for s in shapetypes]
     print("Shapetypes found: {}\n".format(shapetypes_str), flush=True)
 
-def plot_shapefile(sf, limit=9, bbox=False, labels=None):
+def plot_shapefile(sf, limit=9, bbox=False, label=None):
     fig = plt.figure(0)
+
+    fieldnames = [x[0] for x in sf.fields[1:]]
+
+    if label is not None:
+        idx_label = fieldnames.index(label)
 
     for i, sr in enumerate(sf.iterShapeRecords()):
         if sr.shape.shapeType not in [15]:
@@ -182,6 +187,16 @@ def plot_shapefile(sf, limit=9, bbox=False, labels=None):
                 ps = plt.plot(x,y)
             else:
                 ps = plt.plot(x,y, color=ps[0].get_color())   
+
+        if label is not None:
+            label_text = sr.record[idx_label]
+            # print(label_text, flush=True)
+            x = (sr.shape.bbox[0] + sr.shape.bbox[2]) / 2
+            y = (sr.shape.bbox[1] + sr.shape.bbox[3]) / 2
+
+            plt.text(x, y, label_text, color=ps[0].get_color(), 
+                                       verticalalignment='center', 
+                                       horizontalalignment='center')
 
         if i > limit:
             break
