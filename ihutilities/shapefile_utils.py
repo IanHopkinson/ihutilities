@@ -86,7 +86,7 @@ def make_multipolygon(points, parts):
 
     polygons = ""
 
-    for points in list_of_polygons:
+    for i, points in enumerate(list_of_polygons):
         origin = points[0]
         polygon = "(("
         for i, point in enumerate(points):
@@ -157,7 +157,7 @@ def summarise_shapefile(sf, limit=9):
     shapetypes_str = [shapetype_lookup[s] for s in shapetypes]
     print("Shapetypes found: {}\n".format(shapetypes_str), flush=True)
 
-def plot_shapefile(sf, limit=9):
+def plot_shapefile(sf, limit=9, bbox=False, labels=None):
     fig = plt.figure(0)
 
     for i, sr in enumerate(sf.iterShapeRecords()):
@@ -165,7 +165,10 @@ def plot_shapefile(sf, limit=9):
             print("ihutilities.plot_shapefile does not currently handle shapeType {} ({})".format(sr.shape.shapeType, shapetype_lookup[sr.shape.shapeType]), flush=True)
             break
 
-        list_of_polygons = _convert_parts(sr.shape.points, sr.shape.parts)
+        if bbox:
+            list_of_polygons = _convert_bbox_to_coords(sr.shape.bbox)
+        else:
+            list_of_polygons = _convert_parts(sr.shape.points, sr.shape.parts)
 
         ps = []
         for polygon in list_of_polygons:        
@@ -174,6 +177,7 @@ def plot_shapefile(sf, limit=9):
             for point in polygon:
                 x.append(point[0])
                 y.append(point[1])
+            # This ensures multipolygons are all plotted the same colour
             if len(ps) == 0:
                 ps = plt.plot(x,y)
             else:
@@ -191,6 +195,15 @@ def plot_shapefile(sf, limit=9):
     plt.xlabel('eastings')
     plt.ylabel('northings')
     plt.show()
+
+def _convert_bbox_to_coords(bb):
+    coords = [[[bb[0], bb[1]], 
+              [bb[2], bb[1]], 
+              [bb[2], bb[3]], 
+              [bb[0], bb[3]], 
+              [bb[0], bb[1]]]]
+
+    return coords
 
 def _convert_parts(points, parts):
     # Takes a points array and a parts array and returns a list of lists of x,y coordinates
