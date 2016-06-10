@@ -10,6 +10,10 @@ from matplotlib import pyplot as plt
 
 from collections import OrderedDict
 
+import math
+
+import logging
+
 # ShapeType lookup from here: https://en.wikipedia.org/wiki/Shapefile
 shapetype_lookup = {0: "Null shape",
                     1: "Point",
@@ -74,7 +78,7 @@ def make_bbox_polygon(shp_bbox):
     polygon = "POLYGON(({}))".format(bb_polygon)
     return polygon 
 
-def make_multipolygon(points, parts):
+def make_multipolygon(points, parts, decimate_threshold=None):
     # MULTIPOLYGON(((0 0,10 0,10 10,0 10,0 0)),((5 5,7 5,7 7,5 7, 5 5)))
     #print(parts, flush=True)
     #print(points, flush=True)
@@ -82,7 +86,7 @@ def make_multipolygon(points, parts):
     prefix = "MULTIPOLYGON("
     suffix = ")"
 
-    list_of_polygons = _convert_parts(points, parts)
+    list_of_polygons = _convert_parts(points, parts, decimate_threshold=decimate_threshold)
 
     polygons = ""
 
@@ -173,7 +177,7 @@ def plot_shapefile(sf, limit=9, bbox=False, label=None):
         if bbox:
             list_of_polygons = _convert_bbox_to_coords(sr.shape.bbox)
         else:
-            list_of_polygons = _convert_parts(sr.shape.points, sr.shape.parts)
+            list_of_polygons = _convert_parts(sr.shape.points, sr.shape.parts, decimate_threshold=10000)
 
         ps = []
         for polygon in list_of_polygons:        
@@ -220,7 +224,7 @@ def _convert_bbox_to_coords(bb):
 
     return coords
 
-def _convert_parts(points, parts):
+def _convert_parts(points, parts, decimate_threshold=None):
     # Takes a points array and a parts array and returns a list of lists of x,y coordinates
     list_of_parts = []
     for j in range(len(parts)):
@@ -230,8 +234,20 @@ def _convert_parts(points, parts):
         except IndexError:
             end_index = len(points)
         chunk = []
-        for point in points[start_index: end_index]:
-            chunk.append(point)
+
+        part_length = end_index - start_index 
+        if decimate_threshold is not None and part_length > decimate_threshold:
+            ratio = math.ceil(part_length / decimate_threshold)
+            print("Part size = {}, exceeds decimate_threshold = {}".format(part_length, decimate_threshold), flush=True)
+            print("Using ratio = {}".format(ratio), flush=True)
+            for i, point in enumerate(points[start_index: end_index]):
+                if i % ratio == 0:
+                    chunk.append(point)
+                # chunk.append(points[end_index - 1])    
+        else:
+            for point in points[start_index: end_index]:
+                chunk.append(point)
+        
         list_of_parts.append(chunk)
 
     return list_of_parts
