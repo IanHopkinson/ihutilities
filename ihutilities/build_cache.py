@@ -42,7 +42,7 @@ session_log_fields = OrderedDict([
 
 logging.basicConfig(level=logging.INFO)
 
-def build_cache(constructors, cache_db, cache_fields, sha, test=True):
+def build_cache(constructors, cache_db, cache_fields, sha, chunk_size=1000, test=True):
     if test:
         cache_db = "test.sqlite"
         print("** test is True therefore cache_db set to {}".format(cache_db))
@@ -76,7 +76,7 @@ def build_cache(constructors, cache_db, cache_fields, sha, test=True):
         t_update0 = time.time()
         print("\nUpdating flatfile db with {}".format(make_row_method.__name__), flush=True)
         # This is where we make the data
-        line_count = updater(id_, key_generator, key_count, make_row_method, cache_db, db_fields, sha)
+        line_count = updater(id_, key_generator, key_count, make_row_method, cache_db, db_fields, sha, chunk_size)
         # 
         total_line_count += line_count
         # Write final report
@@ -95,13 +95,13 @@ def build_cache(constructors, cache_db, cache_fields, sha, test=True):
     elapsed = t1 - t0
     print("\nWrote a total {0} records to {1} in {2:.2f}s".format(total_line_count, os.path.basename(cache_db), elapsed), flush=True)
 
-def updater(id_, key_method, get_key_count, make_row_method, cache_db, db_fields, sha):
+def updater(id_, key_method, get_key_count, make_row_method, cache_db, db_fields, sha, chunk_size):
     # Get a bunch of UPRNs
     key_count = get_key_count()
     # uprn_cursor = get_uprn_cursor(data_source_dictionary[uprn_method])
     print("Found {} keys in {}".format(key_count, key_method.__name__), flush=True)
     # Set loop control variables
-    chunk_size = 1000 #100000 #1000 #100000 for production, 1000 for test
+    # chunk_size = 1000 #100000 #1000 #100000 for production, 1000 for test
     line_count = 0
     chunk_count = 0
     test_limit = float('inf') # 10000 # float('inf')
