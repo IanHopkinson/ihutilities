@@ -14,7 +14,7 @@ from ihutilities.db_utils import configure_db, write_to_db
 # This dictionary has field names and field types. It should be reuseable between the configure_db and 
 # write_to_db functions
 
-def do_etl(db_fields, db_config, data_path, data_field_lookup, mode="production", headers=True, null_equivalents=[""], force=False):
+def do_etl(db_fields, db_config, data_path, data_field_lookup, mode="production", headers=True, null_equivalents=[""], force=False, separator=","):
     """This function uploads CSV files to a sqlite or MariaDB/MySQL database
 
     Args:
@@ -42,6 +42,8 @@ def do_etl(db_fields, db_config, data_path, data_field_lookup, mode="production"
             False indicates no headers, csvreader is used for import and the data_field_lookup lookup is to column numbers 
        null_equivalents (list of strings):
             cell contents which should be considered equivalent of null i.e ["-"]
+       separator (str):
+            a separator for the CSV, default is comma 
 
     Returns:
        No return value
@@ -65,6 +67,13 @@ def do_etl(db_fields, db_config, data_path, data_field_lookup, mode="production"
         report_size = 1000 # 10000
         print("Test mode so file_length is set to test_line_limit of {}".format(test_line_limit), flush=True)
         file_length = test_line_limit
+        # Rename output database if we are in test mode
+        if isinstance(db_config, str):
+            db_config = db_config.replace(".sqlite", "-test.sqlite")
+            print("Renamed output database to {} because we are in test mode".format(db_config), flush=True)
+        else:
+            db_config["db_name"] = db_config["db_name"] + "_test"
+            print("Renamed output database to {} because we are in test mode".format(db_config["db_name"]), flush=True)
     else:
         print("Mode should be either 'test' or 'production', mode supplied was '{}'".format(mode))
         sys.exit()
@@ -87,16 +96,16 @@ def do_etl(db_fields, db_config, data_path, data_field_lookup, mode="production"
     else:
         autoinc = False
 
-    if data_path.endswith(".pdl"):
-        sep = "|"
-    else:
-        sep = ","
+    # if data_path.endswith(".pdl"):
+    #     sep = "|"
+    # else:
+    #     sep = ","
 
     with open(data_path, encoding='utf-8-sig') as f:
         if headers:
-            rows = csv.DictReader(f, delimiter=sep)
+            rows = csv.DictReader(f, delimiter=separator)
         else:
-            rows = csv.reader(f, delimiter=sep)
+            rows = csv.reader(f, delimiter=separator)
         # Loop over input rows
         try:
             for i, row in enumerate(rows):
