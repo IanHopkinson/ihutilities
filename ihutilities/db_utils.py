@@ -267,6 +267,10 @@ def finalise_db(db_config, index_name="idx_postcode", table="property_data", col
 
     conn = _make_connection(db_config)
     cursor = conn.cursor()
+
+    if isinstance(colname, list):
+        colname = ",".join(colname)
+        
     if spatial:
         cursor.execute('CREATE SPATIAL INDEX {index_name} on {table}({colname})'
             .format(index_name=index_name, table=table, colname=colname))
