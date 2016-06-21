@@ -9,10 +9,19 @@ import sys
 import time
 
 from collections import OrderedDict
-from ihutilities.db_utils import configure_db, write_to_db
+from ihutilities import configure_db, write_to_db, update_to_db
 
 # This dictionary has field names and field types. It should be reuseable between the configure_db and 
 # write_to_db functions
+
+metadata_fields = OrderedDict([
+    ("SequenceNumber", "INTEGER PRIMARY KEY"),
+    ("data_path", "TEXT"),
+    ("status", "TEXT"),
+    ("start_time", "TEXT"),
+    ("finish_time", "TEXT"),
+    ("last_write_time", "TEXT")
+    ])
 
 def do_etl(db_fields, db_config, data_path, data_field_lookup, mode="production", headers=True, null_equivalents=[""], force=False, separator=","):
     """This function uploads CSV files to a sqlite or MariaDB/MySQL database
@@ -78,7 +87,12 @@ def do_etl(db_fields, db_config, data_path, data_field_lookup, mode="production"
         print("Mode should be either 'test' or 'production', mode supplied was '{}'".format(mode))
         sys.exit()
 
-    configure_db(db_config, db_fields, force=force)
+    # We're implicitly writing data to "property_data" because we didn't provide a tables argument
+    revised_db_fields = {}
+    revised_db_fields["property_data"] = db_fields
+    revised_db_fields["metadata"] = metadata_fields   
+
+    configure_db(db_config, revised_db_fields, tables = ["property_data", "metadata"], force=force)
 
     # Get on with the main business
     t0 = time.time()
@@ -96,10 +110,11 @@ def do_etl(db_fields, db_config, data_path, data_field_lookup, mode="production"
     else:
         autoinc = False
 
-    # if data_path.endswith(".pdl"):
-    #     sep = "|"
-    # else:
-    #     sep = ","
+    # Write start to metadata table
+    id_ = 0
+    start_time = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    metadata = [(id_, data_path, "Started", start_time, "", "")]
+    write_to_db(metadata, db_config, revised_db_fields["metadata"], table="metadata")
 
     with open(data_path, encoding='utf-8-sig') as f:
         if headers:
@@ -179,6 +194,11 @@ def do_etl(db_fields, db_config, data_path, data_field_lookup, mode="production"
     elapsed = t1 - t0
     print("\nWrote a total {} lines to the database in {:.2f}s".format(line_count, elapsed), flush=True)
     print("Dropped {} lines because they contained duplicate primary key ({})".format(lines_dropped, primary_key), flush=True)
+
+    finish_time = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    metadata = [(id_, data_path, "Complete", start_time, finish_time, finish_time)]
+    update_fields = [x for x in revised_db_fields["metadata"].keys()]
+    update_to_db(metadata, db_config, update_fields, table="metadata", key="SequenceNumber")
 
 def make_point(row, data_field_lookup):
     try:
