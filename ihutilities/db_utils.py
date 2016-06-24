@@ -72,14 +72,14 @@ def configure_db(db_config, db_fields, tables="property_data", force=False):
     elif db_config["db_type"] == "mysql" or db_config["db_type"] == "mariadb":
         # Make connection now wraps in creation of a new database if it doesn't exist
         conn = _make_connection(db_config)
-        cursor = conn.cursor()
+        # cursor = conn.cursor()
 
     # Create tables, as specified
     _create_tables_db(db_config, db_fields, tables, force)
     # Close connection? or return db_config
     
     db_config["db_conn"].commit()
-    #db_config["db_conn"].close()
+    db_config["db_conn"].close()
 
     return db_config
 
@@ -150,7 +150,7 @@ def write_to_db(data, db_config, db_fields, table="property_data"):
     cursor.executemany(INSERT_statement, data)
 
     conn.commit()
-    # conn.close()
+    conn.close()
 
 def update_to_db(data, db_config, db_fields, table="property_data", key="UPRN"):
     """
@@ -228,7 +228,7 @@ def update_to_db(data, db_config, db_fields, table="property_data", key="UPRN"):
             cursor.execute(update_statement, update_data)
 
     conn.commit()
-    #conn.close()
+    conn.close()
 
 def drop_db_tables(file_path, tables):
     conn = sqlite3.connect(file_path)
@@ -278,7 +278,7 @@ def finalise_db(db_config, index_name="idx_postcode", table="property_data", col
         cursor.execute('CREATE INDEX {index_name} on {table}({colname})'
             .format(index_name=index_name, table=table, colname=colname))
     conn.commit()
-    #conn.close()
+    conn.close()
 
 def read_db(sql_query, db_config):
     # For MariaDB we need to trap this error:
@@ -339,18 +339,21 @@ def _make_connection(db_config):
         if not check_mysql_database_exists(db_config):
             create_mysql_database(db_config)
 
-        if db_config["db_conn"] is None:
-            password = os.environ[db_config["db_pw_environ"]]
-            conn = mysql.connector.connect( database=db_config["db_name"],
-                                            user=db_config["db_user"], 
-                                            password=password,
-                                            host=db_config["db_host"],
-                                            pool_name=db_config["db_name"],
-                                            pool_size=32)
-            db_config["db_conn"] = conn
-        else:
-            # print("Returning old connection", flush=True)
-            conn = db_config["db_conn"]
+        # This code much fiddled with, essentially I was trying to do my own connection pooling
+        # on top of the connectors pooling and it didn't work.
+        # I was getting pool exhaustion because I wasn't closing connections, this should now be fixed (fingers crossed)
+        #if db_config["db_conn"] is None or True:
+        password = os.environ[db_config["db_pw_environ"]]
+        conn = mysql.connector.connect( database=db_config["db_name"],
+                                        user=db_config["db_user"], 
+                                        password=password,
+                                        host=db_config["db_host"],
+                                        pool_name=db_config["db_name"],
+                                        pool_size=32)
+        db_config["db_conn"] = conn
+        #else:
+        #    print("Returning old connection", flush=True)
+        #    conn = db_config["db_conn"]
 
         # Bit messy, sometimes we make a connection without db existing
         try:
@@ -359,7 +362,7 @@ def _make_connection(db_config):
             if err.errno != errorcode.ER_BAD_DB_ERROR:
                 raise
 
-    return db_config["db_conn"]
+    return conn #db_config["db_conn"]
 
 def create_mysql_database(db_config):
     password = os.environ[db_config["db_pw_environ"]]
