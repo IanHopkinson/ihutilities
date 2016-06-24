@@ -83,7 +83,7 @@ def configure_db(db_config, db_fields, tables="property_data", force=False):
 
     return db_config
 
-def write_to_db(data, db_config, db_fields, table="property_data"):
+def write_to_db(data, db_config, db_fields, table="property_data", whatever=False):
     """
     This function writes a list of rows to a sqlite or MariaDB/MySQL database
 
@@ -99,6 +99,9 @@ def write_to_db(data, db_config, db_fields, table="property_data"):
     Kwargs:
        table (str): 
             name of table to which we are writing, key to db_fields
+       whatever (bool):
+            If true each item is tried individually and only those accepted are written, list of those 
+            not inserted is returned
 
     Returns:
        No return value
@@ -147,10 +150,24 @@ def write_to_db(data, db_config, db_fields, table="property_data"):
 
     INSERT_statement = DB_FIELDS[0:-1] + DB_PLACEHOLDERS[0:-1] + DB_INSERT_TAIL
 
-    cursor.executemany(INSERT_statement, data)
+    rejected_data = []
+    if whatever:
+        for row in data:
+            try:
+                cursor.execute(INSERT_statement, row)
+            except mysql.connector.errors.IntegrityError:
+                rejected_data.append(row)
+
+    else:
+        try:
+            cursor.executemany(INSERT_statement, data)
+        except mysql.connector.errors.IntegrityError:
+            raise
 
     conn.commit()
     conn.close()
+
+    return rejected_data
 
 def update_to_db(data, db_config, db_fields, table="property_data", key="UPRN"):
     """
