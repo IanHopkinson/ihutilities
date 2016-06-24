@@ -107,6 +107,35 @@ def make_multipolygon(points, parts, decimate_threshold=None):
     # print(output_polygon)
     return output_polygon
 
+def make_polygon(points, parts, decimate_threshold=None):
+    # POLYGON((0 0,10 0,10 10,0 10,0 0),(5 5,7 5,7 7,5 7, 5 5))
+    #print(parts, flush=True)
+    #print(points, flush=True)
+
+    prefix = "POLYGON("
+    suffix = ")"
+
+    list_of_polygons = _convert_parts(points, parts, decimate_threshold=decimate_threshold)
+
+    polygons = ""
+
+    for i, points in enumerate(list_of_polygons):
+        origin = points[0]
+        polygon = "("
+        for i, point in enumerate(points):
+            polygon = polygon + str(round(point[0], 0)) + " " + str(round(point[1], 0)) + ", "
+            
+        polygon = polygon + str(round(origin[0], 0)) + " " + str(round(origin[1], 0)) + "),"
+
+        polygons = polygons + polygon
+            #print(polygon[:100], flush=True)
+        
+    
+    output_polygon = prefix + polygons[:-1] + suffix
+
+    # print(output_polygon)
+    return output_polygon
+
 def make_linestring(shp_points):
     linestring = "LineString("
     for point in shp_points:
@@ -143,7 +172,14 @@ def summarise_shapefile(sf, limit=9):
 
         data_dict = OrderedDict(zip(fieldnames, sr.record))
 
-        content_str = ",".join(sr.record)
+        content = []
+        for item in sr.record:
+            if isinstance(item, str):
+                content.append(item)
+            else:
+                content.append(str(item))
+
+        content_str = ",".join(content)
         # for field in fields:
         #     # print(field, getattr(sr.shape, field))
         #     values = getattr(sr.shape, field)
@@ -170,14 +206,14 @@ def plot_shapefile(sf, limit=9, bbox=False, label=None):
         idx_label = fieldnames.index(label)
 
     for i, sr in enumerate(sf.iterShapeRecords()):
-        if sr.shape.shapeType not in [15]:
+        if sr.shape.shapeType not in [5, 15]:
             print("ihutilities.plot_shapefile does not currently handle shapeType {} ({})".format(sr.shape.shapeType, shapetype_lookup[sr.shape.shapeType]), flush=True)
             break
 
         if bbox:
             list_of_polygons = _convert_bbox_to_coords(sr.shape.bbox)
         else:
-            list_of_polygons = _convert_parts(sr.shape.points, sr.shape.parts, decimate_threshold=10000)
+            list_of_polygons = _convert_parts(sr.shape.points, sr.shape.parts, shapetype=sr.shape.shapeType, decimate_threshold=10000)
 
         ps = []
         for polygon in list_of_polygons:        
@@ -224,8 +260,9 @@ def _convert_bbox_to_coords(bb):
 
     return coords
 
-def _convert_parts(points, parts, decimate_threshold=None):
+def _convert_parts(points, parts, shapetype=15, decimate_threshold=None):
     # Takes a points array and a parts array and returns a list of lists of x,y coordinates
+
     list_of_parts = []
     for j in range(len(parts)):
         start_index = parts[j]
