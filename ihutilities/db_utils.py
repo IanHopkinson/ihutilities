@@ -78,8 +78,8 @@ def configure_db(db_config, db_fields, tables="property_data", force=False):
     _create_tables_db(db_config, db_fields, tables, force)
     # Close connection? or return db_config
     
-    db_config["db_conn"].commit()
-    db_config["db_conn"].close()
+    #db_config["db_conn"].commit()
+    #db_config["db_conn"].close()
 
     return db_config
 
@@ -162,6 +162,7 @@ def write_to_db(data, db_config, db_fields, table="property_data", whatever=Fals
         try:
             cursor.executemany(INSERT_statement, data)
         except mysql.connector.errors.IntegrityError:
+            conn.close()
             raise
 
     conn.commit()
@@ -379,7 +380,7 @@ def _make_connection(db_config):
             if err.errno != errorcode.ER_BAD_DB_ERROR:
                 raise
 
-    return conn #db_config["db_conn"]
+    return db_config["db_conn"]
 
 def create_mysql_database(db_config):
     password = os.environ[db_config["db_pw_environ"]]
@@ -393,6 +394,9 @@ def create_mysql_database(db_config):
     except mysql.connector.Error as err:
         print("Failed creating database: {}".format(err))
         exit(1)
+
+    conn.commit()
+    conn.close()
 
 
 def check_mysql_database_exists(db_config):
@@ -413,6 +417,8 @@ def check_mysql_database_exists(db_config):
     else:
         raise ValueError("Found multiple databases with the same name")
 
+    conn.commit()
+    conn.close()
     return exists
 
 def _create_tables_db(db_config, db_fields, tables, force):
@@ -463,5 +469,6 @@ def _create_tables_db(db_config, db_fields, tables, force):
             logging.warning("Table {} already exists in database {}".format(table, db_config["db_name"]))
 
     db_config["db_conn"].commit()
+    db_config["db_conn"].close()
 
 
