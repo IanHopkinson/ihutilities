@@ -324,14 +324,22 @@ def read_db(sql_query, db_config):
 
     colnames = [x[0] for x in cursor.description]
 
+    #rows = cursor.fetchall()
+    #conn.close()
+
+    # for row in rows:
+    #     if row is not None:
+    #         labelled_row = OrderedDict(zip(colnames, row))
+    #         yield labelled_row
+
     while True:
-        row = cursor.fetchone()
-        if row is not None:
-            labelled_row = OrderedDict(zip(colnames, row))
-            yield labelled_row
-        else:
-            conn.close()
-            raise StopIteration
+       row = cursor.fetchone()
+       if row is not None:
+           labelled_row = OrderedDict(zip(colnames, row))
+           yield labelled_row
+       else:
+           conn.close()
+           raise StopIteration
 
 def _normalise_config(db_config):
     """
@@ -367,7 +375,7 @@ def _make_connection(db_config):
                                         password=password,
                                         host=db_config["db_host"],
                                         pool_name=db_config["db_name"],
-                                        pool_size=32)
+                                        pool_size=10)
         db_config["db_conn"] = conn
         #else:
         #    print("Returning old connection", flush=True)
