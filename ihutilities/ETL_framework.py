@@ -15,7 +15,7 @@ from ihutilities import configure_db, write_to_db, update_to_db
 # write_to_db functions
 
 metadata_fields = OrderedDict([
-    ("SequenceNumber", "INTEGER PRIMARY KEY"),
+    ("SequenceNumber", "INTEGER PRIMARY KEY AUTOINCREMENT"),
     ("data_path", "TEXT"),
     ("status", "TEXT"),
     ("start_time", "TEXT"),
@@ -111,7 +111,7 @@ def do_etl(db_fields, db_config, data_path, data_field_lookup, mode="production"
         autoinc = False
 
     # Write start to metadata table
-    id_ = 0
+    id_ = None
     start_time = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     metadata = [(id_, data_path, "Started", start_time, "", "")]
     write_to_db(metadata, db_config, revised_db_fields["metadata"], table="metadata")

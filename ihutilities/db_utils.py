@@ -447,6 +447,9 @@ def _create_tables_db(db_config, db_fields, tables, force):
         
         DB_CREATE = DB_CREATE_ROOT
         for k,v in db_fields[table].items():
+            if (db_config["db_type"] == "mariadb" or db_config["db_type"] == "mysql") and "AUTOINCREMENT" in v:
+                v = v.replace("AUTOINCREMENT", "AUTO_INCREMENT")
+
             if v in ["POINT", "POLYGON", "LINESTRING", "MULTIPOLYGON"]:
                 logging.debug("Appending NOT NULL to {} in {} to allow spatial indexing in MariaDB/MySQL [_create_tables_db]".format(v, table))
                 DB_CREATE = DB_CREATE + " ".join([k,v]) + " NOT NULL,"
