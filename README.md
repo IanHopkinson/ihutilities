@@ -30,9 +30,8 @@
 # TODO
 
 * Build_cache should allow you to easily calculate total run time
-* Unhelpful error message in do_ETL if we ask for a database in a folder which does not exist
 * Support for "resume" in ETL framework
-* Document functions with a docstring (prepare for Sphinx, even if we don't use it now https://pythonhosted.org/an_example_pypi_project/sphinx.html). Start with configure_db 
+* do_etl metadata table does not update with finish_time and last_write_time
 * read_db should take templated queries (using the appropriate placeholder and data supplied separately)
 * read_db should only allow select statements
 * Extend testing to io_utils

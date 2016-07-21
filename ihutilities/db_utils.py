@@ -51,7 +51,7 @@ def configure_db(db_config, db_fields, tables="property_data", force=False):
         >>> db_filename = "test_config_db.sqlite"
         >>> db_dir = "ihutilities\\fixtures"
         >>> db_file_path = os.path.join(db_dir, db_filename)
-        >>> configure_db(db_file_path, self.db_fields, tables="test")
+        >>> configure_db(db_file_path, db_fields, tables="test")
     """
     # Cunning polymorphism: 
     # If we get a list and string then we convert them to a dictionary and a list
@@ -67,6 +67,11 @@ def configure_db(db_config, db_fields, tables="property_data", force=False):
     if db_config["db_type"] == "sqlite":
         if os.path.isfile(db_config["db_path"]) and force:
             os.remove(db_config["db_path"])
+        # If the directory doesn't exist then create it
+        if not os.path.isdir(os.path.dirname(db_config["db_path"])):
+            logging.warning("Path to requested database ({}) does not exist, creating".format(os.path.dirname(db_config["db_path"])))
+            os.makedirs(os.path.dirname(db_config["db_path"]))
+            
         conn = _make_connection(db_config)
     # Default behaviour for mysql/mariadb is not to drop database
     elif db_config["db_type"] == "mysql" or db_config["db_type"] == "mariadb":
