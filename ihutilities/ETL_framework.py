@@ -23,7 +23,7 @@ metadata_fields = OrderedDict([
     ("last_write_time", "TEXT")
     ])
 
-def do_etl(db_fields, db_config, data_path, data_field_lookup, mode="production", headers=True, null_equivalents=[""], force=False, separator=","):
+def do_etl(db_fields, db_config, data_path, data_field_lookup, mode="production", headers=True, null_equivalents=[""], force=False, separator=",", encoding="utf-8-sig"):
     """This function uploads CSV files to a sqlite or MariaDB/MySQL database
 
     Args:
@@ -63,6 +63,7 @@ def do_etl(db_fields, db_config, data_path, data_field_lookup, mode="production"
 
     """
     print("Starting ETL to database at {}".format(datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")), flush=True)
+    print("Input file is {}".format(data_path))
     # Scan parameters
     if mode == "production":
         test_line_limit = float('inf') # float('inf')
@@ -116,7 +117,7 @@ def do_etl(db_fields, db_config, data_path, data_field_lookup, mode="production"
     metadata = [(id_, data_path, "Started", start_time, "", "")]
     write_to_db(metadata, db_config, revised_db_fields["metadata"], table="metadata")
 
-    with open(data_path, encoding='utf-8-sig') as f:
+    with open(data_path, encoding=encoding) as f:
         if headers:
             rows = csv.DictReader(f, delimiter=separator)
         else:
