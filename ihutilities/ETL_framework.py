@@ -9,7 +9,7 @@ import sys
 import time
 
 from collections import OrderedDict
-from ihutilities import configure_db, write_to_db, update_to_db
+from ihutilities import configure_db, write_to_db, update_to_db, read_db
 
 # This dictionary has field names and field types. It should be reuseable between the configure_db and 
 # write_to_db functions
@@ -197,7 +197,12 @@ def do_etl(db_fields, db_config, data_path, data_field_lookup, mode="production"
     print("Dropped {} lines because they contained duplicate primary key ({})".format(lines_dropped, primary_key), flush=True)
 
     finish_time = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    metadata = [(id_, data_path, "Complete", start_time, finish_time, finish_time)]
+
+    # Now we are autoincrementing the SequenceNumber field, we need to do a read_db to find the value
+    sql_query = "select max(SequenceNumber) as actual_id from metadata;"
+    actual_id = list(read_db(sql_query, db_config))[0]["actual_id"]
+
+    metadata = [(actual_id, data_path, "Complete", start_time, finish_time, finish_time)]
     update_fields = [x for x in revised_db_fields["metadata"].keys()]
     update_to_db(metadata, db_config, update_fields, table="metadata", key="SequenceNumber")
 
