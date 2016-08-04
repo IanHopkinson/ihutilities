@@ -29,9 +29,9 @@
 
 # TODO
 
+* Don't write a Duplicate primary key message, if there were no duplicate primary keys
 * Build_cache should allow you to easily calculate total run time
 * Support for "resume" in ETL framework
-* do_etl metadata table does not update with finish_time and last_write_time
 * read_db should take templated queries (using the appropriate placeholder and data supplied separately)
 * read_db should only allow select statements
 * Extend testing to io_utils
