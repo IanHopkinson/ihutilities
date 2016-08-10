@@ -29,6 +29,9 @@
 
 # TODO
 
+* Print a working message when creating database indices
+* Don't create a sqlite file if read_db doesn't find a database to read
+* Allow write_to_db to take dictionaries!
 * Don't write a Duplicate primary key message, if there were no duplicate primary keys
 * Build_cache should allow you to easily calculate total run time
 * Support for "resume" in ETL framework

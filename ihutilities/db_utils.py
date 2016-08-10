@@ -298,7 +298,7 @@ def finalise_db(db_config, index_name="idx_postcode", table="property_data", col
         cursor.execute('CREATE SPATIAL INDEX {index_name} on {table}({colname})'
             .format(index_name=index_name, table=table, colname=colname))
     else:
-        cursor.execute('CREATE INDEX {index_name} on {table}({colname})'
+        cursor.execute('CREATE INDEX {index_name} on {table}({colname} ASC)'
             .format(index_name=index_name, table=table, colname=colname))
     conn.commit()
     conn.close()
