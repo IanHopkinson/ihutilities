@@ -109,7 +109,7 @@ def updater(id_, key_method, get_key_count, make_row_method, cache_db, db_fields
     line_count_offset = 0
     print("Test_limit set to {}".format(test_limit), flush=True)
 
-    t0 = time.time()
+    
     # Fetch chunk progress
     chunk_skip = get_chunk_count(id_, cache_db)
     print("Skipping {} chunks".format(chunk_skip), flush=True)
@@ -133,6 +133,8 @@ def updater(id_, key_method, get_key_count, make_row_method, cache_db, db_fields
     results = list(read_db(sql_query, cache_db))
     sessid = results[0]["ID"]
     
+    t0 = time.time()
+
     for keys in key_chunks:
     # for uprns in uprn_source(uprn_method, chunk_size): 
         chunk_count += 1
@@ -164,7 +166,7 @@ def updater(id_, key_method, get_key_count, make_row_method, cache_db, db_fields
         time_ = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         update_to_db([(chunk_count, time_, sessid)], cache_db, ["last_chunk", "end_time", "ID"], table="session_log", key="ID")
 
-        est_completion_time = ((time.time() - t0) / line_count) * (min(key_count, test_limit) - (line_count + line_count_offset))
+        est_completion_time = ((time.time() - t0) / line_count) * (key_count - (line_count + line_count_offset))
         completion_str = (datetime.datetime.now() + datetime.timedelta(seconds=est_completion_time)).strftime("%Y-%m-%d %H:%M:%S")
         print("{}: {}/{} at ({}). Estimated completion time: {}".format(
             make_row_method.__name__,
