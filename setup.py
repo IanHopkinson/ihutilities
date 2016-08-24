@@ -27,7 +27,7 @@ conf = dict(
     zip_safe=False,
     install_requires=["pyshp"],
     tests_require=[],
-    scripts=['ihutilities/survey_csv.py'],
+    scripts=['ihutilities/survey_csv.py', 'ihutilities/calculate_file_sha.py'],
     entry_points={}
     )
 
