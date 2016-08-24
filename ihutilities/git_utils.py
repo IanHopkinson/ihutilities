@@ -3,6 +3,7 @@
 from __future__ import unicode_literals
 
 import subprocess
+import os
     
 def git_sha(repo_dir):
     """
@@ -67,4 +68,32 @@ def git_uncommitted_changes(filename, repo_dir):
     if len(out) > 0:
         return True
     else:
-        return False    
+        return False
+
+def git_calculate_file_sha(filepath):
+    """
+    This function returns the full SHA-1 hash of file, it does not require the file to be committed
+
+    Args:
+       filepath (str):
+            A string containing the filepath
+
+    Returns:
+       A string containing the SHA-1 hash of the repo
+    Raises:
+
+    Usage:
+        >>> sha = git_sha(".")
+    """
+
+    cmd = ['git','hash-object',filepath]
+    pr = subprocess.Popen(cmd,                  
+            stdout=subprocess.PIPE, 
+            stderr=subprocess.PIPE, 
+            shell=False)
+    (out, error) = pr.communicate()
+
+    if len(error) > 0:
+        print(error)
+
+    return out.strip().decode("utf-8")

@@ -3,10 +3,12 @@
 from __future__ import unicode_literals
 
 import csv
+import hashlib
 import logging
 import operator
 import os
 import math
+import subprocess
 
 from collections import OrderedDict
 
@@ -50,6 +52,19 @@ def write_dictionary(filename, data, append=True):
         if newfile:
             dict_writer.writeheader()
         dict_writer.writerows(data)
+
+def calculate_file_sha(filepath):
+    file_sha = hashlib.sha1()
+    file_size = os.path.getsize(filepath)
+
+    #This magic should make our sha match the git sha
+    file_sha.update("blob {:d}\0".format(file_size).encode("utf-8"))
+
+    with open(filepath, "rb") as f:
+        for chunk in iter(lambda: f.read(4096), b""):
+            file_sha.update(chunk)
+
+    return file_sha.hexdigest()
 
 def pretty_print_dict(dictionary):
     # print("Feature names: {}\n".format(feature_names))
