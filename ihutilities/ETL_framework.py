@@ -55,7 +55,8 @@ def do_etl(db_fields, db_config, data_path, data_field_lookup, mode="production"
        separator (str):
             a separator for the CSV, default is comma
        force (bool):
-
+            if True then database dropped before ETL, if False then no op if data file has already been uploaded, data appended
+            if the file has not yet been uploaded.
        encoding (str):
             the character encoding for the input file
 
