@@ -71,7 +71,7 @@ def do_etl(db_fields, db_config, data_path, data_field_lookup, mode="production"
     Usage:
 
     """
-    print("Starting ETL to database at {}".format(datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")), flush=True)
+    print("\nStarting ETL to database at {}".format(datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")), flush=True)
     print("Input file is {}".format(data_path))
     # Scan parameters
     if mode == "production":
