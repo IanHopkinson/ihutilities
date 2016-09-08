@@ -3,13 +3,14 @@
 
 import csv
 import datetime
+import logging
 import os
 import sqlite3
 import sys
 import time
 
 from collections import OrderedDict
-from ihutilities import configure_db, write_to_db, update_to_db, read_db, calculate_file_sha
+from ihutilities import configure_db, write_to_db, update_to_db, read_db, calculate_file_sha, _normalise_config
 
 # This dictionary has field names and field types. It should be reuseable between the configure_db and 
 # write_to_db functions
@@ -88,6 +89,18 @@ def do_etl(db_fields, db_config, data_path, data_field_lookup, mode="production"
     else:
         print("Mode should be either 'test' or 'production', mode supplied was '{}'".format(mode))
         sys.exit()
+
+    db_config = _normalise_config(db_config)
+    
+    # If force is false then return if database already exists
+    if db_config["db_type"] == "sqlite":
+        if os.path.isfile(db_config["db_path"]) and not force:
+            print("\nPath to requested database ({}) already exists and force is False, therefore returning. Delete file to allow ETL".format(db_config["db_path"]), flush=True)
+            return db_config, "Already done"
+    elif db_config["db_type"] == "mysql" or db_config["db_type"] == "mariadb":
+        if check_mysql_database_exists(db_config) and not force:
+            print("\nDatabase ({}) already exists and force is False, therefore returning. Drop database to allow ETL".format(db_config["db_name"]), flush=True)
+            return db_config, "Already done"
 
     # We're implicitly writing data to "property_data" because we didn't provide a tables argument
     revised_db_fields = {}
@@ -207,6 +220,8 @@ def do_etl(db_fields, db_config, data_path, data_field_lookup, mode="production"
     metadata = [(actual_id, data_path, datafile_sha,"Complete", start_time, finish_time, finish_time)]
     update_fields = [x for x in revised_db_fields["metadata"].keys()]
     update_to_db(metadata, db_config, update_fields, table="metadata", key="SequenceNumber")
+
+    return db_config, "Completed"
 
 def make_point(row, data_field_lookup):
     try:
