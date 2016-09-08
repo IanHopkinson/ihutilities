@@ -46,7 +46,6 @@ def do_etl(db_fields, db_config, data_path, data_field_lookup, mode="production"
        mode (str): 
             "production" or "test". 
             "test" loads 10000 lines to the database in 1000 line chunks.
-            "test" loads 10000 lines to the database in 1000 line chunks. 
        headers (bool): 
             Indicates whether headers are present in the input CSV file
             True indicates headers are present, DictReader is used for import and the data_field_lookup is to field names
@@ -54,10 +53,17 @@ def do_etl(db_fields, db_config, data_path, data_field_lookup, mode="production"
        null_equivalents (list of strings):
             cell contents which should be considered equivalent of null i.e ["-"]
        separator (str):
-            a separator for the CSV, default is comma 
+            a separator for the CSV, default is comma
+       force (bool):
+
+       encoding (str):
+            the character encoding for the input file
 
     Returns:
-       No return value
+       db_config (dict):
+            a db_config structure with, if in test mode this will contain the modified database name/path
+       status (string):
+            "Completed" if the ETL runs to completion, "Already done" if ETL has already been done
 
     Raises:
 
@@ -92,15 +98,13 @@ def do_etl(db_fields, db_config, data_path, data_field_lookup, mode="production"
 
     db_config = _normalise_config(db_config)
     
-    # If force is false then return if database already exists
-    if db_config["db_type"] == "sqlite":
-        if os.path.isfile(db_config["db_path"]) and not force:
-            print("\nPath to requested database ({}) already exists and force is False, therefore returning. Delete file to allow ETL".format(db_config["db_path"]), flush=True)
-            return db_config, "Already done"
-    elif db_config["db_type"] == "mysql" or db_config["db_type"] == "mariadb":
-        if check_mysql_database_exists(db_config) and not force:
-            print("\nDatabase ({}) already exists and force is False, therefore returning. Drop database to allow ETL".format(db_config["db_name"]), flush=True)
-            return db_config, "Already done"
+    # If force is false then return if ETL on this file has already been done
+    datafile_sha = calculate_file_sha(data_path)
+    already_done = check_if_already_done(data_path, db_config, datafile_sha)
+    
+    if already_done and not force:
+        print("Data file has already been uploaded to database, therefore returning. Delete database to allow ETL", flush=True)
+        return db_config, "Already done"
 
     # We're implicitly writing data to "property_data" because we didn't provide a tables argument
     revised_db_fields = {}
@@ -127,7 +131,6 @@ def do_etl(db_fields, db_config, data_path, data_field_lookup, mode="production"
 
     # Write start to metadata table
     id_ = None
-    datafile_sha = calculate_file_sha(data_path)
     start_time = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     metadata = [(id_, data_path, datafile_sha,"Started", start_time, "", "")]
     write_to_db(metadata, db_config, revised_db_fields["metadata"], table="metadata")
@@ -222,6 +225,27 @@ def do_etl(db_fields, db_config, data_path, data_field_lookup, mode="production"
     update_to_db(metadata, db_config, update_fields, table="metadata", key="SequenceNumber")
 
     return db_config, "Completed"
+
+def check_if_already_done(data_path, db_config, datafile_sha):
+    status = False
+    # Check for the existance of the database, return False if they don't exist
+    if db_config["db_type"] == "sqlite":
+        if not os.path.isfile(db_config["db_path"]):
+            return False
+    elif db_config["db_type"] == "mysql" or db_config["db_type"] == "mariadb":
+        if not check_mysql_database_exists(db_config):
+            return False
+
+    # Look for the datafile_sha in the metadata table and if it exists, return True
+    sql_query = "select * from metadata where datafile_sha = '{}'".format(datafile_sha)
+    results = list(read_db(sql_query, db_config))
+
+    if len(results) == 1:
+        return True
+    else:
+        return False
+
+    return status
 
 def make_point(row, data_field_lookup):
     try:
