@@ -21,6 +21,8 @@ db_config_template = {"db_name": "test",
              "db_path": None
             }
 
+logger = logging.getLogger(__name__)
+
 def configure_db(db_config, db_fields, tables="property_data", force=False):
     """This function sets up a sqlite or MariaDB/MySQL database
 
@@ -69,7 +71,7 @@ def configure_db(db_config, db_fields, tables="property_data", force=False):
             os.remove(db_config["db_path"])
         # If the directory doesn't exist then create it
         if not os.path.isdir(os.path.dirname(db_config["db_path"])):
-            logging.warning("Path to requested database ({}) does not exist, creating".format(os.path.dirname(db_config["db_path"])))
+            logger.warning("Path to requested database ({}) does not exist, creating".format(os.path.dirname(db_config["db_path"])))
             os.makedirs(os.path.dirname(db_config["db_path"]))
             
         conn = _make_connection(db_config)
@@ -294,7 +296,7 @@ def finalise_db(db_config, index_name="idx_postcode", table="property_data", col
     if isinstance(colname, list):
         colname = ",".join(colname)
     
-    logging.info("Creating index named '{}' on column(s) '{}'".format(index_name, colname))
+    logger.info("Creating index named '{}' on column(s) '{}'".format(index_name, colname))
     if spatial:
         cursor.execute('CREATE SPATIAL INDEX {index_name} on {table}({colname})'
             .format(index_name=index_name, table=table, colname=colname))
@@ -320,7 +322,7 @@ def read_db(sql_query, db_config):
         cursor.execute(sql_query)
     except mysql.connector.Error as err:
         if err.errno == errorcode.CR_CONN_HOST_ERROR:
-            logging.warning("Caught exception '{}'. errno = '{}', waiting {} seconds and having another go".format(err, err.errno, err_wait))
+            logger.warning("Caught exception '{}'. errno = '{}', waiting {} seconds and having another go".format(err, err.errno, err_wait))
             time.sleep(err_wait)
             conn = _make_connection(db_config)
             cursor = conn.cursor()
@@ -457,7 +459,7 @@ def _create_tables_db(db_config, db_fields, tables, force):
                 v = v.replace("AUTOINCREMENT", "AUTO_INCREMENT")
 
             if v in ["POINT", "POLYGON", "LINESTRING", "MULTIPOLYGON"]:
-                logging.debug("Appending NOT NULL to {} in {} to allow spatial indexing in MariaDB/MySQL [_create_tables_db]".format(v, table))
+                logger.debug("Appending NOT NULL to {} in {} to allow spatial indexing in MariaDB/MySQL [_create_tables_db]".format(v, table))
                 DB_CREATE = DB_CREATE + " ".join([k,v]) + " NOT NULL,"
             else:
                 DB_CREATE = DB_CREATE + " ".join([k,v]) + ","
@@ -465,25 +467,24 @@ def _create_tables_db(db_config, db_fields, tables, force):
         DB_CREATE = DB_CREATE[0:-1] + DB_CREATE_TAIL
         if force and db_config["db_type"] == "sqlite":
             cursor.execute('DROP TABLE IF EXISTS {}'.format(table))
-            logging.warning("Force is True, so dropping table {} in database {}".format(table, db_config["db_name"]))
+            logger.warning("Force is True, so dropping table {} in database {}".format(table, db_config["db_name"]))
         elif force and (db_config["db_type"] == "mariadb" or db_config["db_type"] == "mysql"):
             cursor.execute('DROP TABLE IF EXISTS `{}`.`{}`;'.format(db_config["db_name"], table))
-            #logging.warning("Drop in mysql/mariadb is not yet supported")
-            logging.warning("Force is True, so dropping table {} in database {}".format(table, db_config["db_name"]))
+            logger.warning("Force is True, so dropping table {} in database {}".format(table, db_config["db_name"]))
         
         cursor.execute(table_check_query.format(table))
         result = cursor.fetchall()
-        logging.debug("table_check_query result: {}".format(result))
+        logger.debug("table_check_query result: {}".format(result))
         if len(result) != 0 and result[0][0].lower() == table.lower():
             table_exists = True
         else:
             table_exists = False
 
         if not table_exists:
-            logging.debug("Creating table {} with statement: \n{}".format(table, DB_CREATE))    
+            logger.debug("Creating table {} with statement: \n{}".format(table, DB_CREATE))    
             cursor.execute(DB_CREATE)
         else:
-            logging.warning("Table {} already exists in database {}".format(table, db_config["db_name"]))
+            logger.warning("Table {} already exists in database {}".format(table, db_config["db_name"]))
 
     db_config["db_conn"].commit()
     db_config["db_conn"].close()
