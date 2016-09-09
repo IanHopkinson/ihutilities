@@ -24,7 +24,8 @@ class DatabaseUtilitiesTests(unittest.TestCase):
               ("PropertyID", "INT"),
               ("Addr1", "TEXT"),                   
         ])
-        cls.db_dir = "ihutilities\\fixtures"
+        test_root = os.path.dirname(__file__)
+        cls.db_dir = os.path.join(test_root, "fixtures")
         
         #if os.path.isfile(cls.db_file_path):
         #    os.remove(cls.db_file_path)
