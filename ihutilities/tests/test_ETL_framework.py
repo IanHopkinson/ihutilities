@@ -1,9 +1,10 @@
 #!/usr/bin/env python
 # encoding, utf-8
 
+import os
 import unittest
 
-from ihutilities.ETL_framework import make_point
+from ihutilities.ETL_framework import make_point, report_input_length
 
 class TestETLFramework(unittest.TestCase):
     def test_do_etl(self):
@@ -19,4 +20,8 @@ class TestETLFramework(unittest.TestCase):
         self.assertEqual(point, "POINT(123456.0 654321.0)")
 
     def test_report_input_length(self):
-        pass
+        test_root = os.path.dirname(__file__)
+        test_line_limit = 1000
+        datapath = os.path.join(test_root, "fixtures", "survey_csv.csv")
+        file_length = report_input_length(datapath, test_line_limit)
+        self.assertEqual(file_length, 35)
