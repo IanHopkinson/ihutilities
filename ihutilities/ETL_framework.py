@@ -231,6 +231,7 @@ def do_etl(db_fields, db_config, data_path, data_field_lookup, mode="production"
     return db_config, "Completed"
 
 def check_if_already_done(data_path, db_config, datafile_sha):
+    db_config = _normalise_config(db_config)
     status = False
     # Check for the existance of the database, return False if they don't exist
     if db_config["db_type"] == "sqlite":
