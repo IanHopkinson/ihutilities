@@ -408,7 +408,7 @@ def create_mysql_database(db_config):
         cursor.execute(
             "CREATE DATABASE {} DEFAULT CHARACTER SET 'utf8'".format(db_config["db_name"]))
     except mysql.connector.Error as err:
-        print("Failed creating database: {}".format(err))
+        logger.critical("Failed creating database: {}".format(err))
         exit(1)
 
     conn.commit()
@@ -484,7 +484,10 @@ def _create_tables_db(db_config, db_fields, tables, force):
             logger.debug("Creating table {} with statement: \n{}".format(table, DB_CREATE))    
             cursor.execute(DB_CREATE)
         else:
-            logger.warning("Table {} already exists in database {}".format(table, db_config["db_name"]))
+            if db_config["db_type"] == "sqlite":
+                logger.warning("Table {} already exists in database {}".format(table, os.path.basename(db_config["db_path"])))
+            else:
+                logger.warning("Table {} already exists in database {}".format(table, db_config["db_name"]))
 
     db_config["db_conn"].commit()
     db_config["db_conn"].close()

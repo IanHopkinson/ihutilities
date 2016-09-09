@@ -25,6 +25,8 @@ metadata_fields = OrderedDict([
     ("last_write_time", "TEXT")
     ])
 
+logger = logging.getLogger(__name__)
+
 def do_etl(db_fields, db_config, data_path, data_field_lookup, mode="production", headers=True, null_equivalents=[""], force=False, separator=",", encoding="utf-8-sig"):
     """This function uploads CSV files to a sqlite or MariaDB/MySQL database
 
@@ -71,30 +73,30 @@ def do_etl(db_fields, db_config, data_path, data_field_lookup, mode="production"
     Usage:
 
     """
-    print("\nStarting ETL to database at {}".format(datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")), flush=True)
-    print("Input file is {}".format(data_path))
+    logger.info("Starting ETL to database at {}".format(datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")))
+    logger.info("Input file is {}".format(data_path))
     # Scan parameters
     if mode == "production":
         test_line_limit = float('inf') # float('inf')
         chunk_size = 10000 # 10000
         report_size = 10000 # 10000
-        print("Measuring length of input file...", flush=True)
+        logger.info("Measuring length of input file...")
         file_length = report_input_length(data_path, test_line_limit)   
     elif mode == "test":
         test_line_limit = 10000 # float('inf')
         chunk_size = 1000 # 10000
         report_size = 1000 # 10000
-        print("Test mode so file_length is set to test_line_limit of {}".format(test_line_limit), flush=True)
+        logger.info("Test mode so file_length is set to test_line_limit of {}".format(test_line_limit))
         file_length = test_line_limit
         # Rename output database if we are in test mode
         if isinstance(db_config, str):
             db_config = db_config.replace(".sqlite", "-test.sqlite")
-            print("Renamed output database to {} because we are in test mode".format(db_config), flush=True)
+            logger.info("Renamed output database to {} because we are in test mode".format(db_config))
         else:
             db_config["db_name"] = db_config["db_name"] + "_test"
-            print("Renamed output database to {} because we are in test mode".format(db_config["db_name"]), flush=True)
+            logger.info("Renamed output database to {} because we are in test mode".format(db_config["db_name"]))
     else:
-        print("Mode should be either 'test' or 'production', mode supplied was '{}'".format(mode))
+        logger.critical("Mode should be either 'test' or 'production', mode supplied was '{}'".format(mode))
         sys.exit()
 
     db_config = _normalise_config(db_config)
@@ -104,7 +106,7 @@ def do_etl(db_fields, db_config, data_path, data_field_lookup, mode="production"
     already_done = check_if_already_done(data_path, db_config, datafile_sha)
     
     if already_done and not force:
-        print("Data file has already been uploaded to database, therefore returning. Delete database to allow ETL", flush=True)
+        logger.warning("Data file has already been uploaded to database, therefore returning. Delete database to allow ETL")
         return db_config, "Already done"
 
     # We're implicitly writing data to "property_data" because we didn't provide a tables argument
@@ -182,11 +184,11 @@ def do_etl(db_fields, db_config, data_path, data_field_lookup, mode="production"
                 if (line_count % report_size) ==0:
                     est_completion_time = ((time.time() - t0) / line_count) * (min(file_length, test_line_limit) - line_count)
                     completion_str = (datetime.datetime.now() + datetime.timedelta(seconds=est_completion_time)).strftime("%Y-%m-%d %H:%M:%S")
-                    print("Wrote {}/{} at ({}). Estimated completion time: {}".format(
+                    logger.info("Wrote {}/{} at ({}). Estimated completion time: {}".format(
                             line_count, 
                             file_length,
                             datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-                            completion_str), flush=True)
+                            completion_str))
                     t_last = time.time()
 
                 # Write a chunk to the database            
@@ -198,12 +200,12 @@ def do_etl(db_fields, db_config, data_path, data_field_lookup, mode="production"
                 if i > test_line_limit:
                     break
         except Exception as ex:
-            print("Encountered exception '{}' at line_count = {}".format(ex, line_count), flush=True)
+            logger.warning("Encountered exception '{}' at line_count = {}".format(ex, line_count))
             #print("Row: {}".format(row))
             #for key in row.keys():
             #    print("Key: '{:30}', value: '{:}'".format(key, row[key]))
             # raise
-            print("Carrying on regardless", flush=True)
+            # print("Carrying on regardless", flush=True)
             raise   
 
     # Final write to database
@@ -212,8 +214,9 @@ def do_etl(db_fields, db_config, data_path, data_field_lookup, mode="production"
     # Write a final report
     t1 = time.time()
     elapsed = t1 - t0
-    print("\nWrote a total {} lines to the database in {:.2f}s".format(line_count, elapsed), flush=True)
-    print("Dropped {} lines because they contained duplicate primary key ({})".format(lines_dropped, primary_key), flush=True)
+    logger.info("Wrote a total {} lines to the database in {:.2f}s".format(line_count, elapsed))
+    if lines_dropped > 0:
+        logger.warning("Dropped {} lines because they contained duplicate primary key ({})".format(lines_dropped, primary_key))
 
     finish_time = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
@@ -277,9 +280,6 @@ def report_input_length(data_path, test_line_limit):
         rows = csv.reader(f)
         file_length = sum(1 for row in rows) - 1 #Take off the header line
         data_file = os.path.basename(data_path)
-        print("Importing '{}'. {} lines available, limit set to {}".format(data_file, file_length, test_line_limit), flush=True)
-        print("{:.2f}s taken to count lines\n".format(time.time() - t0), flush=True)
+        logger.info("Importing '{}'. {} lines available, limit set to {}".format(data_file, file_length, test_line_limit))
+        logger.info("{:.2f}s taken to count lines\n".format(time.time() - t0))
         return file_length
-
-if __name__ == "__main__":
-    main()
