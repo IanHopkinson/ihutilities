@@ -10,7 +10,7 @@ import sys
 import time
 
 from collections import OrderedDict
-from ihutilities import configure_db, write_to_db, update_to_db, read_db, calculate_file_sha, _normalise_config
+from ihutilities import configure_db, write_to_db, update_to_db, read_db, calculate_file_sha, _normalise_config, check_mysql_database_exists
 
 # This dictionary has field names and field types. It should be reuseable between the configure_db and 
 # write_to_db functions
@@ -147,28 +147,10 @@ def do_etl(db_fields, db_config, data_path, data_field_lookup, mode="production"
         try:
             for i, row in enumerate(rows):
                 # print("Read row {}".format(i), flush=True)
-                new_row = OrderedDict([(x,None) for x in db_fields.keys()]) 
-                # zip input row into output row
-                for output_key in new_row.keys():
-                    # This inserts blank fields
-                    if data_field_lookup[output_key] is not None:
-                        if not isinstance(data_field_lookup[output_key], list):
-                            value = row[data_field_lookup[output_key]]
-                            if value in null_equivalents:
-                                value = None
-                        # If output_key corresponds to a POINT field we need to process a two element array
-                        if db_fields[output_key] == "POINT":
-                            new_row[output_key] = make_point(row, data_field_lookup[output_key])
-                        # If output_key corresponds to an INTEGER then remove any commas in input
-                        elif db_fields[output_key].lower() == "integer" and value is not None:
-                            new_row[output_key] = int(value.replace(",", ""))
-                        else:
-                            if row[data_field_lookup[output_key]] != "":
-                                new_row[output_key] = value
-                    # If we have a field called ID as Primary Key and there is no lookup
-                    # for it we assume it is a synthetic key and put in an autoincrement value
-                    if autoinc:
-                        new_row[primary_key] = None
+                
+                # Zip the input data into a row for the database
+                new_row =  make_row(row, data_field_lookup, db_fields, null_equivalents, autoinc, primary_key)
+               
                 # Decide whether or not to write new_row
                 if autoinc or (new_row[primary_key] not in primary_key_set):
                     line_count += 1
@@ -229,6 +211,32 @@ def do_etl(db_fields, db_config, data_path, data_field_lookup, mode="production"
     update_to_db(metadata, db_config, update_fields, table="metadata", key="SequenceNumber")
 
     return db_config, "Completed"
+
+def make_row(input_row, data_field_lookup, db_fields, null_equivalents, autoinc, primary_key):
+    new_row = OrderedDict([(x,None) for x in db_fields.keys()])
+     # zip input row into output row
+    for output_key in new_row.keys():
+        # This inserts blank fields
+        if data_field_lookup[output_key] is not None:
+            if not isinstance(data_field_lookup[output_key], list):
+                value = input_row[data_field_lookup[output_key]]
+                if value in null_equivalents:
+                    value = None
+            # If output_key corresponds to a POINT field we need to process a two element array
+            if db_fields[output_key] == "POINT":
+                new_row[output_key] = make_point(input_row, data_field_lookup[output_key])
+            # If output_key corresponds to an INTEGER then remove any commas in input
+            elif db_fields[output_key].lower() == "integer" and value is not None:
+                new_row[output_key] = int(value.replace(",", ""))
+            else:
+                if input_row[data_field_lookup[output_key]] != "":
+                    new_row[output_key] = value
+        # If we have a field called ID as Primary Key and there is no lookup
+        # for it we assume it is a synthetic key and put in an autoincrement value
+        if autoinc:
+            new_row[primary_key] = None
+
+    return new_row
 
 def check_if_already_done(data_path, db_config, datafile_sha):
     db_config = _normalise_config(db_config)
