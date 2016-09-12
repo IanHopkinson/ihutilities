@@ -27,7 +27,33 @@ metadata_fields = OrderedDict([
 
 logger = logging.getLogger(__name__)
 
-def do_etl(db_fields, db_config, data_path, data_field_lookup, mode="production", headers=True, null_equivalents=[""], force=False, separator=",", encoding="utf-8-sig"):
+def make_row(input_row, data_path, data_field_lookup, db_fields, null_equivalents, autoinc, primary_key):
+    new_row = OrderedDict([(x,None) for x in db_fields.keys()])
+     # zip input row into output row
+    for output_key in new_row.keys():
+        # This inserts blank fields
+        if data_field_lookup[output_key] is not None:
+            if not isinstance(data_field_lookup[output_key], list):
+                value = input_row[data_field_lookup[output_key]]
+                if value in null_equivalents:
+                    value = None
+            # If output_key corresponds to a POINT field we need to process a two element array
+            if db_fields[output_key] == "POINT":
+                new_row[output_key] = make_point(input_row, data_field_lookup[output_key])
+            # If output_key corresponds to an INTEGER then remove any commas in input
+            elif db_fields[output_key].lower() == "integer" and value is not None:
+                new_row[output_key] = int(value.replace(",", ""))
+            else:
+                if input_row[data_field_lookup[output_key]] != "":
+                    new_row[output_key] = value
+        # If we have a field called ID as Primary Key and there is no lookup
+        # for it we assume it is a synthetic key and put in an autoincrement value
+        if autoinc:
+            new_row[primary_key] = None
+
+    return new_row
+
+def do_etl(db_fields, db_config, data_path, data_field_lookup, mode="production", headers=True, null_equivalents=[""], force=False, separator=",", encoding="utf-8-sig", rowmaker=make_row):
     """This function uploads CSV files to a sqlite or MariaDB/MySQL database
 
     Args:
@@ -149,7 +175,7 @@ def do_etl(db_fields, db_config, data_path, data_field_lookup, mode="production"
                 # print("Read row {}".format(i), flush=True)
                 
                 # Zip the input data into a row for the database
-                new_row =  make_row(row, data_field_lookup, db_fields, null_equivalents, autoinc, primary_key)
+                new_row =  rowmaker(row, data_path, data_field_lookup, db_fields, null_equivalents, autoinc, primary_key)
                
                 # Decide whether or not to write new_row
                 if autoinc or (new_row[primary_key] not in primary_key_set):
@@ -212,31 +238,7 @@ def do_etl(db_fields, db_config, data_path, data_field_lookup, mode="production"
 
     return db_config, "Completed"
 
-def make_row(input_row, data_field_lookup, db_fields, null_equivalents, autoinc, primary_key):
-    new_row = OrderedDict([(x,None) for x in db_fields.keys()])
-     # zip input row into output row
-    for output_key in new_row.keys():
-        # This inserts blank fields
-        if data_field_lookup[output_key] is not None:
-            if not isinstance(data_field_lookup[output_key], list):
-                value = input_row[data_field_lookup[output_key]]
-                if value in null_equivalents:
-                    value = None
-            # If output_key corresponds to a POINT field we need to process a two element array
-            if db_fields[output_key] == "POINT":
-                new_row[output_key] = make_point(input_row, data_field_lookup[output_key])
-            # If output_key corresponds to an INTEGER then remove any commas in input
-            elif db_fields[output_key].lower() == "integer" and value is not None:
-                new_row[output_key] = int(value.replace(",", ""))
-            else:
-                if input_row[data_field_lookup[output_key]] != "":
-                    new_row[output_key] = value
-        # If we have a field called ID as Primary Key and there is no lookup
-        # for it we assume it is a synthetic key and put in an autoincrement value
-        if autoinc:
-            new_row[primary_key] = None
 
-    return new_row
 
 def check_if_already_done(data_path, db_config, datafile_sha):
     db_config = _normalise_config(db_config)
