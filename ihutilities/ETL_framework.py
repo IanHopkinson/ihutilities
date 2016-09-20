@@ -164,57 +164,53 @@ def do_etl(db_fields, db_config, data_path, data_field_lookup, mode="production"
     metadata = [(id_, data_path, datafile_sha,"Started", start_time, "", "")]
     write_to_db(metadata, db_config, revised_db_fields["metadata"], table="metadata")
 
-    with open(data_path, encoding=encoding) as f:
-        if headers:
-            rows = csv.DictReader(f, delimiter=separator)
-        else:
-            rows = csv.reader(f, delimiter=separator)
+    rows = get_source_generator(data_path, headers, separator, encoding)
         # Loop over input rows
-        try:
-            for i, row in enumerate(rows):
-                # print("Read row {}".format(i), flush=True)
-                
-                # Zip the input data into a row for the database
-                new_row =  rowmaker(row, data_path, data_field_lookup, db_fields, null_equivalents, autoinc, primary_key)
-               
-                # Decide whether or not to write new_row
-                if autoinc or (new_row[primary_key] not in primary_key_set):
-                    line_count += 1
-                    data.append(([x for x in new_row.values()]))
-                    primary_key_set.add(new_row[primary_key])
-                else:
-                    #print("UPRN is a duplicate: {}".format(new_row["UPRN"]))
-                    duplicate_primary_keys.add(new_row[primary_key])
-                    lines_dropped += 1
-                    #print("UPRN = {} has already been seen".format(row[0])) 
+    try:
+        for i, row in enumerate(rows):
+            # print("Read row {}".format(i), flush=True)
+            
+            # Zip the input data into a row for the database
+            new_row =  rowmaker(row, data_path, data_field_lookup, db_fields, null_equivalents, autoinc, primary_key)
+           
+            # Decide whether or not to write new_row
+            if autoinc or (new_row[primary_key] not in primary_key_set):
+                line_count += 1
+                data.append(([x for x in new_row.values()]))
+                primary_key_set.add(new_row[primary_key])
+            else:
+                #print("UPRN is a duplicate: {}".format(new_row["UPRN"]))
+                duplicate_primary_keys.add(new_row[primary_key])
+                lines_dropped += 1
+                #print("UPRN = {} has already been seen".format(row[0])) 
 
-                # Write an interim report
-                if (line_count % report_size) ==0:
-                    est_completion_time = ((time.time() - t0) / line_count) * (min(file_length, test_line_limit) - line_count)
-                    completion_str = (datetime.datetime.now() + datetime.timedelta(seconds=est_completion_time)).strftime("%Y-%m-%d %H:%M:%S")
-                    logger.info("Wrote {}/{} at ({}). Estimated completion time: {}".format(
-                            line_count, 
-                            file_length,
-                            datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-                            completion_str))
-                    t_last = time.time()
+            # Write an interim report
+            if (line_count % report_size) ==0:
+                est_completion_time = ((time.time() - t0) / line_count) * (min(file_length, test_line_limit) - line_count)
+                completion_str = (datetime.datetime.now() + datetime.timedelta(seconds=est_completion_time)).strftime("%Y-%m-%d %H:%M:%S")
+                logger.info("Wrote {}/{} at ({}). Estimated completion time: {}".format(
+                        line_count, 
+                        file_length,
+                        datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                        completion_str))
+                t_last = time.time()
 
-                # Write a chunk to the database            
-                if (line_count % chunk_size) == 0:
-                    write_to_db(data, db_config, db_fields)
-                    data = []
+            # Write a chunk to the database            
+            if (line_count % chunk_size) == 0:
+                write_to_db(data, db_config, db_fields)
+                data = []
 
-                # Break if we have reached test_line_limit
-                if i > test_line_limit:
-                    break
-        except Exception as ex:
-            logger.warning("Encountered exception '{}' at line_count = {}".format(ex, line_count))
-            #print("Row: {}".format(row))
-            #for key in row.keys():
-            #    print("Key: '{:30}', value: '{:}'".format(key, row[key]))
-            # raise
-            # print("Carrying on regardless", flush=True)
-            raise   
+            # Break if we have reached test_line_limit
+            if i > test_line_limit:
+                break
+    except Exception as ex:
+        logger.warning("Encountered exception '{}' at line_count = {}".format(ex, line_count))
+        #print("Row: {}".format(row))
+        #for key in row.keys():
+        #    print("Key: '{:30}', value: '{:}'".format(key, row[key]))
+        # raise
+        # print("Carrying on regardless", flush=True)
+        raise   
 
     # Final write to database
     write_to_db(data, db_config, db_fields)
@@ -238,7 +234,15 @@ def do_etl(db_fields, db_config, data_path, data_field_lookup, mode="production"
 
     return db_config, "Completed"
 
+def get_source_generator(data_path, headers, separator, encoding):
+    with open(data_path, encoding=encoding) as f:
+        if headers:
+            rows = csv.DictReader(f, delimiter=separator)
+        else:
+            rows = csv.reader(f, delimiter=separator)
 
+        for row in rows:
+            yield row
 
 def check_if_already_done(data_path, db_config, datafile_sha):
     db_config = _normalise_config(db_config)
