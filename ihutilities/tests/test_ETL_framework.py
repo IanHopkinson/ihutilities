@@ -6,7 +6,8 @@ import unittest
 
 from ihutilities.ETL_framework import (do_etl, make_point, report_input_length, 
                                        get_primary_key_from_db_fields,
-                                       check_if_already_done)
+                                       check_if_already_done,
+                                       get_source_generator)
 
 from collections import OrderedDict
 
@@ -45,7 +46,7 @@ class TestETLFramework(unittest.TestCase):
 
     def test_report_input_length(self):
         test_line_limit = 1000
-        file_length = report_input_length(self.datapath, test_line_limit)
+        file_length = report_input_length(get_source_generator, test_line_limit, self.datapath, False, ",", "utf-8-sig")
         self.assertEqual(file_length, 35)
 
     def test_get_primary_key_from_db_fields(self):

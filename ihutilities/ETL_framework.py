@@ -126,7 +126,7 @@ def do_etl(db_fields, db_config, data_path, data_field_lookup,
         chunk_size = 10000 # 10000
         report_size = 10000 # 10000
         logger.info("Measuring length of input file...")
-        file_length = report_input_length(data_path, test_line_limit)   
+        file_length = report_input_length(rowsource, test_line_limit, data_path, headers, separator, encoding)   
     elif mode == "test":
         test_line_limit = 10000 # float('inf')
         chunk_size = 1000 # 10000
@@ -298,12 +298,10 @@ def get_primary_key_from_db_fields(db_fields):
 
     return primary_key
 
-def report_input_length(data_path, test_line_limit):
+def report_input_length(rowsource, test_line_limit, data_path, headers, separator, encoding):
     t0 = time.time()
-    with open(data_path, encoding='utf-8-sig') as f:
-        rows = csv.reader(f)
-        file_length = sum(1 for row in rows) - 1 #Take off the header line
-        data_file = os.path.basename(data_path)
-        logger.info("Importing '{}'. {} lines available, limit set to {}".format(data_file, file_length, test_line_limit))
-        logger.info("{:.2f}s taken to count lines\n".format(time.time() - t0))
-        return file_length
+
+    file_length = sum(1 for row in rowsource(data_path, headers, separator, encoding)) - 1 #Take off the header line
+    logger.info("{} lines available, limit set to {}".format(file_length, test_line_limit))
+    logger.info("{:.2f}s taken to count lines\n".format(time.time() - t0))
+    return file_length
