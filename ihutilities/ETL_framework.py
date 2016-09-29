@@ -53,7 +53,20 @@ def make_row(input_row, data_path, data_field_lookup, db_fields, null_equivalent
 
     return new_row
 
-def do_etl(db_fields, db_config, data_path, data_field_lookup, mode="production", headers=True, null_equivalents=[""], force=False, separator=",", encoding="utf-8-sig", rowmaker=make_row):
+def get_source_generator(data_path, headers, separator, encoding):
+    with open(data_path, encoding=encoding) as f:
+        if headers:
+            rows = csv.DictReader(f, delimiter=separator)
+        else:
+            rows = csv.reader(f, delimiter=separator)
+
+        for row in rows:
+            yield row
+
+def do_etl(db_fields, db_config, data_path, data_field_lookup, 
+            mode="production", headers=True, null_equivalents=[""], force=False, 
+            separator=",", encoding="utf-8-sig", 
+            rowmaker=make_row, rowsource=get_source_generator):
     """This function uploads CSV files to a sqlite or MariaDB/MySQL database
 
     Args:
@@ -87,6 +100,12 @@ def do_etl(db_fields, db_config, data_path, data_field_lookup, mode="production"
             if the file has not yet been uploaded.
        encoding (str):
             the character encoding for the input file
+       rowmaker (function):
+            the rowmaker function takes an input data row and converts it to a line for the output database. The function call is:
+            rowmaker(row, data_path, data_field_lookup, db_fields, null_equivalents, autoinc, primary_key)
+       rowsource (function):
+            the rowsource function yields input data rows which are handed off to the rowmaker to make database rows. The function call is:
+            get_source_generator(data_path, headers, separator, encoding)
 
     Returns:
        db_config (dict):
@@ -164,7 +183,7 @@ def do_etl(db_fields, db_config, data_path, data_field_lookup, mode="production"
     metadata = [(id_, data_path, datafile_sha,"Started", start_time, "", "")]
     write_to_db(metadata, db_config, revised_db_fields["metadata"], table="metadata")
 
-    rows = get_source_generator(data_path, headers, separator, encoding)
+    rows = rowsource(data_path, headers, separator, encoding)
         # Loop over input rows
     try:
         for i, row in enumerate(rows):
@@ -233,16 +252,6 @@ def do_etl(db_fields, db_config, data_path, data_field_lookup, mode="production"
     update_to_db(metadata, db_config, update_fields, table="metadata", key="SequenceNumber")
 
     return db_config, "Completed"
-
-def get_source_generator(data_path, headers, separator, encoding):
-    with open(data_path, encoding=encoding) as f:
-        if headers:
-            rows = csv.DictReader(f, delimiter=separator)
-        else:
-            rows = csv.reader(f, delimiter=separator)
-
-        for row in rows:
-            yield row
 
 def check_if_already_done(data_path, db_config, datafile_sha):
     db_config = _normalise_config(db_config)
