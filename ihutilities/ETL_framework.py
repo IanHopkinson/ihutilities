@@ -60,7 +60,11 @@ def get_source_generator(data_path, headers, separator, encoding):
         fh = open(data_path, encoding=encoding)
     elif data_path.endswith(".zip"):
         zf = zipfile.ZipFile(data_path)
-        filename = os.path.basename(data_path).replace(".zip", ".csv")
+
+        for filename in zf.namelist():
+            if filename.startswith(os.path.basename(data_path).replace(".zip", "")):
+                break
+
         cf = zf.open(filename, 'rU')
         fh  = io.TextIOWrapper(io.BytesIO(cf.read()))
 
