@@ -3,11 +3,13 @@
 
 import csv
 import datetime
+import io
 import logging
 import os
 import sqlite3
 import sys
 import time
+import zipfile
 
 from collections import OrderedDict
 from ihutilities import configure_db, write_to_db, update_to_db, read_db, calculate_file_sha, _normalise_config, check_mysql_database_exists
@@ -57,7 +59,10 @@ def get_source_generator(data_path, headers, separator, encoding):
     if data_path.endswith(".csv"):
         fh = open(data_path, encoding=encoding)
     elif data_path.endswith(".zip"):
-        
+        zf = zipfile.ZipFile(data_path)
+        filename = os.path.basename(data_path).replace(".zip", ".csv")
+        cf = zf.open(filename, 'rU')
+        fh  = io.TextIOWrapper(io.BytesIO(cf.read()))
 
     with fh:
         if headers:
@@ -81,7 +86,7 @@ def do_etl(db_fields, db_config, data_path, data_field_lookup,
        db_fields (OrderedDict or dictionary of OrderedDicts):
             A dictionary of fieldnames and types per table. 
        data_path (str):
-            A file path to the input CSV data
+            A file path to the input CSV data or a zip file containing a CSV file with the same name
        data_field_lookup (dict):
             A dictionary linking database fields (as the key) to CSV columns (the value),
             if headers exist the values are column names. If headers do not exist then the 

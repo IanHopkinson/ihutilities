@@ -56,10 +56,14 @@ class TestETLFramework(unittest.TestCase):
         primary_key = get_primary_key_from_db_fields(self.DB_FIELDS)
         self.assertEqual(primary_key, "ID")
 
-    # def test_etl_from_zip(self):
-    #     test_root = os.path.dirname(__file__)
-    #     datapath = os.path.join(test_root, "fixtures", "survey_csv.zip")
-    #     db_config = os.path.join(test_root, "fixtures", "do_etl_from_zip.sqlite")
+    def test_etl_from_zip(self):
+        test_root = os.path.dirname(__file__)
+        datapath = os.path.join(test_root, "fixtures", "survey_csv.zip")
+        db_config = os.path.join(test_root, "fixtures", "do_etl_from_zip.sqlite")
 
-    #     db_config, status = do_etl(self.DB_FIELDS, db_config, datapath, self.data_field_lookup, mode="production", force=True)
+        if os.path.isfile(db_config):
+            os.remove(db_config)
 
+        db_config, status = do_etl(self.DB_FIELDS, db_config, datapath, self.data_field_lookup, mode="production", force=True)
+
+        assert status == "Completed"
