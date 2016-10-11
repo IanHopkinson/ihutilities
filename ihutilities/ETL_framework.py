@@ -54,11 +54,16 @@ def make_row(input_row, data_path, data_field_lookup, db_fields, null_equivalent
     return new_row
 
 def get_source_generator(data_path, headers, separator, encoding):
-    with open(data_path, encoding=encoding) as f:
+    if data_path.endswith(".csv"):
+        fh = open(data_path, encoding=encoding)
+    elif data_path.endswith(".zip"):
+        
+
+    with fh:
         if headers:
-            rows = csv.DictReader(f, delimiter=separator)
+            rows = csv.DictReader(fh, delimiter=separator)
         else:
-            rows = csv.reader(f, delimiter=separator)
+            rows = csv.reader(fh, delimiter=separator)
 
         for row in rows:
             yield row
