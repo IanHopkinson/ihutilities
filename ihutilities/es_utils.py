@@ -101,7 +101,7 @@ def delete_es(es_config):
 
     return status
 
-def write_to_es(data, es_config, es_fields, table="data", whatever=False):
+def write_to_es(data, es_config, es_fields, table=None, whatever=False):
     """
     This function writes a list of rows to an elasticsearch database
 
@@ -149,7 +149,7 @@ def write_to_es(data, es_config, es_fields, table="data", whatever=False):
     for row in data:
         action = {
                 "_index": es_config["db_name"],
-                "_type": table,
+                "_type": list(es_fields["mappings"].keys())[0],
                 #"_id": line_count,
                 "_source": row
             }
