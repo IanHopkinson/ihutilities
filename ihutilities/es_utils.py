@@ -8,6 +8,8 @@ on the db_utils functions in ihutilities
 import elasticsearch
 import logging
 
+from elasticsearch import helpers
+
 # This is compatible with the db_utils config template
 es_config_template = {"db_name": "test",
              "db_user": "root",
@@ -98,92 +100,65 @@ def delete_es(es_config):
     logger.info("Index '{}' deleted with status = {}".format(es_config["db_name"], status))
 
     return status
-# def write_to_db(data, db_config, db_fields, table="property_data", whatever=False):
-#     """
-#     This function writes a list of rows to a sqlite or MariaDB/MySQL database
 
-#     Args:
-#        data (list of lists):
-#             List of lists to write to database.
-#        db_config (str or dict): 
-#             For sqlite a file path in a string is sufficient, MariaDB/MySQL require
-#             a dictionary and example of which is found in db_config_template
-#        db_fields (OrderedDict or dictionary of OrderedDicts):
-#             A dictionary of fieldnames and types per table
+def write_to_es(data, es_config, es_fields, table="data", whatever=False):
+    """
+    This function writes a list of rows to an elasticsearch database
 
-#     Kwargs:
-#        table (str): 
-#             name of table to which we are writing, key to db_fields
-#        whatever (bool):
-#             If true each item is tried individually and only those accepted are written, list of those 
-#             not inserted is returned
+    Args:
+       data (list of dictionaries):
+            List of dictionaries - this differs from write_to_db which takes a list of lists
+       db_config (str or dict): 
+            For sqlite a file path in a string is sufficient, MariaDB/MySQL require
+            a dictionary and example of which is found in db_config_template
+       db_fields (OrderedDict or dictionary of OrderedDicts):
+            A dictionary of fieldnames and types per table
 
-#     Returns:
-#        No return value
+    Kwargs:
+       table (str): 
+            name of table to which we are writing, key to db_fields
+       whatever (bool):
+            If true each item is tried individually and only those accepted are written, list of those 
+            not inserted is returned
 
-#     Raises:
+    Returns:
+       No return value
 
-#     Comments:
-#         If data is prepared as a dictionary then it can be converted using:
-#         >>> ([x for x in new_row.values()])
-#     Usage:
-#         >>> db_fields = OrderedDict([
-#               ("UPRN","INTEGER PRIMARY KEY"),
-#               ("PropertyID", "INT"),
-#               ("Addr1", "TEXT"),                   
-#         ])
-#         >>> db_filename = "test_write_db.sqlite"
-#         >>> db_dir = "ihutilities\\fixtures"
-#         >>> db_file_path = os.path.join(db_dir, db_filename)
-#         >>> data = [(1, 2, "hello"),
-#                     (2, 3, "Fred"),
-#                     (3, 3, "Beans")]
-#         >>> write_to_db(data, db_file_path, db_fields, table="test")
-#     """ 
-#     db_config = _normalise_config(db_config)
-#     if db_config["db_type"] == "sqlite":
-#         ONE_PLACEHOLDER = "?,"
-#     elif db_config["db_type"] == "mariadb" or db_config["db_type"] == "mysql":
-#         ONE_PLACEHOLDER = "%s,"
-   
-#     conn = _make_connection(db_config)
-#     cursor = conn.cursor()
+    Raises:
 
-#     DB_INSERT_ROOT = "INSERT INTO {} (".format(table)
-#     DB_INSERT_MIDDLE = ") VALUES ("
-#     DB_INSERT_TAIL = ")"
+    Comments:
+        If data is prepared as a dictionary then it can be converted using:
+        >>> ([x for x in new_row.values()])
+    Usage:
+        >>> db_fields = OrderedDict([
+              ("UPRN","INTEGER PRIMARY KEY"),
+              ("PropertyID", "INT"),
+              ("Addr1", "TEXT"),                   
+        ])
+        >>> db_filename = "test_write_db.sqlite"
+        >>> db_dir = "ihutilities\\fixtures"
+        >>> db_file_path = os.path.join(db_dir, db_filename)
+        >>> data = [(1, 2, "hello"),
+                    (2, 3, "Fred"),
+                    (3, 3, "Beans")]
+        >>> write_to_db(data, db_file_path, db_fields, table="test")
+    """ 
+    es_config = _normalise_config(es_config)
 
-#     DB_FIELDS = DB_INSERT_ROOT
-#     DB_PLACEHOLDERS = DB_INSERT_MIDDLE
+    actions = []
+    for row in data:
+        action = {
+                "_index": es_config["db_name"],
+                "_type": table,
+                #"_id": line_count,
+                "_source": row
+            }
 
-#     for k in db_fields.keys():
-#         DB_FIELDS = DB_FIELDS + k + ","
-#         if db_fields[k] in ["POINT", "POLYGON", "LINESTRING", "MULTIPOLYGON"]:
-#             DB_PLACEHOLDERS = DB_PLACEHOLDERS + "(GeomFromText(%s)),"
-#         else:
-#             DB_PLACEHOLDERS = DB_PLACEHOLDERS + ONE_PLACEHOLDER
+        actions.append(action)
+        
+    helpers.bulk(es, actions) 
 
-#     INSERT_statement = DB_FIELDS[0:-1] + DB_PLACEHOLDERS[0:-1] + DB_INSERT_TAIL
-
-#     rejected_data = []
-#     if whatever:
-#         for row in data:
-#             try:
-#                 cursor.execute(INSERT_statement, row)
-#             except mysql.connector.errors.IntegrityError:
-#                 rejected_data.append(row)
-
-#     else:
-#         try:
-#             cursor.executemany(INSERT_statement, data)
-#         except mysql.connector.errors.IntegrityError:
-#             conn.close()
-#             raise
-
-#     conn.commit()
-#     conn.close()
-
-#     return rejected_data
+    return
 
 # def update_to_db(data, db_config, db_fields, table="property_data", key="UPRN"):
 #     """

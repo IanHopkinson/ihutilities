@@ -8,7 +8,7 @@ import time
 import elasticsearch
 
 from ihutilities.es_utils import (es_config_template, configure_es, delete_es,
-                                    check_es_database_exists) 
+                                    check_es_database_exists, write_to_es) 
 
                                 # write_to_es,
                                 #   _make_connection, read_es,
@@ -50,7 +50,7 @@ class ElasticsearchUtilitiesTests(unittest.TestCase):
         # Delete "test" index if it exists
         status = delete_es(es_config)
 
-        status = configure_es(es_config, self.es_fields, tables="data", force=True)
+        status = configure_es(es_config, self.es_fields, tables="testrecord", force=True)
 
         # Test es exists
         exists = check_es_database_exists(es_config)
@@ -59,27 +59,31 @@ class ElasticsearchUtilitiesTests(unittest.TestCase):
         # Check details of config
         settings = self.es.indices.get_settings(index='test')
 
-        fields = set(list(settings["test"]["settings"]["index"]["data"]["mappings"]["testrecord"]["properties"].keys()))
+        fields = set(list(settings["test"]["settings"]["index"]["testrecord"]["mappings"]["testrecord"]["properties"].keys()))
 
         self.assertEqual(set(['UPRN', 'Addr1', 'PropertyID']), fields)
 
-    # def test_write_to_db(self):
-    #     db_filename = "test_write_db.sqlite"
-    #     db_file_path = os.path.join(self.db_dir, db_filename)
-    #     if os.path.isfile(db_file_path):
-    #         os.remove(db_file_path)
-    #     data = [(1, 2, "hello"),
-    #             (2, 3, "Fred"),
-    #             (3, 3, "Beans")]
-    #     configure_db(db_file_path, self.db_fields, tables="test")
-    #     write_to_db(data, db_file_path, self.db_fields, table="test")
-    #     with sqlite3.connect(db_file_path) as c:
-    #         cursor = c.cursor()
-    #         cursor.execute("""
-    #             select * from test;
-    #         """)
-    #         rows = cursor.fetchall()
-    #         assert_equal(data, rows)
+    def test_write_to_es(self):
+        # Connect to engine and delete test table if it exists
+        es_config = es_config_template.copy()
+        es_config["db_name"] = "test"
+        
+        # Delete "test" index if it exists
+        status = delete_es(es_config)
+
+        status = configure_es(es_config, self.es_fields, tables="testrecord", force=True)
+
+        data = [{"UPRN": 1, "PropertyID": 4, "Addr1": "Aardvark"},
+                {"UPRN": 2, "PropertyID": 5, "Addr1": "Barbarosa"},
+                {"UPRN": 3, "PropertyID": 6, "Addr1": "Camel"}]
+
+        write_to_es(data, es_config, self.es_fields, table="testrecord")
+
+        # Writes to Elasticsearch are not available immediately
+        time.sleep(2)
+
+        results = self.es.search(index="test", doc_type="testrecord")
+        self.assertEqual(len(results["hits"]["hits"]), 3)
 
     # def test_update_to_db(self):
     #     db_filename = "test_update_db.sqlite"
@@ -105,26 +109,6 @@ class ElasticsearchUtilitiesTests(unittest.TestCase):
     #         expected = ("Some", )
     #         assert_equal(expected, rows[0])
 
-    # def test_update_mariadb(self):
-    #     db_config = db_config_template.copy()
-    #     db_config = configure_db(db_config, self.db_fields, tables="test", force=True)
-    #     data = [(1, 2, "hello"),
-    #             (2, 3, "Fred"),
-    #             (3, 3, "Beans")]
-    #     write_to_db(data, db_config, self.db_fields, table="test")
-
-    #     update_fields = ["Addr1", "UPRN"]
-    #     update = [("Some", 3)] 
-    #     update_to_db(update, db_config, update_fields, table="test", key="UPRN")
-
-    #     conn = _make_connection(db_config)
-    #     cursor = conn.cursor()
-    #     cursor.execute("""
-    #         select Addr1 from test where UPRN = 3 ;
-    #     """)
-    #     rows = cursor.fetchall()
-    #     expected = ("Some", )
-    #     assert_equal(expected, rows[0])
 
     # def test_read_es(self):
     #     db_filename = "test_finalise_db.sqlite"
