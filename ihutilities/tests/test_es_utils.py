@@ -5,6 +5,7 @@ import unittest
 import logging
 import os
 import time
+import elasticsearch
 
 from ihutilities.es_utils import (es_config_template, configure_es, delete_es,
                                     check_es_database_exists) 
@@ -26,22 +27,12 @@ class ElasticsearchUtilitiesTests(unittest.TestCase):
         # ])
 
         cls.es_fields = {
-                "settings": {
-                    #"number_of_shards": 1,
-                    #"number_of_replicas": 0
-                },
                 "mappings": {
-                    "datarecord": { # 
+                    "testrecord": { # 
                         "properties": {
-                            "UPRN": {
-                                "type": "string"
-                            },
-                            "PropertyID": {
-                                "type": "string"
-                            },
-                            "Addr1": {
-                                "type": "string"
-                            }
+                            "UPRN": {"type": "integer"},
+                            "PropertyID": {"type": "integer"},
+                            "Addr1": {"type": "string"}
                         }
                     }
                  }
@@ -49,9 +40,7 @@ class ElasticsearchUtilitiesTests(unittest.TestCase):
 
         test_root = os.path.dirname(__file__)
         cls.db_dir = os.path.join(test_root, "fixtures")
-
-        #if os.path.isfile(cls.db_file_path):
-        #    os.remove(cls.db_file_path)
+        cls.es = elasticsearch.Elasticsearch()
 
     def test_configure_es(self):
         # Connect to engine and delete test table if it exists
@@ -61,14 +50,18 @@ class ElasticsearchUtilitiesTests(unittest.TestCase):
         # Delete "test" index if it exists
         status = delete_es(es_config)
 
-        status = configure_es(es_config, self.es_fields, tables="test", force=True)
+        status = configure_es(es_config, self.es_fields, tables="data", force=True)
 
         # Test es exists
         exists = check_es_database_exists(es_config)
         self.assertEqual(exists, True)
 
         # Check details of config
+        settings = self.es.indices.get_settings(index='test')
 
+        fields = set(list(settings["test"]["settings"]["index"]["data"]["mappings"]["testrecord"]["properties"].keys()))
+
+        self.assertEqual(set(['UPRN', 'Addr1', 'PropertyID']), fields)
 
     # def test_write_to_db(self):
     #     db_filename = "test_write_db.sqlite"
