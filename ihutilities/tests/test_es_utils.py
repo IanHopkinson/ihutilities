@@ -8,7 +8,8 @@ import time
 import elasticsearch
 
 from ihutilities.es_utils import (es_config_template, configure_es, delete_es,
-                                    check_es_database_exists, write_to_es) 
+                                  check_es_database_exists, write_to_es,
+                                  read_es) 
 
                                 # write_to_es,
                                 #   _make_connection, read_es,
@@ -110,22 +111,30 @@ class ElasticsearchUtilitiesTests(unittest.TestCase):
     #         assert_equal(expected, rows[0])
 
 
-    # def test_read_es(self):
-    #     db_filename = "test_finalise_db.sqlite"
-    #     db_config = os.path.join(self.db_dir, db_filename)
-    #     if os.path.isfile(db_config):
-    #         os.remove(db_config)
-    #     data = [(1, 2, "hello"),
-    #             (2, 3, "Fred"),
-    #             (3, 3, "Beans")]
-    #     configure_db(db_config, self.db_fields, tables="test")
-    #     write_to_db(data, db_config, self.db_fields, table="test")
+    def test_read_es(self):
+        es_config = es_config_template.copy()
+        es_config["db_name"] = "test"
+        
+        # Delete "test" index if it exists
+        status = delete_es(es_config)
 
-    #     sql_query = "select * from test;"
+        status = configure_es(es_config, self.es_fields, tables="testrecord", force=True)
 
-    #     for i, row in enumerate(read_db(sql_query, db_config)):
-    #         test_data = OrderedDict(zip(self.db_fields.keys(), data[i]))
-    #         assert_equal(row, test_data)
+        data = [{"UPRN": 1, "PropertyID": 4, "Addr1": "Aardvark"},
+                {"UPRN": 2, "PropertyID": 5, "Addr1": "Barbarosa"},
+                {"UPRN": 3, "PropertyID": 6, "Addr1": "Camel"}]
+
+        write_to_es(data, es_config, self.es_fields, table="testrecord")
+
+        # Writes to Elasticsearch are not available immediately
+        time.sleep(2)
+
+        es_query = {"query" : {"match_all" : {}}}
+        
+        results = list(read_es(es_query, es_config))
+
+        for i, result in enumerate(results):
+            self.assertEqual(result, data[i])
 
     # def test_check_database_exists(self):
     #     db_config = db_config_template.copy()

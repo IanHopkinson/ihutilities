@@ -155,7 +155,7 @@ def write_to_es(data, es_config, es_fields, table="data", whatever=False):
             }
 
         actions.append(action)
-        
+
     helpers.bulk(es, actions) 
 
     return
@@ -244,93 +244,14 @@ def write_to_es(data, es_config, es_fields, table="data", whatever=False):
 #         conn.execute('DROP TABLE IF EXISTS {}'.format(table))
 #     conn.close()
 
-# def finalise_db(db_config, index_name="idx_postcode", table="property_data", colname="postcode", spatial=False):
-#     """
-#     This function creates an index in a sqlite or MariaDB/MySQL database
+def read_es(es_query, es_config):
+    es_config = _normalise_config(es_config)
+    index = es_config["db_name"]
 
-#     Args:
-#        db_config (str or dict): 
-#             For sqlite a file path in a string is sufficient, MariaDB/MySQL require
-#             a dictionary and example of which is found in db_config_template
+    results = es.search(index=index, body=es_query)
 
-#     Kwargs:
-#        index_name (str): 
-#             name of the index to be created
-#        table (str):
-#             the table on which the index is to be created
-#        colname (str):
-#             the column on which the index is to be created
-#        spatial (bool):
-#             True for a spatial index, false otherwise
-
-#     Returns:
-#        No return value
-
-#     Raises:
-
-#     Usage:
-#     """
-
-#     db_config = _normalise_config(db_config)
-
-#     conn = _make_connection(db_config)
-#     cursor = conn.cursor()
-
-#     if isinstance(colname, list):
-#         colname = ",".join(colname)
-    
-#     logger.info("Creating index named '{}' on column(s) '{}'".format(index_name, colname))
-#     if spatial:
-#         cursor.execute('CREATE SPATIAL INDEX {index_name} on {table}({colname})'
-#             .format(index_name=index_name, table=table, colname=colname))
-#     else:
-#         cursor.execute('CREATE INDEX {index_name} on {table}({colname} ASC)'
-#             .format(index_name=index_name, table=table, colname=colname))
-#     conn.commit()
-#     conn.close()
-
-# def read_db(sql_query, db_config):
-#     # For MariaDB we need to trap this error:
-#     # mysql.connector.errors.InterfaceError: 2003: Can't connect to MySQL server on '127.0.0.1:3306' 
-#     # (10055 An operation on a socket could not be performed because the system lacked sufficient buffer space or because a queue was full)
-#     # This post explains the problem, we're creating too many ephemeral ports (and not discarding of them properly)
-#     # https://blogs.msdn.microsoft.com/sql_protocols/2009/03/09/understanding-the-error-an-operation-on-a-socket-could-not-be-performed-because-the-system-lacked-sufficient-buffer-space-or-because-a-queue-was-full/
-#     # At the moment we do this by just adding in a wait
-#     db_config = _normalise_config(db_config)
-#     err_wait = 30.0
-    
-#     try:
-#         conn = _make_connection(db_config)
-#         cursor = conn.cursor()
-#         cursor.execute(sql_query)
-#     except mysql.connector.Error as err:
-#         if err.errno == errorcode.CR_CONN_HOST_ERROR:
-#             logger.warning("Caught exception '{}'. errno = '{}', waiting {} seconds and having another go".format(err, err.errno, err_wait))
-#             time.sleep(err_wait)
-#             conn = _make_connection(db_config)
-#             cursor = conn.cursor()
-#             cursor.execute(sql_query)
-#         else:
-#             raise
-
-#     colnames = [x[0] for x in cursor.description]
-
-#     #rows = cursor.fetchall()
-#     #conn.close()
-
-#     # for row in rows:
-#     #     if row is not None:
-#     #         labelled_row = OrderedDict(zip(colnames, row))
-#     #         yield labelled_row
-
-#     while True:
-#        row = cursor.fetchone()
-#        if row is not None:
-#            labelled_row = OrderedDict(zip(colnames, row))
-#            yield labelled_row
-#        else:
-#            conn.close()
-#            raise StopIteration
+    for result in results["hits"]["hits"]:
+           yield result["_source"]
 
 def _normalise_config(es_config):
     """
@@ -344,43 +265,6 @@ def _normalise_config(es_config):
         es_config["db_type"] = "sqlite"
         es_config["db_path"] = es_path
     return es_config
-
-# def _make_connection(db_config):
-#     """
-#     This is a private function responsible for making a connection to the database
-#     """
-
-#     if db_config["db_type"] == "sqlite":
-#         db_config["db_conn"] = sqlite3.connect(db_config["db_path"])
-#     elif db_config["db_type"] == "mariadb" or db_config["db_type"] == "mysql":
-#         if not check_mysql_database_exists(db_config):
-#             create_mysql_database(db_config)
-
-#         # This code much fiddled with, essentially I was trying to do my own connection pooling
-#         # on top of the connectors pooling and it didn't work.
-#         # I was getting pool exhaustion because I wasn't closing connections, this should now be fixed (fingers crossed)
-#         #if db_config["db_conn"] is None or True:
-#         password = os.environ[db_config["db_pw_environ"]]
-#         conn = mysql.connector.connect( database=db_config["db_name"],
-#                                         user=db_config["db_user"], 
-#                                         password=password,
-#                                         host=db_config["db_host"],
-#                                         pool_name=db_config["db_name"],
-#                                         pool_size=10)
-#         db_config["db_conn"] = conn
-#         #else:
-#         #    print("Returning old connection", flush=True)
-#         #    conn = db_config["db_conn"]
-
-#         # Bit messy, sometimes we make a connection without db existing
-#         try:
-#             conn.database = db_config["db_name"]
-#         except mysql.connector.Error as err:
-#             if err.errno != errorcode.ER_BAD_DB_ERROR:
-#                 raise
-
-#     return db_config["db_conn"]
-
 
 def check_es_database_exists(es_config):
     exists = es.indices.exists(es_config["db_name"])
