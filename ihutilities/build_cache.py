@@ -40,7 +40,7 @@ session_log_fields = OrderedDict([
     ("last_chunk", "FLOAT"),
     ])
 
-logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 def build_cache(constructors, cache_db, cache_fields, sha, chunk_size=1000, test=True):
     if test:

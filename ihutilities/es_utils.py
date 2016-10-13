@@ -118,8 +118,7 @@ def write_to_es(data, es_config, es_fields, table=None, whatever=False):
        table (str): 
             name of table to which we are writing, key to db_fields
        whatever (bool):
-            If true each item is tried individually and only those accepted are written, list of those 
-            not inserted is returned
+            Unused for Elasticsearch
 
     Returns:
        No return value
@@ -127,21 +126,9 @@ def write_to_es(data, es_config, es_fields, table=None, whatever=False):
     Raises:
 
     Comments:
-        If data is prepared as a dictionary then it can be converted using:
-        >>> ([x for x in new_row.values()])
+        
     Usage:
-        >>> db_fields = OrderedDict([
-              ("UPRN","INTEGER PRIMARY KEY"),
-              ("PropertyID", "INT"),
-              ("Addr1", "TEXT"),                   
-        ])
-        >>> db_filename = "test_write_db.sqlite"
-        >>> db_dir = "ihutilities\\fixtures"
-        >>> db_file_path = os.path.join(db_dir, db_filename)
-        >>> data = [(1, 2, "hello"),
-                    (2, 3, "Fred"),
-                    (3, 3, "Beans")]
-        >>> write_to_db(data, db_file_path, db_fields, table="test")
+        >>> 
     """ 
     es_config = _normalise_config(es_config)
 
@@ -149,7 +136,7 @@ def write_to_es(data, es_config, es_fields, table=None, whatever=False):
     for row in data:
         action = {
                 "_index": es_config["db_name"],
-                "_type": list(es_fields["mappings"].keys())[0],
+                "_type": table,
                 #"_id": line_count,
                 "_source": row
             }
