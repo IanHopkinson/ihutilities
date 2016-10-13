@@ -30,7 +30,11 @@ logger = logging.getLogger(__name__)
 # Fields in Elasticsearch = columns in Mysql/Mariadb
 #
 
-es = elasticsearch.Elasticsearch()
+try:
+    es = elasticsearch.Elasticsearch(sniff_on_start=True)
+except:
+    logging.critical("sniff_on_start failed so Elasticsearch likely not running")
+    raise
 
 def configure_es(es_config, es_fields, tables="data", force=False):
     """This function sets up an Elasticsearch database
@@ -60,9 +64,9 @@ def configure_es(es_config, es_fields, tables="data", force=False):
     # If we get a list and string then we convert them to a dictionary and a list
     # for backward compatibility
 
-    if isinstance(tables, str):
-        tables = [tables]
-        es_fields = {tables[0]: es_fields}
+    #if isinstance(tables, str):
+    #    tables = [tables]
+    #    es_fields = {tables[0]: es_fields}
     # Convert old db_path string to db_config dictionary
     es_config = _normalise_config(es_config)
 
@@ -246,11 +250,11 @@ def _normalise_config(es_config):
     the dictionary format.
     """
 
-    if isinstance(es_config, str):
-        es_path = es_config
-        es_config = es_config_template.copy()
-        es_config["db_type"] = "sqlite"
-        es_config["db_path"] = es_path
+    # if isinstance(es_config, str):
+    #     es_path = es_config
+    #     es_config = es_config_template.copy()
+    #     es_config["db_type"] = "sqlite"
+    #     es_config["db_path"] = es_path
     return es_config
 
 def check_es_database_exists(es_config):
@@ -262,7 +266,9 @@ def _create_tables_es(es_config, es_fields, tables, force):
     This is a private function responsible for creating a database table
     """
 
-    status = es.indices.create(index=es_config["db_name"], ignore=400, body=es_fields)
-    logger.info("Created database '{}' with status {}".format(es_config["db_name"], status))
+    status = es.indices.create(index=es_config["db_name"], ignore=400)
+    logger.info("Created index '{}' with status {}".format(es_config["db_name"], status))
+    status = es.indices.put_mapping(index=es_config["db_name"], ignore=400, doc_type=tables, body=es_fields["mappings"])
+    logger.info("Put mapping '{}' on '{}' with status {}".format(es_fields["mappings"], tables, status))
 
     return status

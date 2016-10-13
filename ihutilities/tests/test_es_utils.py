@@ -28,12 +28,19 @@ class ElasticsearchUtilitiesTests(unittest.TestCase):
         # ])
 
         cls.es_fields = {
+                "settings": {
+                "number_of_shards": 1,
+                "mapper": {
+                "dynamic": "strict"
+                }
+                },
                 "mappings": {
-                    "testrecord": { # 
+                    "testrecord": { 
                         "properties": {
                             "UPRN": {"type": "integer"},
                             "PropertyID": {"type": "integer"},
-                            "Addr1": {"type": "string"}
+                            "Addr1": {"type": "string"},
+                            "geocode": {"type": "geo_point"},
                         }
                     }
                  }
@@ -58,11 +65,13 @@ class ElasticsearchUtilitiesTests(unittest.TestCase):
         self.assertEqual(exists, True)
 
         # Check details of config
-        settings = self.es.indices.get_settings(index='test')
+        # settings = self.es.indices.get_settings(index='test')
 
-        fields = set(list(settings["test"]["settings"]["index"]["testrecord"]["mappings"]["testrecord"]["properties"].keys()))
+        mappings = self.es.indices.get_mapping(index='test')
 
-        self.assertEqual(set(['UPRN', 'Addr1', 'PropertyID']), fields)
+        fields = set(list(mappings["test"]["mappings"]["testrecord"]["properties"].keys()))
+
+        self.assertEqual(set(['UPRN', 'Addr1', 'PropertyID', 'geocode']), fields)
 
     def test_write_to_es(self):
         # Connect to engine and delete test table if it exists
@@ -74,9 +83,9 @@ class ElasticsearchUtilitiesTests(unittest.TestCase):
 
         status = configure_es(es_config, self.es_fields, tables="testrecord", force=True)
 
-        data = [{"UPRN": 1, "PropertyID": 4, "Addr1": "Aardvark"},
-                {"UPRN": 2, "PropertyID": 5, "Addr1": "Barbarosa"},
-                {"UPRN": 3, "PropertyID": 6, "Addr1": "Camel"}]
+        data = [{"UPRN": 1, "PropertyID": 4, "Addr1": "Aardvark", "geocode": [53.20710, -2.89310]},
+                {"UPRN": 2, "PropertyID": 5, "Addr1": "Barbarosa", "geocode": [53.30710, -2.89310]},
+                {"UPRN": 3, "PropertyID": 6, "Addr1": "Camel", "geocode": [53.40710, -2.89310]}]
 
         write_to_es(data, es_config, self.es_fields, table="testrecord")
 
@@ -120,21 +129,84 @@ class ElasticsearchUtilitiesTests(unittest.TestCase):
 
         status = configure_es(es_config, self.es_fields, tables="testrecord", force=True)
 
-        data = [{"UPRN": 1, "PropertyID": 4, "Addr1": "Aardvark"},
-                {"UPRN": 2, "PropertyID": 5, "Addr1": "Barbarosa"},
-                {"UPRN": 3, "PropertyID": 6, "Addr1": "Camel"}]
-
+        data = [{"UPRN": 1, "PropertyID": 4, "Addr1": "Aardvark", "geocode": {"lat": 53.20710, "lon": -2.89310}},
+                {"UPRN": 2, "PropertyID": 5, "Addr1": "Barbarosa", "geocode": {"lat":53.30710, "lon": -2.89310}},
+                {"UPRN": 3, "PropertyID": 6, "Addr1": "Camel", "geocode": {"lat":53.40710, "lon": -2.89310}}]
         write_to_es(data, es_config, self.es_fields, table="testrecord")
 
         # Writes to Elasticsearch are not available immediately
         time.sleep(2)
 
-        es_query = {"query" : {"match_all" : {}}}
+        es_query = {"sort": { "UPRN" : {"order" : "asc"}}}
         
         results = list(read_es(es_query, es_config))
 
         for i, result in enumerate(results):
             self.assertEqual(result, data[i])
+
+    def test_geopoint_query(self):
+        es_config = es_config_template.copy()
+        es_config["db_name"] = "test"
+        
+        # Delete "test" index if it exists
+        status = delete_es(es_config)
+
+        status = configure_es(es_config, self.es_fields, tables="testrecord", force=True)
+
+        data = [{"UPRN": 1, "PropertyID": 4, "Addr1": "Aardvark", "geocode": {"lat": 63.20710, "lon": -1.89310}},
+                {"UPRN": 2, "PropertyID": 5, "Addr1": "Barbarosa", "geocode": {"lat":53.30710, "lon": -2.89310}},
+                {"UPRN": 3, "PropertyID": 6, "Addr1": "Camel", "geocode": {"lat":63.40710, "lon": -3.89310}}]
+        write_to_es(data, es_config, self.es_fields, table="testrecord")
+
+        # Writes to Elasticsearch are not available immediately
+        time.sleep(2)
+
+        es_query = {"query": {
+                        "bool" : {
+                            "must" : {
+                                "match_all" : {}
+                            },
+                            "filter" : {
+                                "geo_distance" : {
+                                    "distance" : "100m",
+                                    "geocode" : {
+                                        "lat" : 53.30710,
+                                        "lon" : -2.89310
+                                    }
+                                }
+                            }
+                        }
+                        }
+                    }
+        
+        results = list(read_es(es_query, es_config))
+
+        self.assertEqual(results[0], data[1])
+
+    # def test_geopoint_query(self):
+    #     es_config = es_config_template.copy()
+    #     es_config["db_name"] = "test"
+        
+    #     # Delete "test" index if it exists
+    #     status = delete_es(es_config)
+
+    #     status = configure_es(es_config, self.es_fields, tables="testrecord", force=True)
+
+    #     data = [{"UPRN": 1, "PropertyID": 4, "Addr1": "Aardvark", "geocode": {"lat": 53.20710, "lon": -2.89310}},
+    #             {"UPRN": 2, "PropertyID": 5, "Addr1": "Barbarosa", "geocode": {"lat":53.30710, "lon": -2.89310}},
+    #             {"UPRN": 3, "PropertyID": 6, "Addr1": "Camel", "geocode": {"lat":53.40710, "lon": -2.89310}}]
+
+    #     write_to_es(data, es_config, self.es_fields, table="testrecord")
+
+    #     # Writes to Elasticsearch are not available immediately
+    #     time.sleep(2)
+
+    #     es_query = {"query" : {"match_all" : {}}}
+        
+    #     results = list(read_es(es_query, es_config))
+
+    #     for i, result in enumerate(results):
+    #         self.assertEqual(result, data[i])
 
     # def test_check_database_exists(self):
     #     db_config = db_config_template.copy()
