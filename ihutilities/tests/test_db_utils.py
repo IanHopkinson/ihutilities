@@ -10,6 +10,7 @@ from mysql.connector import errorcode
 
 from collections import OrderedDict
 from nose.tools import assert_equal
+import nose
 
 from ihutilities.db_utils import (db_config_template, configure_db, write_to_db,
                                   _make_connection, read_db,
@@ -206,6 +207,50 @@ class DatabaseUtilitiesTests(unittest.TestCase):
             rows = cursor.fetchall()
             expected = ("Some", )
             assert_equal(expected, rows[0])
+
+    def test_update_dictionaries_to_db(self):
+        db_filename = "test_update_db.sqlite"
+        db_file_path = os.path.join(self.db_dir, db_filename)
+        if os.path.isfile(db_file_path):
+            os.remove(db_file_path)
+        data = [(1, 2, "hello"),
+                (2, 3, "Fred"),
+                (3, 3, "Beans")]
+        configure_db(db_file_path, self.db_fields, tables="test", force=True)
+        write_to_db(data, db_file_path, self.db_fields, table="test")
+
+        update_fields = ["Addr1", "UPRN"]
+        update = [OrderedDict([("Addr1", "Some"), ("UPRN", 3)])]
+
+        update_to_db(update, db_file_path, update_fields, table="test", key="UPRN")
+
+        with sqlite3.connect(db_file_path) as c:
+            cursor = c.cursor()
+            cursor.execute("""
+                select Addr1 from test where UPRN = 3 ;
+            """)
+            rows = cursor.fetchall()
+            expected = ("Some", )
+            assert_equal(expected, rows[0])
+
+    def test_update_key_consistency_check(self):
+        db_filename = "test_update_db.sqlite"
+        db_file_path = os.path.join(self.db_dir, db_filename)
+        if os.path.isfile(db_file_path):
+            os.remove(db_file_path)
+        data = [(1, 2, "hello"),
+                (2, 3, "Fred"),
+                (3, 3, "Beans")]
+        configure_db(db_file_path, self.db_fields, tables="test", force=True)
+        write_to_db(data, db_file_path, self.db_fields, table="test")
+        # This set of update_fields is deliberately wrong
+        update_fields = ["PropertyID", "UPRN"]
+        update = [OrderedDict([("Addr1", "Some"), ("UPRN", 3)])]
+
+        try:
+            self.assertRaises(update_to_db(update, db_file_path, update_fields, table="test", key="UPRN"), KeyError)
+        except KeyError:
+            pass
 
     def test_update_mariadb(self):
         db_config = db_config_template.copy()

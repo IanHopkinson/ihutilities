@@ -192,7 +192,7 @@ def update_to_db(data, db_config, db_fields, table="property_data", key="UPRN"):
     This function updates rows in a sqlite or MariaDB/MySQL database
 
     Args:
-       data (list of lists):
+       data (list of lists or dictionaries):
             List of lists of data to update to database, order matches db_fields
        db_config (str or dict): 
             For sqlite a file path in a string is sufficient, MariaDB/MySQL require
@@ -242,8 +242,20 @@ def update_to_db(data, db_config, db_fields, table="property_data", key="UPRN"):
     
     key_index = db_fields.index(key)
 
-    
-    for row in data:
+    # convert a list of dictionary to a list of lists, if required:
+
+    converted_data = []
+    if isinstance(data[0], dict):
+        for row in data:
+            converted_data.append([x for x in row.values()])
+
+        if db_fields != list(data[0].keys()):
+            raise KeyError("db_fields supplied to update_to_db ('{}') do not match fields in update dictionary {}"
+                            .format(db_fields, list(data[0].keys())))
+    else:
+        converted_data = data
+
+    for row in converted_data:
         # print(update_statement, [x for x in row])
         key_val = row[key_index]
         update_fields = []
