@@ -377,11 +377,4 @@ class DatabaseUtilitiesTests(unittest.TestCase):
         db_config["db_name"] = "INFORMATION_SCHEMA"
         assert_equal(check_mysql_database_exists(db_config), True)
 
-    def test_not_implemented_update_es(self):
-        db_config = db_config_template.copy()
-        db_config["db_type"] = "elasticsearch"        
-        try:
-            self.assertRaises(update_to_db(None, db_config, None, table="test", key="UPRN"), NotImplementedError)
-        except NotImplementedError:
-            pass
 

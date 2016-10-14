@@ -7,15 +7,17 @@ import os
 import time
 import elasticsearch
 
-from ihutilities.es_utils import (es_config_template, configure_es, read_es, delete_es,
+from ihutilities.es_utils import (es_config_template, delete_es,
                                   check_es_database_exists)
 
-from ihutilities import configure_db, write_to_db, read_db
+from ihutilities import configure_db, write_to_db, read_db, update_to_db
 
                                 # write_to_es,
                                 #   _make_connection, read_es,
                                 #   update_to_es, finalise_es,
                                 #   check_mysql_database_exists)
+
+from collections import OrderedDict
 
 logging.basicConfig(level=logging.INFO)
 
@@ -136,30 +138,46 @@ class ElasticsearchUtilitiesTests(unittest.TestCase):
         results = self.es.search(index="test", doc_type="testrecord")
         self.assertEqual(len(results["hits"]["hits"]), 3)
 
-    # def test_update_to_db(self):
-    #     db_filename = "test_update_db.sqlite"
-    #     db_file_path = os.path.join(self.db_dir, db_filename)
-    #     if os.path.isfile(db_file_path):
-    #         os.remove(db_file_path)
-    #     data = [(1, 2, "hello"),
-    #             (2, 3, "Fred"),
-    #             (3, 3, "Beans")]
-    #     configure_db(db_file_path, self.db_fields, tables="test", force=True)
-    #     write_to_db(data, db_file_path, self.db_fields, table="test")
+    def test_update_to_es(self):
+       # Connect to engine and delete test table if it exists
+        es_config = es_config_template.copy()
+        es_config["db_name"] = "test"
+        
+        # Delete "test" index if it exists
+        status = delete_es(es_config)
 
-    #     update_fields = ["Addr1", "UPRN"]
-    #     update = [("Some", 3)] 
-    #     update_to_db(update, db_file_path, update_fields, table="test", key="UPRN")
+        configure_db(es_config, self.es_fields, tables="testrecord", force=True)
 
-    #     with sqlite3.connect(db_file_path) as c:
-    #         cursor = c.cursor()
-    #         cursor.execute("""
-    #             select Addr1 from test where UPRN = 3 ;
-    #         """)
-    #         rows = cursor.fetchall()
-    #         expected = ("Some", )
-    #         assert_equal(expected, rows[0])
+        data = [{"UPRN": 1, "PropertyID": 4, "Addr1": "Aardvark", "geocode": [53.20710, -2.89310]},
+                {"UPRN": 2, "PropertyID": 5, "Addr1": "Barbarosa", "geocode": [53.30710, -2.89310]},
+                {"UPRN": 3, "PropertyID": 6, "Addr1": "Camel", "geocode": [53.40710, -2.89310]}]
 
+        write_to_db(data, es_config, self.es_fields, table="testrecord")
+
+        # Writes to Elasticsearch are not available immediately
+        time.sleep(2)
+
+        update_fields = ["PropertyID", "UPRN"]
+        update = [OrderedDict([("Addr1", "Some"), ("UPRN", 3)])] 
+        update_to_db(update, es_config, update_fields, table="testrecord", key="UPRN")
+        time.sleep(2)
+
+        check_updated_query = {   "query": {
+                                    "constant_score": {
+                                      "filter": {
+                                        "term": {
+                                          "UPRN": 3
+                                        }
+                                      }
+                                    }
+                                  }
+                                }
+
+        results = self.es.search(index="test", doc_type="testrecord", body=check_updated_query)
+
+
+
+        self.assertEqual(results["hits"]["hits"][0]["_source"]["Addr1"], "Some")
 
     def test_read_es(self):
         es_config = es_config_template.copy()

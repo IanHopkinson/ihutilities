@@ -31,7 +31,7 @@
 
 * Use setup and teardown on a per test basis for test_db_utils
 
-* Add an update_to_es function
+* At the moment the _id in elasticsearch is autoincrementing, we should be able to explicitly set it (think there is a setting for this)
 
 * read_es could do with returning search metadata
 * Build_cache should allow you to easily calculate total run time

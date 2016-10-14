@@ -150,84 +150,70 @@ def write_to_es(data, es_config, es_fields, table="data", whatever=False):
 
     return []
 
-# def update_to_db(data, db_config, db_fields, table="property_data", key="UPRN"):
-#     """
-#     This function updates rows in a sqlite or MariaDB/MySQL database
+def update_to_es(data, es_config, es_fields, table="data", key="UPRN"):
+    """
+    This function updates rows in an elasticsearch database
 
-#     Args:
-#        data (list of lists):
-#             List of lists of data to update to database, order matches db_fields
-#        db_config (str or dict): 
-#             For sqlite a file path in a string is sufficient, MariaDB/MySQL require
-#             a dictionary and example of which is found in db_config_template
-#        db_fields (OrderedDict):
-#             A list of fieldnames in an OrderedDict containing the fields to update and
-#             the key field in the order in which the fields are presented in the data lists
+    Args:
+       data (list of dictionaries):
+            List of dictionaries of data to update to database, order matches db_fields
+       db_config (str or dict): 
+            For sqlite a file path in a string is sufficient, MariaDB/MySQL require
+            a dictionary and example of which is found in db_config_template
+       db_fields (OrderedDict):
+            A list of fieldnames in an OrderedDict containing the fields to update and
+            the key field in the order in which the fields are presented in the data lists
 
-#     Kwargs:
-#        table (str): 
-#             name of table to which we are writing, key to db_fields
-#        key (str):
-#             the field which forms the key of the update
+    Kwargs:
+       table (str): 
+            name of table to which we are writing, key to db_fields
+       key (str):
+            the field which forms the key of the update
 
-#     Returns:
-#        No return value
+    Returns:
+       No return value
 
-#     Raises:
+    Raises:
 
-#     Usage:
-#         >>> db_fields = OrderedDict([
-#               ("UPRN","INTEGER PRIMARY KEY"),
-#               ("PropertyID", "INT"),
-#               ("Addr1", "TEXT"),                   
-#         ])
-#         >>> db_filename = "test_write_db.sqlite"
-#         >>> db_dir = "ihutilities\\fixtures"
-#         >>> db_file_path = os.path.join(db_dir, db_filename)
-#         >>> data = [(1, 2, "hello"),
-#                     (2, 3, "Fred"),
-#                     (3, 3, "Beans")]
-#         >>> update_fields = ["Addr1", "UPRN"]
-#         >>> update = [("Some", 3)] 
-#         >>> update_to_db(update, db_file_path, update_fields, table="test", key="UPRN")
-#     """
-#     db_config = _normalise_config(db_config)
-#     if db_config["db_type"] == "sqlite":
-#         DB_UPDATE_TAIL = " WHERE {} = ?".format(key)
-#         PLACEHOLDER = " = ?,"
-#     elif db_config["db_type"] == "mariadb" or db_config["db_type"] == "mysql":
-#         DB_UPDATE_TAIL = " WHERE {} = %s".format(key)
-#         PLACEHOLDER = " = %s,"
+    Usage:
+        >>> 
+    """
+    es_config = _normalise_config(es_config)
 
-#     conn = _make_connection(db_config)
-#     cursor = conn.cursor()
-#     DB_UPDATE_ROOT = "UPDATE {} SET ".format(table)
+    # We need to find the _id of the documents that match
+    ids_query = {
+      "query": {
+        "constant_score": {
+          "filter": {
+            "term": {
+              "{}".format(key): 3
+            }
+          }
+        }
+      }
+    }
+    # We can set 
+    for row in data:
+        ids_query = {
+                    "query": {
+                        "constant_score": {
+                            "filter": {
+                                "term": {
+                                    "{}".format(key): row[key]
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+        row.pop(key)
+        data_modified = dict(row)
+        results = es.search(index=es_config["db_name"], body=ids_query)
+        for matching_record in results["hits"]["hits"]:
+            _id = matching_record["_id"]
+            es.update(index=es_config["db_name"],doc_type=table,id=_id,
+                        body={"doc": data_modified})
     
-#     key_index = db_fields.index(key)
-
-    
-#     for row in data:
-#         # print(update_statement, [x for x in row])
-#         key_val = row[key_index]
-#         update_fields = []
-#         update_data = []
-#         for i, _ in enumerate(row):
-#             if i != key_index and row[i] is not None:
-#                 update_fields.append(db_fields[i])
-#                 update_data.append(row[i])
-                
-#         DB_FIELDS = DB_UPDATE_ROOT
-#         for k in update_fields:
-#             DB_FIELDS = DB_FIELDS + k + PLACEHOLDER 
-#             update_statement = DB_FIELDS[0:-1] + DB_UPDATE_TAIL
-
-#         update_data.append(key_val)
-#         if len(update_fields) != 0:
-#             cursor.execute(update_statement, update_data)
-
-#     conn.commit()
-#     conn.close()
-
 # def drop_db_tables(file_path, tables):
 #     conn = sqlite3.connect(file_path)
 #     for table in tables:
