@@ -242,6 +242,10 @@ def update_to_db(data, db_config, db_fields, table="property_data", key="UPRN"):
         >>> update_to_db(update, db_file_path, update_fields, table="test", key="UPRN")
     """
     db_config = _normalise_config(db_config)
+
+    if db_config["db_type"] == "elasticsearch":
+        raise NotImplementedError("Update_to_db not yet implemented for Elasticsearch")
+
     if db_config["db_type"] == "sqlite":
         DB_UPDATE_TAIL = " WHERE {} = ?".format(key)
         PLACEHOLDER = " = ?,"
