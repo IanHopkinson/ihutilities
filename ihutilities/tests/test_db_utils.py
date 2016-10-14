@@ -337,6 +337,22 @@ class DatabaseUtilitiesTests(unittest.TestCase):
             test_data = OrderedDict(zip(self.db_fields.keys(), data[i]))
             assert_equal(row, test_data)
 
+    def test_read_db_doesnot_create_database(self):
+        db_filename = "nonexistent_db.sqlite"
+        db_config = os.path.join(self.db_dir, db_filename)
+
+        if os.path.isfile(db_config):
+            os.remove(db_config)
+        
+        sql_query = "select * from test;"
+
+        try:
+            results = list(read_db(sql_query, db_config))
+        except IOError:
+            pass
+        
+        self.assertEqual(os.path.isfile(db_config), False)
+
     def test_read_mariadb(self):
         db_config = db_config_template.copy()
 

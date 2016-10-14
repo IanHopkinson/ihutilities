@@ -29,7 +29,7 @@
 
 # TODO
 
-* Don't create a sqlite file if read_db doesn't find a database to read
+* Use setup and teardown on a per test basis for test_db_utils
 
 * Merge read_es functions into db_utils
 * read_es could do with returning search metadata
@@ -38,6 +38,5 @@
 * read_db should take templated queries (using the appropriate placeholder and data supplied separately)
 * read_db should only allow select statements
 * Extend testing to io_utils
-* Get ETL_framework to accept a function as a data source
 * Add in some ngram functionality
 * Currently using scripts for survey_csv, could use console scripts: http://python-packaging.readthedocs.org/en/latest/command-line-scripts.html

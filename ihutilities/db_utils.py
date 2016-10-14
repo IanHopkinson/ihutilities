@@ -338,6 +338,9 @@ def read_db(sql_query, db_config):
     db_config = _normalise_config(db_config)
     err_wait = 30.0
     
+    if db_config["db_type"] == "sqlite" and not os.path.isfile(db_config["db_path"]):
+        raise IOError("Database file '{}' does not exist".format(db_config["db_path"]))
+
     try:
         conn = _make_connection(db_config)
         cursor = conn.cursor()
