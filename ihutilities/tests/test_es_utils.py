@@ -7,9 +7,11 @@ import os
 import time
 import elasticsearch
 
-from ihutilities.es_utils import (es_config_template, configure_es, delete_es,
+from ihutilities.es_utils import (es_config_template, delete_es,
                                   check_es_database_exists, write_to_es,
-                                  read_es) 
+                                  read_es)
+
+from ihutilities import configure_db
 
                                 # write_to_es,
                                 #   _make_connection, read_es,
@@ -58,7 +60,7 @@ class ElasticsearchUtilitiesTests(unittest.TestCase):
         # Delete "test" index if it exists
         status = delete_es(es_config)
 
-        status = configure_es(es_config, self.es_fields, tables="testrecord", force=True)
+        status = configure_db(es_config, self.es_fields, tables="testrecord", force=True)
 
         # Test es exists
         exists = check_es_database_exists(es_config)
@@ -81,7 +83,7 @@ class ElasticsearchUtilitiesTests(unittest.TestCase):
         # Delete "test" index if it exists
         status = delete_es(es_config)
 
-        status = configure_es(es_config, self.es_fields, tables="testrecord", force=True)
+        status = configure_db(es_config, self.es_fields, tables="testrecord", force=True)
 
         data = [{"UPRN": 1, "PropertyID": 4, "Addr1": "Aardvark", "geocode": [53.20710, -2.89310]},
                 {"UPRN": 2, "PropertyID": 5, "Addr1": "Barbarosa", "geocode": [53.30710, -2.89310]},
@@ -127,7 +129,7 @@ class ElasticsearchUtilitiesTests(unittest.TestCase):
         # Delete "test" index if it exists
         status = delete_es(es_config)
 
-        status = configure_es(es_config, self.es_fields, tables="testrecord", force=True)
+        status = configure_db(es_config, self.es_fields, tables="testrecord", force=True)
 
         data = [{"UPRN": 1, "PropertyID": 4, "Addr1": "Aardvark", "geocode": {"lat": 53.20710, "lon": -2.89310}},
                 {"UPRN": 2, "PropertyID": 5, "Addr1": "Barbarosa", "geocode": {"lat":53.30710, "lon": -2.89310}},
@@ -151,7 +153,7 @@ class ElasticsearchUtilitiesTests(unittest.TestCase):
         # Delete "test" index if it exists
         status = delete_es(es_config)
 
-        status = configure_es(es_config, self.es_fields, tables="testrecord", force=True)
+        status = configure_db(es_config, self.es_fields, tables="testrecord", force=True)
 
         data = [{"UPRN": 1, "PropertyID": 4, "Addr1": "Aardvark", "geocode": {"lat": 63.20710, "lon": -1.89310}},
                 {"UPRN": 2, "PropertyID": 5, "Addr1": "Barbarosa", "geocode": {"lat":53.30710, "lon": -2.89310}},

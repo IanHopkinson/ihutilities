@@ -12,6 +12,8 @@ from mysql.connector import errorcode
 
 from collections import OrderedDict
 
+from ihutilities.es_utils import configure_es, write_to_es, read_es
+
 db_config_template = {"db_name": "test",
              "db_user": "root",
              "db_pw_environ": "MARIA_DB_PASSWORD",
@@ -59,11 +61,17 @@ def configure_db(db_config, db_fields, tables="property_data", force=False):
     # If we get a list and string then we convert them to a dictionary and a list
     # for backward compatibility
 
+    db_config = _normalise_config(db_config)
+
+    if db_config["db_type"] == "elasticsearch":
+        db_config = configure_es(db_config, db_fields, tables=tables, force=force)
+        return db_config
+
     if isinstance(tables, str):
         tables = [tables]
         db_fields = {tables[0]: db_fields}
     # Convert old db_path string to db_config dictionary
-    db_config = _normalise_config(db_config)
+    
 
     # Delete database if force is true
     if db_config["db_type"] == "sqlite":

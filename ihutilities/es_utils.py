@@ -34,7 +34,6 @@ try:
     es = elasticsearch.Elasticsearch(sniff_on_start=True)
 except:
     logging.critical("sniff_on_start failed so Elasticsearch likely not running")
-    raise
 
 def configure_es(es_config, es_fields, tables="data", force=False):
     """This function sets up an Elasticsearch database
