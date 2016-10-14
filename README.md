@@ -31,6 +31,8 @@
 
 * Use setup and teardown on a per test basis for test_db_utils
 
+* Add an update_to_es function
+
 * read_es could do with returning search metadata
 * Build_cache should allow you to easily calculate total run time
 * Support for "resume" in ETL framework

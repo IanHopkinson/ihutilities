@@ -63,9 +63,9 @@ def configure_es(es_config, es_fields, tables="data", force=False):
     # If we get a list and string then we convert them to a dictionary and a list
     # for backward compatibility
 
-    #if isinstance(tables, str):
-    #    tables = [tables]
-    #    es_fields = {tables[0]: es_fields}
+    if isinstance(tables, str):
+        tables = [tables]
+        es_fields = {tables[0]: es_fields}
     # Convert old db_path string to db_config dictionary
     es_config = _normalise_config(es_config)
 
@@ -267,7 +267,8 @@ def _create_tables_es(es_config, es_fields, tables, force):
 
     status = es.indices.create(index=es_config["db_name"], ignore=400)
     logger.info("Created index '{}' with status {}".format(es_config["db_name"], status))
-    status = es.indices.put_mapping(index=es_config["db_name"], ignore=400, doc_type=tables, body=es_fields["mappings"])
-    logger.info("Put mapping '{}' on '{}' with status {}".format(es_fields["mappings"], tables, status))
+    for table in tables:
+        status = es.indices.put_mapping(index=es_config["db_name"], ignore=400, doc_type=table, body=es_fields[table]["mappings"])
+        logger.info("Put mapping '{}' on '{}' with status {}".format(es_fields[table]["mappings"], table, status))
 
     return status

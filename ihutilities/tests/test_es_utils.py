@@ -59,7 +59,7 @@ class ElasticsearchUtilitiesTests(unittest.TestCase):
         # Delete "test" index if it exists
         status = delete_es(es_config)
 
-        status = configure_db(es_config, self.es_fields, tables="testrecord", force=True)
+        configure_db(es_config, self.es_fields, tables="testrecord", force=True)
 
         # Test es exists
         exists = check_es_database_exists(es_config)
@@ -73,6 +73,46 @@ class ElasticsearchUtilitiesTests(unittest.TestCase):
         fields = set(list(mappings["test"]["mappings"]["testrecord"]["properties"].keys()))
 
         self.assertEqual(set(['UPRN', 'Addr1', 'PropertyID', 'geocode']), fields)
+
+    def test_configure_multi_doc_es(self):
+        # Connect to engine and delete test table if it exists
+        es_config = es_config_template.copy()
+        es_config["db_name"] = "test"
+        
+        # Delete "test" index if it exists
+        status = delete_es(es_config)
+
+        multi_doc_fields = {}
+        multi_doc_fields["testrecord"] = self.es_fields
+        multi_doc_fields["testmeta"] = {
+                "mappings": {
+                    "testmeta": { 
+                        "properties": {
+                            "ID": {"type": "integer"},
+                            "SecondID": {"type": "integer"},
+                            "Addr2": {"type": "string"},
+                            "geocode2": {"type": "geo_point"},
+                        }
+                    }
+                 }
+            }
+
+        configure_db(es_config, multi_doc_fields, tables=["testrecord", "testmeta"], force=True)
+
+        # Test es exists
+        exists = check_es_database_exists(es_config)
+        self.assertEqual(exists, True)
+
+        # Check details of config
+        # settings = self.es.indices.get_settings(index='test')
+
+        mappings = self.es.indices.get_mapping(index='test')
+
+        fields1 = set(list(mappings["test"]["mappings"]["testrecord"]["properties"].keys()))
+        fields2 = set(list(mappings["test"]["mappings"]["testmeta"]["properties"].keys()))
+
+        self.assertEqual(set(['UPRN', 'Addr1', 'PropertyID', 'geocode']), fields1)
+        self.assertEqual(set(['ID', 'SecondID', 'Addr2', 'geocode2']), fields2)
 
     def test_write_to_es(self):
         # Connect to engine and delete test table if it exists
