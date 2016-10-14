@@ -349,6 +349,12 @@ def read_db(sql_query, db_config):
     # https://blogs.msdn.microsoft.com/sql_protocols/2009/03/09/understanding-the-error-an-operation-on-a-socket-could-not-be-performed-because-the-system-lacked-sufficient-buffer-space-or-because-a-queue-was-full/
     # At the moment we do this by just adding in a wait
     db_config = _normalise_config(db_config)
+
+    if db_config["db_type"] == "elasticsearch":
+        yield from read_es(sql_query, db_config)
+        return
+        #return results
+
     err_wait = 30.0
     
     if db_config["db_type"] == "sqlite" and not os.path.isfile(db_config["db_path"]):

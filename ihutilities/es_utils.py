@@ -241,7 +241,7 @@ def read_es(es_query, es_config):
     results = es.search(index=index, body=es_query)
 
     for result in results["hits"]["hits"]:
-           yield result["_source"]
+        yield result["_source"]
 
 def _normalise_config(es_config):
     """

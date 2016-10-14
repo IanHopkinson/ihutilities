@@ -7,11 +7,10 @@ import os
 import time
 import elasticsearch
 
-from ihutilities.es_utils import (es_config_template, delete_es,
-                                  check_es_database_exists,
-                                  read_es)
+from ihutilities.es_utils import (es_config_template, configure_es, read_es, delete_es,
+                                  check_es_database_exists)
 
-from ihutilities import configure_db, write_to_db
+from ihutilities import configure_db, write_to_db, read_db
 
                                 # write_to_es,
                                 #   _make_connection, read_es,
@@ -141,7 +140,7 @@ class ElasticsearchUtilitiesTests(unittest.TestCase):
 
         es_query = {"sort": { "UPRN" : {"order" : "asc"}}}
         
-        results = list(read_es(es_query, es_config))
+        results = list(read_db(es_query, es_config))
 
         for i, result in enumerate(results):
             self.assertEqual(result, data[i])
@@ -181,7 +180,7 @@ class ElasticsearchUtilitiesTests(unittest.TestCase):
                         }
                     }
         
-        results = list(read_es(es_query, es_config))
+        results = list(read_db(es_query, es_config))
 
         self.assertEqual(results[0], data[1])
 
