@@ -141,6 +141,11 @@ def write_to_db(data, db_config, db_fields, table="property_data", whatever=Fals
         >>> write_to_db(data, db_file_path, db_fields, table="test")
     """ 
     db_config = _normalise_config(db_config)
+
+    if db_config["db_type"] == "elasticsearch":
+        rejected_data = write_to_es(data, db_config, db_fields, table=table, whatever=whatever)
+        return rejected_data
+
     if db_config["db_type"] == "sqlite":
         ONE_PLACEHOLDER = "?,"
     elif db_config["db_type"] == "mariadb" or db_config["db_type"] == "mysql":

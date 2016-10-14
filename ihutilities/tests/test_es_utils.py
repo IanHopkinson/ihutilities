@@ -8,10 +8,10 @@ import time
 import elasticsearch
 
 from ihutilities.es_utils import (es_config_template, delete_es,
-                                  check_es_database_exists, write_to_es,
+                                  check_es_database_exists,
                                   read_es)
 
-from ihutilities import configure_db
+from ihutilities import configure_db, write_to_db
 
                                 # write_to_es,
                                 #   _make_connection, read_es,
@@ -89,7 +89,7 @@ class ElasticsearchUtilitiesTests(unittest.TestCase):
                 {"UPRN": 2, "PropertyID": 5, "Addr1": "Barbarosa", "geocode": [53.30710, -2.89310]},
                 {"UPRN": 3, "PropertyID": 6, "Addr1": "Camel", "geocode": [53.40710, -2.89310]}]
 
-        write_to_es(data, es_config, self.es_fields, table="testrecord")
+        write_to_db(data, es_config, self.es_fields, table="testrecord")
 
         # Writes to Elasticsearch are not available immediately
         time.sleep(2)
@@ -134,7 +134,7 @@ class ElasticsearchUtilitiesTests(unittest.TestCase):
         data = [{"UPRN": 1, "PropertyID": 4, "Addr1": "Aardvark", "geocode": {"lat": 53.20710, "lon": -2.89310}},
                 {"UPRN": 2, "PropertyID": 5, "Addr1": "Barbarosa", "geocode": {"lat":53.30710, "lon": -2.89310}},
                 {"UPRN": 3, "PropertyID": 6, "Addr1": "Camel", "geocode": {"lat":53.40710, "lon": -2.89310}}]
-        write_to_es(data, es_config, self.es_fields, table="testrecord")
+        write_to_db(data, es_config, self.es_fields, table="testrecord")
 
         # Writes to Elasticsearch are not available immediately
         time.sleep(2)
@@ -158,7 +158,7 @@ class ElasticsearchUtilitiesTests(unittest.TestCase):
         data = [{"UPRN": 1, "PropertyID": 4, "Addr1": "Aardvark", "geocode": {"lat": 63.20710, "lon": -1.89310}},
                 {"UPRN": 2, "PropertyID": 5, "Addr1": "Barbarosa", "geocode": {"lat":53.30710, "lon": -2.89310}},
                 {"UPRN": 3, "PropertyID": 6, "Addr1": "Camel", "geocode": {"lat":63.40710, "lon": -3.89310}}]
-        write_to_es(data, es_config, self.es_fields, table="testrecord")
+        write_to_db(data, es_config, self.es_fields, table="testrecord")
 
         # Writes to Elasticsearch are not available immediately
         time.sleep(2)

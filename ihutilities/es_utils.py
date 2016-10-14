@@ -104,7 +104,7 @@ def delete_es(es_config):
 
     return status
 
-def write_to_es(data, es_config, es_fields, table=None, whatever=False):
+def write_to_es(data, es_config, es_fields, table="data", whatever=False):
     """
     This function writes a list of rows to an elasticsearch database
 
@@ -148,7 +148,7 @@ def write_to_es(data, es_config, es_fields, table=None, whatever=False):
 
     helpers.bulk(es, actions) 
 
-    return
+    return []
 
 # def update_to_db(data, db_config, db_fields, table="property_data", key="UPRN"):
 #     """
