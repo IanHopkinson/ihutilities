@@ -95,8 +95,8 @@ def write_to_db(data, db_config, db_fields, table="property_data", whatever=Fals
     This function writes a list of rows to a sqlite or MariaDB/MySQL database
 
     Args:
-       data (list of lists):
-            List of lists to write to database.
+       data (list of lists or OrderedDicts):
+            List of lists or OrderedDicts to write to database.
        db_config (str or dict): 
             For sqlite a file path in a string is sufficient, MariaDB/MySQL require
             a dictionary and example of which is found in db_config_template
@@ -158,8 +158,18 @@ def write_to_db(data, db_config, db_fields, table="property_data", whatever=Fals
     INSERT_statement = DB_FIELDS[0:-1] + DB_PLACEHOLDERS[0:-1] + DB_INSERT_TAIL
 
     rejected_data = []
-    if whatever:
+
+    # convert a list of dictionary to a list of lists, if required:
+
+    converted_data = []
+    if isinstance(data[0], dict):
         for row in data:
+            converted_data.append([x for x in row.values()])
+    else:
+        converted_data = data
+
+    if whatever:
+        for row in converted_data:
             try:
                 cursor.execute(INSERT_statement, row)
             except mysql.connector.errors.IntegrityError:
@@ -167,7 +177,7 @@ def write_to_db(data, db_config, db_fields, table="property_data", whatever=Fals
 
     else:
         try:
-            cursor.executemany(INSERT_statement, data)
+            cursor.executemany(INSERT_statement, converted_data)
         except mysql.connector.errors.IntegrityError:
             conn.close()
             raise

@@ -122,6 +122,25 @@ class DatabaseUtilitiesTests(unittest.TestCase):
             rows = cursor.fetchall()
             assert_equal(data, rows)
 
+    def test_write_dictionaries_to_db(self): 
+        db_filename = "test_write_db.sqlite"
+        db_file_path = os.path.join(self.db_dir, db_filename)
+        if os.path.isfile(db_file_path):
+            os.remove(db_file_path)
+        data = [OrderedDict([("UPRN", 1), ("PropertyID",2), ("Addr1", "hello")]),
+                OrderedDict([("UPRN", 2), ("PropertyID",3), ("Addr1", "Fred")]),
+                OrderedDict([("UPRN", 3), ("PropertyID",3), ("Addr1", "Beans")])]
+        configure_db(db_file_path, self.db_fields, tables="test")
+        write_to_db(data, db_file_path, self.db_fields, table="test")
+        with sqlite3.connect(db_file_path) as c:
+            cursor = c.cursor()
+            cursor.execute("""
+                select * from test;
+            """)
+            rows = cursor.fetchall()
+            for i, row in enumerate(rows):
+                assert_equal([x for x in data[i].values()], list(row))
+
     def test_write_to_mariadb(self):
         db_config = db_config_template.copy()
         db_config = configure_db(db_config, self.db_fields, tables="test", force=True)

@@ -30,7 +30,7 @@
 # TODO
 
 * Don't create a sqlite file if read_db doesn't find a database to read
-* Allow write_to_db to take dictionaries! Also gives us better compatibility with elasticsearch queries
+
 * Merge read_es functions into db_utils
 * read_es could do with returning search metadata
 * Build_cache should allow you to easily calculate total run time
