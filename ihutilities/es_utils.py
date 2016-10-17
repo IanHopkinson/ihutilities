@@ -7,6 +7,7 @@ on the db_utils functions in ihutilities
 
 import elasticsearch
 import logging
+import urllib3
 
 from elasticsearch import helpers
 
@@ -30,10 +31,17 @@ logger = logging.getLogger(__name__)
 # Fields in Elasticsearch = columns in Mysql/Mariadb
 #
 
-try:
-    es = elasticsearch.Elasticsearch(sniff_on_start=True)
-except:
-    logging.critical("sniff_on_start failed so Elasticsearch likely not running")
+# This is problematic because we throw a bunch of ugly looking errors when we try to do this, and its slow
+
+import socket;
+sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+result = sock.connect_ex(('localhost',9200))
+if result == 0:
+   logging.info("Service discovered on port 9200")
+   es = elasticsearch.Elasticsearch(sniff_on_start=True)
+else:
+   logging.critical("No service detected on port 9200, db_utils for Elasticsearch will not work")
+    
 
 def configure_es(es_config, es_fields, tables="data", force=False):
     """This function sets up an Elasticsearch database
