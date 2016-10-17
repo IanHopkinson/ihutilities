@@ -493,9 +493,11 @@ def _create_tables_db(db_config, db_fields, tables, force):
     if db_config["db_type"] == "sqlite":
         table_check_query = "SELECT name FROM sqlite_master WHERE type='table' AND name='{}';"
         DB_CREATE_TAIL = ")"
+        name = os.path.basename(db_config["db_path"])
     elif db_config["db_type"] == "mariadb" or db_config["db_type"] == "mysql":
         table_check_query = "SELECT table_name as name FROM information_schema.tables WHERE table_schema = '{}'".format(db_config["db_name"]) + " AND table_name = '{}';"
         DB_CREATE_TAIL = ") ENGINE = MyISAM"
+        name = db_config["db_name"]
 
     conn = db_config["db_conn"]
     cursor = conn.cursor()
@@ -503,9 +505,14 @@ def _create_tables_db(db_config, db_fields, tables, force):
         DB_CREATE_ROOT = "CREATE TABLE {} (".format(table)
         
         DB_CREATE = DB_CREATE_ROOT
+        primary_keys = []
         for k,v in db_fields[table].items():
             if (db_config["db_type"] == "mariadb" or db_config["db_type"] == "mysql") and "AUTOINCREMENT" in v:
                 v = v.replace("AUTOINCREMENT", "AUTO_INCREMENT")
+
+            if "PRIMARY KEY" in v.upper():
+                v = v.replace("PRIMARY KEY", "")
+                primary_keys.append(k)
 
             if v in ["POINT", "POLYGON", "LINESTRING", "MULTIPOLYGON"]:
                 logger.debug("Appending NOT NULL to {} in {} to allow spatial indexing in MariaDB/MySQL [_create_tables_db]".format(v, table))
@@ -513,13 +520,22 @@ def _create_tables_db(db_config, db_fields, tables, force):
             else:
                 DB_CREATE = DB_CREATE + " ".join([k,v]) + ","
 
-        DB_CREATE = DB_CREATE[0:-1] + DB_CREATE_TAIL
+        # add in the PRIMARY KEY clause
+        if len(primary_keys) == 0:
+            logger.warning("No primary keys supplied for table '{}'".format(table))
+        PRIMARY_KEY_CLAUSE = "PRIMARY KEY ({})".format(",".join(primary_keys))
+
+        DB_CREATE = DB_CREATE + PRIMARY_KEY_CLAUSE
+
+        # Since we're using a separate primary key clause we don't need to clip a trailing comma
+        DB_CREATE = DB_CREATE + DB_CREATE_TAIL
+        #DB_CREATE = DB_CREATE[0:-1] + DB_CREATE_TAIL
         if force and db_config["db_type"] == "sqlite":
             cursor.execute('DROP TABLE IF EXISTS {}'.format(table))
-            logger.warning("Force is True, so dropping table {} in database {}".format(table, db_config["db_name"]))
+            logger.warning("Force is True, so dropping table '{}' in database '{}'".format(table, name))
         elif force and (db_config["db_type"] == "mariadb" or db_config["db_type"] == "mysql"):
             cursor.execute('DROP TABLE IF EXISTS `{}`.`{}`;'.format(db_config["db_name"], table))
-            logger.warning("Force is True, so dropping table {} in database {}".format(table, db_config["db_name"]))
+            logger.warning("Force is True, so dropping table '{}' in database '{}'".format(table, name))
         
         cursor.execute(table_check_query.format(table))
         result = cursor.fetchall()
@@ -530,14 +546,14 @@ def _create_tables_db(db_config, db_fields, tables, force):
             table_exists = False
 
         if not table_exists:
-            logger.debug("Creating table {} with statement: \n{}".format(table, DB_CREATE))    
-            cursor.execute(DB_CREATE)
+            logger.debug("Creating table {} with statement: \n{}".format(table, DB_CREATE))
+            try:    
+                cursor.execute(DB_CREATE)
+            except:
+                logger.debug("Database create statement failed: '{}' for database '{}'".format(DB_CREATE, name))
         else:
-            if db_config["db_type"] == "sqlite":
-                logger.warning("Table {} already exists in database {}".format(table, os.path.basename(db_config["db_path"])))
-            else:
-                logger.warning("Table {} already exists in database {}".format(table, db_config["db_name"]))
-
+            logger.warning("Table '{}' already exists in database '{}'".format(table, name))
+            
     db_config["db_conn"].commit()
     db_config["db_conn"].close()
 
