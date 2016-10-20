@@ -60,7 +60,7 @@ def configure_db(db_config, db_fields, tables="property_data", force=False):
     # Cunning polymorphism: 
     # If we get a list and string then we convert them to a dictionary and a list
     # for backward compatibility
-
+    
     db_config = _normalise_config(db_config)
 
     if db_config["db_type"] == "elasticsearch":

@@ -4,6 +4,7 @@
 This package contains functions relating to shapefiles
 """
 
+import os
 import shapefile
 
 from matplotlib import pyplot as plt
@@ -49,6 +50,7 @@ def load_shapefile_data(data_path):
         >>> 
     """
     sf = shapefile.Reader(data_path)
+
     shapes = sf.shapes()
     file_length = len(shapes)
     return sf, file_length
@@ -148,15 +150,16 @@ def make_point(shp_point):
     point = "POINT({} {})".format(shp_point[0], shp_point[1])
     return point
 
-def summarise_shapefile(sf, limit=9):
+def summarise_shapefile(sf, limit=9, to_screen=True):
     fieldnames = [x[0] for x in sf.fields[1:]]
 
     shapes = sf.shapes()
     file_length = len(shapes)
 
-    print("\nShapefile contains {} records".format(file_length), flush=True)
-    print("Fieldnames: {}\n".format(fieldnames), flush=True)
-    print("First {} records:".format(limit), flush=True)
+    if to_screen:
+        print("\nShapefile contains {} records".format(file_length), flush=True)
+        print("Fieldnames: {}\n".format(fieldnames), flush=True)
+        print("First {} records:".format(limit), flush=True)
 
     shapetypes = set()
 
@@ -188,14 +191,18 @@ def summarise_shapefile(sf, limit=9):
         #         print("{}. Length = {}".format(field, len(values)))
         #     else:
         #         print(field, values, flush=True)
-        print("{}. {}".format(i + 1, content_str))
+        if to_screen:
+            print("{}. {}".format(i + 1, content_str))
         if i >= limit: 
             break
 
-
-    print("\nShapefile attributes: {}".format(fields), flush=True)
+    if to_screen:
+        print("\nShapefile attributes: {}".format(fields), flush=True)
     shapetypes_str = [shapetype_lookup[s] for s in shapetypes]
-    print("Shapetypes found: {}\n".format(shapetypes_str), flush=True)
+    if to_screen:
+        print("Shapetypes found: {}\n".format(shapetypes_str), flush=True)
+
+    return fieldnames
 
 def plot_shapefile(sf, limit=9, bbox=False, label=None):
     fig = plt.figure(0)
