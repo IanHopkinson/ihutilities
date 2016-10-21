@@ -510,7 +510,7 @@ def _create_tables_db(db_config, db_fields, tables, force):
             if (db_config["db_type"] == "mariadb" or db_config["db_type"] == "mysql") and "AUTOINCREMENT" in v:
                 v = v.replace("AUTOINCREMENT", "AUTO_INCREMENT")
 
-            if "PRIMARY KEY" in v.upper():
+            if "PRIMARY KEY" in v.upper() and ("AUTO_INCREMENT" not in v) and ("AUTOINCREMENT" not in v):
                 v = v.replace("PRIMARY KEY", "")
                 primary_keys.append(k)
 
@@ -523,13 +523,13 @@ def _create_tables_db(db_config, db_fields, tables, force):
         # add in the PRIMARY KEY clause
         if len(primary_keys) == 0:
             logger.warning("No primary keys supplied for table '{}'".format(table))
-        PRIMARY_KEY_CLAUSE = "PRIMARY KEY ({})".format(",".join(primary_keys))
+            DB_CREATE = DB_CREATE[0:-1] + DB_CREATE_TAIL
+        else:
+            PRIMARY_KEY_CLAUSE = "PRIMARY KEY ({})".format(",".join(primary_keys))
+            # Since we're using a separate primary key clause we don't need to clip a trailing comma
+            DB_CREATE = DB_CREATE + PRIMARY_KEY_CLAUSE
+            DB_CREATE = DB_CREATE + DB_CREATE_TAIL
 
-        DB_CREATE = DB_CREATE + PRIMARY_KEY_CLAUSE
-
-        # Since we're using a separate primary key clause we don't need to clip a trailing comma
-        DB_CREATE = DB_CREATE + DB_CREATE_TAIL
-        #DB_CREATE = DB_CREATE[0:-1] + DB_CREATE_TAIL
         if force and db_config["db_type"] == "sqlite":
             cursor.execute('DROP TABLE IF EXISTS {}'.format(table))
             logger.warning("Force is True, so dropping table '{}' in database '{}'".format(table, name))
