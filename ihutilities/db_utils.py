@@ -175,7 +175,7 @@ def write_to_db(data, db_config, db_fields, table="property_data", whatever=Fals
     # convert a list of dictionary to a list of lists, if required:
 
     converted_data = []
-    if isinstance(data[0], dict):
+    if len(data) > 0 and isinstance(data[0], dict):
         for row in data:
             converted_data.append([x for x in row.values()])
     else:
