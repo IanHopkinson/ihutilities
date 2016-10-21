@@ -66,7 +66,7 @@ def get_source_generator(data_path, headers, separator, encoding):
                 break
 
         cf = zf.open(filename, 'rU')
-        fh  = io.TextIOWrapper(io.BytesIO(cf.read()))
+        fh  = io.TextIOWrapper(io.BytesIO(cf.read()), encoding=encoding)
 
     with fh:
         if headers:
