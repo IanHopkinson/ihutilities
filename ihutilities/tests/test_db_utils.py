@@ -50,6 +50,28 @@ class DatabaseUtilitiesTests(unittest.TestCase):
             obs_columns = set([x[0] for x in cursor.description])
             assert_equal(exp_columns, obs_columns)
 
+    def test_configure_db_pk_and_autoinc(self):
+        db_filename = "test_config_db.sqlite"
+        db_file_path = os.path.join(self.db_dir, db_filename)
+        if os.path.isfile(db_file_path):
+            os.remove(db_file_path)
+
+        mod_db_fields = self.db_fields.copy()
+        mod_db_fields["UPRN"] = "INTEGER PRIMARY KEY"
+        
+        configure_db(db_file_path, mod_db_fields, tables="test")
+        # Test file exists
+        assert_equal(True, os.path.isfile(db_file_path)) 
+        # Do a schema query
+        with sqlite3.connect(db_file_path) as c:
+            cursor = c.cursor()
+            cursor.execute("""
+                select * from test;
+            """)
+            exp_columns = set([x for x in self.db_fields.keys()]) 
+            obs_columns = set([x[0] for x in cursor.description])
+            assert_equal(exp_columns, obs_columns)
+
     def test_configure_mariadb(self):
         # Connect to engine and delete test table if it exists
         db_config = db_config_template.copy()
