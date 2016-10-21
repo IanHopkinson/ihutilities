@@ -200,7 +200,7 @@ def write_to_db(data, db_config, db_fields, table="property_data", whatever=Fals
 
     return rejected_data
 
-def update_to_db(data, db_config, db_fields, table="property_data", key="UPRN"):
+def update_to_db(data, db_config, db_fields, table="property_data", key=["UPRN"]):
     """
     This function updates rows in a sqlite or MariaDB/MySQL database
 
@@ -241,6 +241,9 @@ def update_to_db(data, db_config, db_fields, table="property_data", key="UPRN"):
         >>> update = [("Some", 3)] 
         >>> update_to_db(update, db_file_path, update_fields, table="test", key="UPRN")
     """
+    if isinstance(key, str):
+        key = [key]
+
     db_config = _normalise_config(db_config)
 
     if db_config["db_type"] == "elasticsearch":
@@ -248,17 +251,31 @@ def update_to_db(data, db_config, db_fields, table="property_data", key="UPRN"):
         return
 
     if db_config["db_type"] == "sqlite":
-        DB_UPDATE_TAIL = " WHERE {} = ?".format(key)
+        # WHERE KEY1 = ?
+        # WHERE KEY1 = ? AND KEY2 = ?
+        # WHERE KEY1 = ? AND KEY2 = ? AND KEY3 = ?
+        DB_UPDATE_TAIL = " WHERE "
+        joiner = ""
+        for k in key:
+            DB_UPDATE_TAIL = DB_UPDATE_TAIL + "{} {} = ?".format(joiner, k)
+            joiner = "AND"
         PLACEHOLDER = " = ?,"
     elif db_config["db_type"] == "mariadb" or db_config["db_type"] == "mysql":
-        DB_UPDATE_TAIL = " WHERE {} = %s".format(key)
+        DB_UPDATE_TAIL = " WHERE "
+        joiner = ""
+        for k in key:
+            DB_UPDATE_TAIL = DB_UPDATE_TAIL + "{} {} = %s".format(joiner, k)
+            joiner = "AND"
         PLACEHOLDER = " = %s,"
 
     conn = _make_connection(db_config)
     cursor = conn.cursor()
     DB_UPDATE_ROOT = "UPDATE {} SET ".format(table)
     
-    key_index = db_fields.index(key)
+    key_indices = []
+    for k in key:
+        key_index = db_fields.index(k)
+        key_indices.append(key_index)
 
     # convert a list of dictionary to a list of lists, if required:
 
@@ -272,14 +289,15 @@ def update_to_db(data, db_config, db_fields, table="property_data", key="UPRN"):
                             .format(db_fields, list(data[0].keys())))
     else:
         converted_data = data
-
     for row in converted_data:
         # print(update_statement, [x for x in row])
-        key_val = row[key_index]
+        key_vals = []
+        for k in key_indices:
+            key_vals.append(row[k])
         update_fields = []
         update_data = []
         for i, _ in enumerate(row):
-            if i != key_index and row[i] is not None:
+            if i not in key_indices and row[i] is not None:
                 update_fields.append(db_fields[i])
                 update_data.append(row[i])
                 
@@ -288,8 +306,9 @@ def update_to_db(data, db_config, db_fields, table="property_data", key="UPRN"):
             DB_FIELDS = DB_FIELDS + k + PLACEHOLDER 
             update_statement = DB_FIELDS[0:-1] + DB_UPDATE_TAIL
 
-        update_data.append(key_val)
+        update_data.extend(key_vals)
         if len(update_fields) != 0:
+            logging.debug("Attempting update with statement = '{}' and data = '{}'".format(update_statement, update_data))
             cursor.execute(update_statement, update_data)
 
     conn.commit()
