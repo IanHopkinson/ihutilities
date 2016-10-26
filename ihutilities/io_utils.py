@@ -66,9 +66,14 @@ def calculate_file_sha(filepath):
         file_size = os.path.getsize(filepath)
     else:
         zip_path, name_in_zip = split_zipfile_path(filepath)
-        zf = zipfile.ZipFile(zip_path)
-        file_size = zf.getinfo(name_in_zip).file_size
+        if len(name_in_zip) != 0:
+            zf = zipfile.ZipFile(zip_path)
+            file_size = zf.getinfo(name_in_zip).file_size
+        else: # if no name in zip is specified then calculate the sha of the zip file as a whole
+            file_size = os.path.getsize(filepath)
+            fh = open(filepath, "rb")   
 
+    
     #This magic should make our sha match the git sha
     file_sha.update("blob {:d}\0".format(file_size).encode("utf-8"))
 
@@ -104,7 +109,7 @@ def sort_dict_by_value(unordered_dict):
     sorted_dict = sorted(unordered_dict.items(), key=operator.itemgetter(1))
     return OrderedDict(sorted_dict)
 
-def get_a_file_handle(file_path, encoding="utf-8-sig", mode="rU"):
+def get_a_file_handle(file_path, encoding="utf-8-sig", mode="rU", zip_guess=True):
     """This function returns a file handle, even if a file is within a zip
 
     Args:
@@ -136,7 +141,10 @@ def get_a_file_handle(file_path, encoding="utf-8-sig", mode="rU"):
         namelist = zf.namelist()
 
         if len(name_in_zip) == 0:
-            cf = zf.open(namelist[0], "rU")
+            try:
+                cf = zf.open(namelist[0], "rU")
+            except (NotImplementedError, OSError):
+                raise
             if mode == "rU":
                 fh = io.TextIOWrapper(io.BytesIO(cf.read()), encoding=encoding)
             else:
@@ -144,7 +152,10 @@ def get_a_file_handle(file_path, encoding="utf-8-sig", mode="rU"):
         else:
             for name in namelist:
                 if fnmatch.fnmatch(name, name_in_zip):
-                    cf = zf.open(name, "rU")
+                    try:
+                        cf = zf.open(name, "rU")
+                    except (NotImplementedError, OSError):
+                        raise
                     if mode == "rU":
                         fh = io.TextIOWrapper(io.BytesIO(cf.read()), encoding=encoding)
                     else:
