@@ -59,13 +59,22 @@ def write_dictionary(filename, data, append=True):
 
 def calculate_file_sha(filepath):
     file_sha = hashlib.sha1()
-    file_size = os.path.getsize(filepath)
+
+    fh = get_a_file_handle(filepath, mode="rb")
+
+    if ".zip" not in filepath:
+        file_size = os.path.getsize(filepath)
+    else:
+        zip_path, name_in_zip = split_zipfile_path(filepath)
+        zf = zipfile.ZipFile(zip_path)
+        file_size = zf.getinfo(name_in_zip).file_size
 
     #This magic should make our sha match the git sha
     file_sha.update("blob {:d}\0".format(file_size).encode("utf-8"))
 
-    with open(filepath, "rb") as f:
-        for chunk in iter(lambda: f.read(4096), b""):
+    #with open(filepath, "rb") as f:
+    with fh:
+        for chunk in iter(lambda: fh.read(4096), b""):
             file_sha.update(chunk)
 
     return file_sha.hexdigest()
@@ -95,7 +104,7 @@ def sort_dict_by_value(unordered_dict):
     sorted_dict = sorted(unordered_dict.items(), key=operator.itemgetter(1))
     return OrderedDict(sorted_dict)
 
-def get_a_file_handle(file_path, encoding="utf-8-sig"):
+def get_a_file_handle(file_path, encoding="utf-8-sig", mode="rU"):
     """This function returns a file handle, even if a file is within a zip
 
     Args:
@@ -117,20 +126,29 @@ def get_a_file_handle(file_path, encoding="utf-8-sig"):
     """
     # If we have a straightforward file then return that
     if ".zip" not in file_path:
-        fh = open(file_path, encoding=encoding)
+        if mode == "rU":
+            fh = open(file_path, encoding=encoding, mode=mode)
+        else: # This is what we do for binary files
+            fh = open(file_path, mode=mode)
     else:
         zip_path, name_in_zip = split_zipfile_path(file_path)
         zf = zipfile.ZipFile(zip_path)
         namelist = zf.namelist()
 
         if len(name_in_zip) == 0:
-            cf = zf.open(namelist[0], 'rU')
-            fh  = io.TextIOWrapper(io.BytesIO(cf.read()), encoding=encoding)
+            cf = zf.open(namelist[0], "rU")
+            if mode == "rU":
+                fh = io.TextIOWrapper(io.BytesIO(cf.read()), encoding=encoding)
+            else:
+                fh = io.BytesIO(cf.read())
         else:
             for name in namelist:
                 if fnmatch.fnmatch(name, name_in_zip):
-                    cf = zf.open(name, 'rU')
-                    fh  = io.TextIOWrapper(io.BytesIO(cf.read()), encoding=encoding)    
+                    cf = zf.open(name, "rU")
+                    if mode == "rU":
+                        fh = io.TextIOWrapper(io.BytesIO(cf.read()), encoding=encoding)
+                    else:
+                        fh = io.BytesIO(cf.read())               
     
     return fh
 
