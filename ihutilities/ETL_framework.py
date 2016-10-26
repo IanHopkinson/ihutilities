@@ -14,7 +14,7 @@ import zipfile
 from collections import OrderedDict
 from ihutilities import (configure_db, write_to_db, update_to_db, read_db, 
                         calculate_file_sha, _normalise_config, check_mysql_database_exists,
-                        get_a_file_handle)
+                        get_a_file_handle, split_zipfile_path)
 
 # This dictionary has field names and field types. It should be reuseable between the configure_db and 
 # write_to_db functions
@@ -38,7 +38,11 @@ def make_row(input_row, data_path, data_field_lookup, db_fields, null_equivalent
         # This inserts blank fields
         if data_field_lookup[output_key] is not None:
             if not isinstance(data_field_lookup[output_key], list):
-                value = input_row[data_field_lookup[output_key]]
+                try:
+                    value = input_row[data_field_lookup[output_key]]
+                except KeyError:
+                    logger.critical("Required data field '{}' not found in input data = {}".format(data_field_lookup[output_key], input_row))
+                    raise
                 if value in null_equivalents:
                     value = None
             # If output_key corresponds to a POINT field we need to process a two element array
@@ -154,6 +158,8 @@ def do_etl(db_fields, db_config, data_path, data_field_lookup,
     db_config = _normalise_config(db_config)
     
     # If force is false then return if ETL on this file has already been done
+    data_path, name_in_zip = split_zipfile_path(data_path)
+
     datafile_sha = calculate_file_sha(data_path)
     already_done = check_if_already_done(data_path, db_config, datafile_sha)
     
