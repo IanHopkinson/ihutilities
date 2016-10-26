@@ -3,12 +3,16 @@
 from __future__ import unicode_literals
 
 import csv
+import fnmatch
 import hashlib
+import io
 import logging
 import operator
+import glob
 import os
 import math
 import subprocess
+import zipfile
 
 from collections import OrderedDict
 
@@ -91,3 +95,51 @@ def sort_dict_by_value(unordered_dict):
     sorted_dict = sorted(unordered_dict.items(), key=operator.itemgetter(1))
     return OrderedDict(sorted_dict)
 
+def get_a_file_handle(file_path, encoding="utf-8-sig"):
+    """This function returns a file handle, even if a file is within a zip
+
+    Args:
+       file_path (str): 
+            file path to the output file
+
+    Kwargs:
+       append (bool): 
+            if True then data is appended to an existing file 
+            if False and the file exists then the file is deleted 
+       
+    Returns:
+       a file handler
+
+    Raises:
+
+    Usage:
+        >>> 
+    """
+    # If we have a straightforward file then return that
+    if ".zip" not in file_path:
+        fh = open(file_path, encoding=encoding)
+    else:
+        zip_path, name_in_zip = split_zipfile_path(file_path)
+        zf = zipfile.ZipFile(zip_path)
+        namelist = zf.namelist()
+
+        if len(name_in_zip) == 0:
+            cf = zf.open(namelist[0], 'rU')
+            fh  = io.TextIOWrapper(io.BytesIO(cf.read()), encoding=encoding)
+        else:
+            for name in namelist:
+                if fnmatch.fnmatch(name, name_in_zip):
+                    cf = zf.open(name, 'rU')
+                    fh  = io.TextIOWrapper(io.BytesIO(cf.read()), encoding=encoding)    
+    
+    return fh
+
+def split_zipfile_path(zipfile_path):
+    parts = zipfile_path.split(".zip")
+    zip_path = parts[0] + ".zip"
+    if len(parts) != 0 and len(parts) == 2:
+        name_in_zip = parts[1][1:]
+    else:
+        name_in_zip = ""
+
+    return zip_path, name_in_zip

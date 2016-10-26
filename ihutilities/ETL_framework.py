@@ -12,7 +12,9 @@ import time
 import zipfile
 
 from collections import OrderedDict
-from ihutilities import configure_db, write_to_db, update_to_db, read_db, calculate_file_sha, _normalise_config, check_mysql_database_exists
+from ihutilities import (configure_db, write_to_db, update_to_db, read_db, 
+                        calculate_file_sha, _normalise_config, check_mysql_database_exists,
+                        get_a_file_handle)
 
 # This dictionary has field names and field types. It should be reuseable between the configure_db and 
 # write_to_db functions
@@ -56,18 +58,9 @@ def make_row(input_row, data_path, data_field_lookup, db_fields, null_equivalent
     return new_row
 
 def get_source_generator(data_path, headers, separator, encoding):
-    if data_path.endswith(".csv"):
-        fh = open(data_path, encoding=encoding)
-    elif data_path.endswith(".zip"):
-        zf = zipfile.ZipFile(data_path)
-
-        for filename in zf.namelist():
-            if filename.startswith(os.path.basename(data_path).replace(".zip", "")):
-                break
-
-        cf = zf.open(filename, 'rU')
-        fh  = io.TextIOWrapper(io.BytesIO(cf.read()), encoding=encoding)
-
+    # See data manager for detecting zip files, and then picking up the right part
+    #
+    fh = get_a_file_handle(data_path, encoding=encoding)
     with fh:
         if headers:
             rows = csv.DictReader(fh, delimiter=separator)
