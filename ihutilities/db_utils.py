@@ -570,6 +570,7 @@ def _create_tables_db(db_config, db_fields, tables, force):
                 cursor.execute(DB_CREATE)
             except:
                 logger.debug("Database create statement failed: '{}' for database '{}'".format(DB_CREATE, name))
+                raise
         else:
             logger.warning("Table '{}' already exists in database '{}'".format(table, name))
             
