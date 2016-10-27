@@ -331,7 +331,7 @@ def make_dbfields(file_path):
     data_field_lookup_array = []
 
     for source_field in headers:
-        destination_field = source_field.replace("-", "").replace(" ", "").replace("(", "").replace(")", "").replace(".", "").replace("/", "")
+        destination_field = source_field.replace("-", "_").replace(" ", "_").replace("(", "_").replace(")", "_").replace(".", "_").replace("/", "_").replace(",", "_")
         DB_FIELDS_ARRAY.append((destination_field, "TEXT"))
         data_field_lookup_array.append((destination_field, source_field))
 
