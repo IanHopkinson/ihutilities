@@ -164,6 +164,11 @@ def get_a_file_handle(file_path, encoding="utf-8-sig", mode="rU", zip_guess=True
     return fh
 
 def split_zipfile_path(zipfile_path):
+    if ".zip" not in zipfile_path:
+        zip_path = zipfile_path
+        name_in_zip = ""
+        return zip_path, name_in_zip
+
     parts = zipfile_path.split(".zip")
     zip_path = parts[0] + ".zip"
     if len(parts) != 0 and len(parts) == 2:
