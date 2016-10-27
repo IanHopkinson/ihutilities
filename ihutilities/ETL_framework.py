@@ -318,3 +318,24 @@ def report_input_length(rowsource, test_line_limit, data_path, headers, separato
     logger.info("{} lines available, limit set to {}".format(file_length, test_line_limit))
     logger.info("{:.2f}s taken to count lines\n".format(time.time() - t0))
     return file_length
+
+def make_dbfields(file_path):
+    fh = get_a_file_handle(file_path)
+
+    # Sniff headers
+    with fh:
+        reader = csv.reader(fh)
+        headers = next(reader, None)
+
+    DB_FIELDS_ARRAY = []
+    data_field_lookup_array = []
+
+    for source_field in headers:
+        destination_field = source_field.replace("-", "").replace(" ", "").replace("(", "").replace(")", "").replace(".", "").replace("/", "")
+        DB_FIELDS_ARRAY.append((destination_field, "TEXT"))
+        data_field_lookup_array.append((destination_field, source_field))
+
+    DB_FIELDS = OrderedDict(DB_FIELDS_ARRAY)
+    data_field_lookup = OrderedDict(data_field_lookup_array)
+
+    return DB_FIELDS, data_field_lookup
