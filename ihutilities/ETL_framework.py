@@ -245,7 +245,7 @@ def do_etl(db_fields, db_config, data_path, data_field_lookup,
         raise   
 
     # Final write to database
-    write_to_db(data, db_config, db_fields)
+    write_to_db(data, db_config, db_fields, whatever=True)
 
     # Write a final report
     t1 = time.time()
