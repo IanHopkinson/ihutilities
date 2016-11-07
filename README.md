@@ -31,6 +31,8 @@
 
 * Use setup and teardown on a per test basis for test_db_utils
 
+* NROSH snapshot ETL using do_ETL shows that line count is misleading where we are dropping rows
+
 * At the moment the _id in elasticsearch is autoincrementing, we should be able to explicitly set it (think there is a setting for this)
 
 * read_es could do with returning search metadata
