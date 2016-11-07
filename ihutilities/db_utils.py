@@ -185,13 +185,13 @@ def write_to_db(data, db_config, db_fields, table="property_data", whatever=Fals
         for row in converted_data:
             try:
                 cursor.execute(INSERT_statement, row)
-            except mysql.connector.errors.IntegrityError:
+            except (mysql.connector.errors.IntegrityError, sqlite3.IntegrityError):
                 rejected_data.append(row)
 
     else:
         try:
             cursor.executemany(INSERT_statement, converted_data)
-        except mysql.connector.errors.IntegrityError:
+        except (mysql.connector.errors.IntegrityError, sqlite3.IntegrityError):
             conn.close()
             raise
 
