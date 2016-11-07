@@ -21,10 +21,16 @@ def survey_csv(file_path, line_limit=1000, encoding=None):
     line_count = 0
     report_size = 1000000
 
-    empty_count = Counter()
+    filled_count = Counter()
+    
     with open(file_path, encoding=encoding) as f:
         rows = csv.reader(f)
         headers = next(rows)
+
+    field_set = {}
+    for field in headers:
+        field_set[field] = set()
+
 
     with open(file_path, encoding=encoding) as f:
         rows = csv.DictReader(f)
@@ -33,10 +39,11 @@ def survey_csv(file_path, line_limit=1000, encoding=None):
                 line_count += 1
                 # Filling percentage
                 for field in headers:
-                    if len(row[field]) == 0:
-                        empty_count[field] += 1
+                    if len(row[field]) != 0:
+                        filled_count[field] += 1
 
                     # Categorical enumeration
+                    field_set[field].add(row[field])
 
                 if i > line_limit:
                     break
@@ -46,7 +53,7 @@ def survey_csv(file_path, line_limit=1000, encoding=None):
                         print("==============")
                         t1 = time.time()
                         elapsed = t1 - t0
-                        print_report(file_path, elapsed, line_limit, line_count, headers, empty_count)
+                        print_report(file_path, elapsed, line_limit, line_count, headers, filled_count)
         except Exception as ex:
             print("Encountered exception '{}' at line_count = {}".format(ex, line_count))
             print("Aborting")
@@ -57,9 +64,9 @@ def survey_csv(file_path, line_limit=1000, encoding=None):
     t1 = time.time()
     elapsed = t1 - t0
     line_count = line_count - 2
-    print_report(file_path, elapsed, line_limit, line_count, headers, empty_count)
+    print_report(file_path, elapsed, line_limit, line_count, headers, filled_count, field_set)
 
-def print_report(file_path, elapsed, line_limit, line_count, headers, empty_count):
+def print_report(file_path, elapsed, line_limit, line_count, headers, filled_count, field_set):
 
     print("\nFile path: {}".format(file_path), flush=True)
     print("Time to survey: {0:.2f} seconds".format(elapsed), flush=True)
@@ -69,9 +76,17 @@ def print_report(file_path, elapsed, line_limit, line_count, headers, empty_coun
         print("Line limit set to: {}".format(line_limit), flush=True)
     print("Number of fields: {}".format(len(headers)), flush=True)
     print("\nField list:", flush=True)
-    print("i, Name, filled percentage", flush=True)
+    print("i, Name, filled_count, distinct_count", flush=True)
     for i, field in enumerate(headers, start=1):
-        print("{0: <3}, {1: <30}, {2:.3f}%".format(i,field, 100.0 * (1.0 - empty_count[field]/line_count)), flush=True)
+        # filled_percentage = 100.0 * (1.0 - empty_count[field]/line_count)
+        distinct_count = len(field_set[field])
+        if len(field_set[field]) < 10:
+            values = "|".join(list(field_set[field]))
+        else:
+            values = "|".join(list(field_set[field])[0:10]) + "..."
+        print("{0: <3}, {1: <30}, {2: <10}, {3: <10} ".format(i,field, filled_count[field], distinct_count), flush=True)
+
+    return
 
 if __name__ == "__main__":
     arg = sys.argv[1:]
