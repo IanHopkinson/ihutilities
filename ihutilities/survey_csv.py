@@ -3,8 +3,11 @@
 
 import csv
 import datetime
+import decimal
 import sys
 import time
+
+import dateutil.parser as parser
 
 from collections import Counter
 
@@ -76,17 +79,59 @@ def print_report(file_path, elapsed, line_limit, line_count, headers, filled_cou
         print("Line limit set to: {}".format(line_limit), flush=True)
     print("Number of fields: {}".format(len(headers)), flush=True)
     print("\nField list:", flush=True)
-    print("i, Name, filled_count, distinct_count", flush=True)
+    print("i, Name, filled_count, distinct_count, field_type", flush=True)
     for i, field in enumerate(headers, start=1):
         # filled_percentage = 100.0 * (1.0 - empty_count[field]/line_count)
         distinct_count = len(field_set[field])
-        if len(field_set[field]) < 10:
-            values = "|".join(list(field_set[field]))
-        else:
-            values = "|".join(list(field_set[field])[0:10]) + "..."
-        print("{0: <3}, {1: <30}, {2: <10}, {3: <10} ".format(i,field, filled_count[field], distinct_count), flush=True)
+        type_ = type_sniff(field_set, field)
+        print("{0: <3}, {1: <30}, {2: <10}, {3: <10}, {4:}".format(i,field, filled_count[field], distinct_count, type_), flush=True)
 
     return
+
+def type_sniff(field_set, field):
+    data_set = field_set[field]
+    types = ["StringType", "DecimalType", "IntegerType", "DateType"]
+
+    type_scores = Counter()
+    fail_scores = Counter()
+
+    for item in data_set:
+        # If item is none then continue
+        if item in ("", None):
+            continue
+        # Check for date
+        try:
+            date_ = parser.parse(item)
+            type_scores["DateType"] += 2
+        except:
+            fail_scores["DateType"] += 2
+
+        # check for integer
+        try:
+            value = int(item)
+            type_scores["IntegerType"] += 3
+        except:
+            fail_scores["IntegerType"] += 3
+
+        # check for float/decimal
+        try:
+            value = decimal.Decimal(item)
+            type_scores["FloatType"] += 2
+        except:
+            fail_scores["FloatType"] += 2
+
+        # check for string (string is the fallback)
+        type_scores["StringType"] += 1
+
+    try:
+        type_ = type_scores.most_common(1)[0][0] 
+        #type_ = type_scores.most_common(5)
+        anti_type = fail_scores.most_common(5)
+    except:
+        type_ = "NoneType"
+        anti_type = "NoneType"
+
+    return type_ #, anti_type
 
 if __name__ == "__main__":
     arg = sys.argv[1:]
