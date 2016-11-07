@@ -79,12 +79,34 @@ def print_report(file_path, elapsed, line_limit, line_count, headers, filled_cou
         print("Line limit set to: {}".format(line_limit), flush=True)
     print("Number of fields: {}".format(len(headers)), flush=True)
     print("\nField list:", flush=True)
-    print("i, Name, filled_count, distinct_count, field_type", flush=True)
+    print("i, Name, filled_count, distinct_count, field_type, minimum, maximum", flush=True)
     for i, field in enumerate(headers, start=1):
         # filled_percentage = 100.0 * (1.0 - empty_count[field]/line_count)
         distinct_count = len(field_set[field])
         type_ = type_sniff(field_set, field)
-        print("{0: <3}, {1: <30}, {2: <10}, {3: <10}, {4:}".format(i,field, filled_count[field], distinct_count, type_), flush=True)
+        if type_ == "IntegerType":
+            convfunc = int
+        elif type_ == "DecimalType":
+            convfunc = decimal.Decimal
+        elif type_ == "DateType":
+            convfunc = parser.parse
+        else:
+            convfunc = str
+        array = []
+        for x in field_set[field]:
+            if x not in ["", None]:
+                try:
+                    array.append(convfunc(x))
+                except:
+                    pass
+        #array = [convfunc(x) for x in field_set[field] if x not in ["", None]]
+        if len(array) != 0: 
+            minimum = min(array)
+            maximum = max(array)
+        else:
+            minimum = None
+            maximum = None
+        print("{0: <3}, {1: <30}, {2: <10}, {3: <10}, {4:}, {5:}, {6:}".format(i,field, filled_count[field], distinct_count, type_, minimum, maximum), flush=True)
 
     return
 
