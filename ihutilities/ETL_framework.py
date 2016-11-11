@@ -158,7 +158,7 @@ def do_etl(db_fields, db_config, data_path, data_field_lookup,
     db_config = _normalise_config(db_config)
     
     # If force is false then return if ETL on this file has already been done
-    data_path, name_in_zip = split_zipfile_path(data_path)
+    zip_path, name_in_zip = split_zipfile_path(data_path)
 
     datafile_sha = calculate_file_sha(data_path)
     already_done = check_if_already_done(data_path, db_config, datafile_sha)
