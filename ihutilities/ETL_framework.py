@@ -76,7 +76,7 @@ def get_source_generator(data_path, headers, separator, encoding):
 
 def do_etl(db_fields, db_config, data_path, data_field_lookup, 
             mode="production", headers=True, null_equivalents=[""], force=False, 
-            separator=",", encoding="utf-8-sig", 
+            separator=",", encoding="utf-8-sig", table=None,
             rowmaker=make_row, rowsource=get_source_generator):
     """This function uploads CSV files to a sqlite or MariaDB/MySQL database
 
@@ -167,12 +167,20 @@ def do_etl(db_fields, db_config, data_path, data_field_lookup,
         logger.warning("Data file has already been uploaded to database, therefore returning. Delete database to allow ETL")
         return db_config, "Already done"
 
-    # We're implicitly writing data to "property_data" because we didn't provide a tables argument
-    revised_db_fields = {}
-    revised_db_fields["property_data"] = db_fields
-    revised_db_fields["metadata"] = metadata_fields   
+    # If the table argument is None we assume we are writing to the property_data table and that db_fields describes one flat level table
+    if table is None:
+        table = "property_data"
+        revised_db_fields = {}
+        revised_db_fields["property_data"] = db_fields
+        revised_db_fields["metadata"] = metadata_fields   
+        tables = ["property_data", "metadata"]
+    else:
+        revised_db_fields = db_fields.copy()
+        revised_db_fields["metadata"] = metadata_fields   
+        tables = list(db_fields.keys())
+        tables.append("metadata")
 
-    configure_db(db_config, revised_db_fields, tables = ["property_data", "metadata"], force=force)
+    configure_db(db_config, revised_db_fields, tables=tables, force=force)
 
     # Get on with the main business
     t0 = time.time()
@@ -183,7 +191,7 @@ def do_etl(db_fields, db_config, data_path, data_field_lookup,
 
     primary_key_set = set()
     duplicate_primary_keys = set()
-    primary_key = get_primary_key_from_db_fields(db_fields)
+    primary_key = get_primary_key_from_db_fields(db_fields[table])
 
     if primary_key == "ID" and data_field_lookup["ID"] is None:
         autoinc = True
@@ -203,7 +211,7 @@ def do_etl(db_fields, db_config, data_path, data_field_lookup,
             # print("Read row {}".format(i), flush=True)
             
             # Zip the input data into a row for the database
-            new_row =  rowmaker(row, data_path, data_field_lookup, db_fields, null_equivalents, autoinc, primary_key)
+            new_row =  rowmaker(row, data_path, data_field_lookup, db_fields[table], null_equivalents, autoinc, primary_key)
            
             # Decide whether or not to write new_row
             if autoinc or (new_row[primary_key] not in primary_key_set):
@@ -229,7 +237,7 @@ def do_etl(db_fields, db_config, data_path, data_field_lookup,
 
             # Write a chunk to the database            
             if (line_count % chunk_size) == 0:
-                write_to_db(data, db_config, db_fields)
+                write_to_db(data, db_config, db_fields[table], table=table)
                 data = []
 
             # Break if we have reached test_line_limit
@@ -245,7 +253,7 @@ def do_etl(db_fields, db_config, data_path, data_field_lookup,
         raise   
 
     # Final write to database
-    write_to_db(data, db_config, db_fields, whatever=True)
+    write_to_db(data, db_config, db_fields[table], whatever=True, table=table)
 
     # Write a final report
     t1 = time.time()
