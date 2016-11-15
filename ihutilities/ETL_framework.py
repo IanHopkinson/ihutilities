@@ -144,11 +144,11 @@ def do_etl(db_fields, db_config, data_path, data_field_lookup,
         report_size = 1000 # 10000
         logger.info("Test mode so file_length is set to test_line_limit of {}".format(test_line_limit))
         file_length = test_line_limit
-        # Rename output database if we are in test mode
-        if isinstance(db_config, str):
+        # Rename output database if we are in test mode but not if it already ends with test
+        if isinstance(db_config, str) and not db_config.endswith("-test.sqlite"):
             db_config = db_config.replace(".sqlite", "-test.sqlite")
             logger.info("Renamed output database to {} because we are in test mode".format(db_config))
-        else:
+        elif not db_config["db_name"].endswith("_test"):
             db_config["db_name"] = db_config["db_name"] + "_test"
             logger.info("Renamed output database to {} because we are in test mode".format(db_config["db_name"]))
     else:
