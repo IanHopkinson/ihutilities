@@ -191,7 +191,7 @@ def do_etl(db_fields, db_config, data_path, data_field_lookup,
 
     primary_key_set = set()
     duplicate_primary_keys = set()
-    primary_key = get_primary_key_from_db_fields(db_fields[table])
+    primary_key = get_primary_key_from_db_fields(revised_db_fields[table])
 
     if primary_key == "ID" and data_field_lookup["ID"] is None:
         autoinc = True
@@ -211,7 +211,7 @@ def do_etl(db_fields, db_config, data_path, data_field_lookup,
             # print("Read row {}".format(i), flush=True)
             
             # Zip the input data into a row for the database
-            new_row =  rowmaker(row, data_path, data_field_lookup, db_fields[table], null_equivalents, autoinc, primary_key)
+            new_row =  rowmaker(row, data_path, data_field_lookup, revised_db_fields[table], null_equivalents, autoinc, primary_key)
            
             # Decide whether or not to write new_row
             if autoinc or (new_row[primary_key] not in primary_key_set):
@@ -237,7 +237,7 @@ def do_etl(db_fields, db_config, data_path, data_field_lookup,
 
             # Write a chunk to the database            
             if (line_count % chunk_size) == 0:
-                write_to_db(data, db_config, db_fields[table], table=table)
+                write_to_db(data, db_config, revised_db_fields[table], table=table)
                 data = []
 
             # Break if we have reached test_line_limit
@@ -253,7 +253,7 @@ def do_etl(db_fields, db_config, data_path, data_field_lookup,
         raise   
 
     # Final write to database
-    write_to_db(data, db_config, db_fields[table], whatever=True, table=table)
+    write_to_db(data, db_config, revised_db_fields[table], whatever=True, table=table)
 
     # Write a final report
     t1 = time.time()
