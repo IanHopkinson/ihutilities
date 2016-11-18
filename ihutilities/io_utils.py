@@ -113,13 +113,16 @@ def get_a_file_handle(file_path, encoding="utf-8-sig", mode="rU", zip_guess=True
     """This function returns a file handle, even if a file is within a zip
 
     Args:
-       file_path (str): 
-            file path to the output file
+        file_path (str): 
+            file path which may point to a file inside a zip
 
     Kwargs:
-       append (bool): 
-            if True then data is appended to an existing file 
-            if False and the file exists then the file is deleted 
+        encoding (str): 
+            character encoding of the taregt file
+        mode (str): 
+            mode to use for opening file
+        zip_guess (bool): 
+            if True then we try to guess whether the file is a zip   
        
     Returns:
        a file handler
@@ -130,6 +133,10 @@ def get_a_file_handle(file_path, encoding="utf-8-sig", mode="rU", zip_guess=True
         >>> 
     """
     # If we have a straightforward file then return that
+    fh = None 
+    if file_path is None:
+        return fh
+
     if ".zip" not in file_path:
         if mode == "rU":
             fh = open(file_path, encoding=encoding, mode=mode)
