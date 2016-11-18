@@ -60,7 +60,10 @@ def write_dictionary(filename, data, append=True):
 def calculate_file_sha(filepath):
     file_sha = hashlib.sha1()
 
-    fh = get_a_file_handle(filepath, mode="rb")
+    fh = file_handle_or_none(filepath, encoding=None, mode="rb")
+
+    if fh is None:
+        return None
 
     if ".zip" not in filepath:
         file_size = os.path.getsize(filepath)
@@ -139,9 +142,9 @@ def get_a_file_handle(file_path, encoding="utf-8-sig", mode="rU", zip_guess=True
 
     if ".zip" not in file_path:
         if mode == "rU":
-            fh = open(file_path, encoding=encoding, mode=mode)
-        else: # This is what we do for binary files
-            fh = open(file_path, mode=mode)
+            fh = file_handle_or_none(file_path, encoding=encoding, mode=mode)
+        else: # This is what we do for binary files, no encoding permitted here
+            fh = file_handle_or_none(file_path, encoding=None, mode=mode)
     else:
         zip_path, name_in_zip = split_zipfile_path(file_path)
         zf = zipfile.ZipFile(zip_path)
@@ -168,6 +171,16 @@ def get_a_file_handle(file_path, encoding="utf-8-sig", mode="rU", zip_guess=True
                     else:
                         fh = io.BytesIO(cf.read())               
     
+    return fh
+
+def file_handle_or_none(file_path, encoding="utf-8-sig", mode="rU"):
+    try:
+        if encoding is not None:
+            fh = open(file_path, encoding=encoding, mode=mode)
+        else:
+            fh = open(file_path, mode=mode)
+    except FileNotFoundError:
+        fh = None
     return fh
 
 def split_zipfile_path(zipfile_path):
