@@ -307,7 +307,7 @@ def do_etl(db_fields, db_config, data_path, data_field_lookup,
             if i > test_line_limit:
                 break
     except Exception as ex:
-        logger.warning("Encountered exception '{}' at line_count = {}".format(ex, line_count))
+        logger.critical("Encountered exception '{}' at line_count = {}".format(ex, line_count))
         #print("Row: {}".format(row))
         #for key in row.keys():
         #    print("Key: '{:30}', value: '{:}'".format(key, row[key]))
