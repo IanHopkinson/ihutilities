@@ -194,6 +194,10 @@ def write_to_db(data, db_config, db_fields, table="property_data", whatever=Fals
         except (mysql.connector.errors.IntegrityError, sqlite3.IntegrityError):
             conn.close()
             raise
+        except (mysql.connector.errors.DataError):
+            conn.close()
+            logger.info("write_to_db failed with {}".format(converted_data), flush=True)
+            raise
 
     conn.commit()
     conn.close()

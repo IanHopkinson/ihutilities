@@ -29,15 +29,13 @@
 
 # TODO
 
+* I suspect that ETL for large files is slow if a primary key is specified up front because the index is built continuously
+* Support for "resume" in ETL framework
 * Use setup and teardown on a per test basis for test_db_utils
-
 * NROSH snapshot ETL using do_ETL shows that line count is misleading where we are dropping rows
-
 * At the moment the _id in elasticsearch is autoincrementing, we should be able to explicitly set it (think there is a setting for this)
-
 * read_es could do with returning search metadata
 * Build_cache should allow you to easily calculate total run time
-* Support for "resume" in ETL framework
 * read_db should take templated queries (using the appropriate placeholder and data supplied separately)
 * read_db should only allow select statements
 * Extend testing to io_utils

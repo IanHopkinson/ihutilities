@@ -26,7 +26,18 @@ metadata_fields = OrderedDict([
     ("status", "TEXT"),
     ("start_time", "TEXT"),
     ("finish_time", "TEXT"),
-    ("last_write_time", "TEXT")
+    ("last_write_time", "TEXT"),
+    ("chunk_count", "INTEGER")
+    ])
+
+session_log_fields = OrderedDict([
+    ("ID", "INTEGER PRIMARY KEY AUTOINCREMENT"),
+    ("make_row_method", "TEXT"),
+    ("start_time", "TEXT"),
+    ("end_time", "TEXT"),
+    ("sha", "TEXT"),
+    ("first_chunk", "TEXT"),
+    ("last_chunk", "FLOAT"),
     ])
 
 logger = logging.getLogger(__name__)
@@ -172,13 +183,16 @@ def do_etl(db_fields, db_config, data_path, data_field_lookup,
         table = "property_data"
         revised_db_fields = {}
         revised_db_fields["property_data"] = db_fields
-        revised_db_fields["metadata"] = metadata_fields   
-        tables = ["property_data", "metadata"]
+        revised_db_fields["metadata"] = metadata_fields
+        revised_db_fields["session_log"] = session_log_fields   
+        tables = ["property_data", "metadata", "session_log"]
     else:
         revised_db_fields = db_fields.copy()
         revised_db_fields["metadata"] = metadata_fields   
+        revised_db_fields["session_log"] = session_log_fields
         tables = list(db_fields.keys())
         tables.append("metadata")
+        tables.append("session_log")
 
     configure_db(db_config, revised_db_fields, tables=tables, force=force)
 
@@ -201,14 +215,49 @@ def do_etl(db_fields, db_config, data_path, data_field_lookup,
     # Write start to metadata table
     id_ = None
     start_time = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    metadata = [(id_, data_path, datafile_sha,"Started", start_time, "", "")]
+    metadata = [(id_, data_path, datafile_sha,"Started", start_time, "", "", 0)]
     write_to_db(metadata, db_config, revised_db_fields["metadata"], table="metadata")
+
+    # Get metadata id_ back out of the database
+    sql_query = "select SequenceNumber from metadata order by SequenceNumber desc;"
+    results = list(read_db(sql_query, db_config))
+    id_ = results[0]["SequenceNumber"]
+
+    # ** Add in session log code
+    # Fetch chunk progress
+    chunk_count = 0
+    chunk_skip = 0
+    # chunk_skip = get_chunk_count(id_, db_config)
+    # print("Skipping {} chunks".format(chunk_skip), flush=True)
+    # # ** Skip chunks
+    # key_chunks = key_method(chunk_size)
+
+    # if chunk_skip != 0:
+    #     for i in range(0, chunk_skip):
+    #         print("Skipping chunk {} in ({}, {})".format(i, key_method.__name__, make_row_method.__name__), flush=True) 
+    #         key_chunks.__next__()
+    #         line_count_offset = chunk_size * chunk_skip
+    #         chunk_count = chunk_skip
+
+    # Update session log here
+    time_ = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    session_log_data = [(None, rowsource.__name__, time_, time_, datafile_sha, chunk_skip, chunk_skip)]
+    write_to_db(session_log_data, db_config, revised_db_fields["session_log"], table="session_log")
+
+    # Pick up session log data
+    sql_query = "select * from session_log order by ID desc;"
+    results = list(read_db(sql_query, db_config))
+    sessid = results[0]["ID"]
+
+    #**End session log code
 
     rows = rowsource(data_path, headers, separator, encoding)
         # Loop over input rows
     try:
         for i, row in enumerate(rows):
-            # print("Read row {}".format(i), flush=True)
+            # Line skipping code goes here
+
+
             
             # Zip the input data into a row for the database
             new_row =  rowmaker(row, data_path, data_field_lookup, revised_db_fields[table], null_equivalents, autoinc, primary_key)
@@ -238,6 +287,12 @@ def do_etl(db_fields, db_config, data_path, data_field_lookup,
             # Write a chunk to the database            
             if (line_count % chunk_size) == 0:
                 write_to_db(data, db_config, revised_db_fields[table], table=table)
+                chunk_count += 1
+                # Update chunk_count to db metadata
+                update_to_db([(chunk_count, id_)], db_config, ["chunk_count", "SequenceNumber"], table="metadata", key="SequenceNumber")
+                # Update current time and chunk count to session log
+                time_ = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                update_to_db([(chunk_count, time_, sessid)], db_config, ["last_chunk", "end_time", "ID"], table="session_log", key="ID")
                 data = []
 
             # Break if we have reached test_line_limit
@@ -347,3 +402,10 @@ def make_dbfields(file_path):
     data_field_lookup = OrderedDict(data_field_lookup_array)
 
     return DB_FIELDS, data_field_lookup
+
+def get_chunk_count(id_, cache_db):
+    sql_query = "select chunk_count from metadata where SequenceNumber = {};".format(id_) 
+    result = list(read_db(sql_query, cache_db))
+    
+    chunk_count = result[0]["chunk_count"]
+    return chunk_count
