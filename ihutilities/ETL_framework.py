@@ -212,23 +212,29 @@ def do_etl(db_fields, db_config, data_path, data_field_lookup,
     else:
         autoinc = False
 
-    # Write start to metadata table
-    id_ = None
-    start_time = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    metadata = [(id_, data_path, datafile_sha,"Started", start_time, "", "", 0)]
-    write_to_db(metadata, db_config, revised_db_fields["metadata"], table="metadata")
-
     # Get metadata id_ back out of the database
-    sql_query = "select SequenceNumber from metadata order by SequenceNumber desc;"
+    sql_query = "select * from metadata order by SequenceNumber desc;"
     results = list(read_db(sql_query, db_config))
-    id_ = results[0]["SequenceNumber"]
+    if len(results) == 0:
+    # Write start to metadata table
+        id_ = None
+        start_time = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        metadata = [(id_, data_path, datafile_sha,"Started", start_time, "", "", 0)]
+        write_to_db(metadata, db_config, revised_db_fields["metadata"], table="metadata")
+        id_ = 1
+    else:
+        id_ = results[0]["SequenceNumber"]
+        start_time = results[0]["SequenceNumber"]
+
+
 
     # ** Add in session log code
     # Fetch chunk progress
-    chunk_count = 0
-    chunk_skip = 0
-    # chunk_skip = get_chunk_count(id_, db_config)
-    # print("Skipping {} chunks".format(chunk_skip), flush=True)
+    chunk_skip = get_chunk_count(id_, db_config)
+    chunk_count = chunk_skip
+    line_count_offset = chunk_size * chunk_skip
+    line_count = line_count_offset
+    logging.info("Skipping {} chunks ({} lines)".format(chunk_skip, line_count))
     # # ** Skip chunks
     # key_chunks = key_method(chunk_size)
 
@@ -256,7 +262,8 @@ def do_etl(db_fields, db_config, data_path, data_field_lookup,
     try:
         for i, row in enumerate(rows):
             # Line skipping code goes here
-
+            if i < line_count_offset:
+                continue
 
             
             # Zip the input data into a row for the database
@@ -271,6 +278,7 @@ def do_etl(db_fields, db_config, data_path, data_field_lookup,
                 #print("UPRN is a duplicate: {}".format(new_row["UPRN"]))
                 duplicate_primary_keys.add(new_row[primary_key])
                 lines_dropped += 1
+                logger.warning("Lines dropped = {}, do not use resume".format(lines_dropped))
                 #print("UPRN = {} has already been seen".format(row[0])) 
 
             # Write an interim report
@@ -341,7 +349,7 @@ def check_if_already_done(data_path, db_config, datafile_sha):
             return False
 
     # Look for the datafile_sha in the metadata table and if it exists, return True
-    sql_query = "select * from metadata where datafile_sha = '{}'".format(datafile_sha)
+    sql_query = "select * from metadata where datafile_sha = '{}' and status = 'Complete'".format(datafile_sha)
     results = list(read_db(sql_query, db_config))
 
     if len(results) == 1:
