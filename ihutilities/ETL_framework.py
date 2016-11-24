@@ -261,6 +261,8 @@ def do_etl(db_fields, db_config, data_path, data_field_lookup,
         for i, row in enumerate(rows):
             # Line skipping code goes here
             if i < line_count_offset:
+                if (i % chunk_size) == 0:
+                    logging.info("Skipping chunk {}".format(i/chunk_size))
                 continue
 
             
