@@ -233,7 +233,7 @@ def do_etl(db_fields, db_config, data_path, data_field_lookup,
     chunk_skip = get_chunk_count(id_, db_config)
     chunk_count = chunk_skip
     if chunk_skip != 0:
-        line_count_offset = (chunk_size * chunk_skip) - 1
+        line_count_offset = (chunk_size * chunk_skip)
         line_count = line_count_offset
     else:
         line_count_offset = 0
