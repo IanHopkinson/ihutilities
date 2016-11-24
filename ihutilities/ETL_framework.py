@@ -234,7 +234,7 @@ def do_etl(db_fields, db_config, data_path, data_field_lookup,
     chunk_count = chunk_skip
     if chunk_skip != 0:
         line_count_offset = (chunk_size * chunk_skip)
-        line_count = line_count_offset
+        line_count = 0
     else:
         line_count_offset = 0
         line_count = 0
@@ -262,7 +262,7 @@ def do_etl(db_fields, db_config, data_path, data_field_lookup,
             # Line skipping code goes here
             if i < line_count_offset:
                 if (i % chunk_size) == 0:
-                    logging.info("Skipping chunk {}".format(i/chunk_size))
+                    logging.info("Skipping chunk {:.0f}, line = ({:d})".format(i/chunk_size, i))
                 continue
 
             
@@ -283,10 +283,10 @@ def do_etl(db_fields, db_config, data_path, data_field_lookup,
 
             # Write an interim report
             if (line_count % report_size) ==0:
-                est_completion_time = ((time.time() - t0) / line_count) * (min(file_length, test_line_limit) - line_count)
+                est_completion_time = ((time.time() - t0) / line_count) * (min(file_length, test_line_limit) - (line_count + line_count_offset))
                 completion_str = (datetime.datetime.now() + datetime.timedelta(seconds=est_completion_time)).strftime("%Y-%m-%d %H:%M:%S")
                 logger.info("Wrote {}/{} at ({}). Estimated completion time: {}".format(
-                        line_count, 
+                        line_count + line_count_offset, 
                         file_length,
                         datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
                         completion_str))
@@ -316,12 +316,14 @@ def do_etl(db_fields, db_config, data_path, data_field_lookup,
         raise   
 
     # Final write to database
+    logging.info("Final write to database of {} lines".format(len(data)))
     write_to_db(data, db_config, revised_db_fields[table], whatever=True, table=table)
+
 
     # Write a final report
     t1 = time.time()
     elapsed = t1 - t0
-    logger.info("Wrote a total {} lines to the database in {:.2f}s".format(line_count, elapsed))
+    logger.info("Wrote a total {} lines to the database in {:.2f}s".format(line_count + line_count_offset, elapsed))
     if lines_dropped > 0:
         logger.warning("Dropped {} lines because they contained duplicate primary key ({})".format(lines_dropped, primary_key))
 

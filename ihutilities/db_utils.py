@@ -3,6 +3,8 @@
 """
 This package contains functions relating to databases
 """
+
+import datetime
 import os
 import time
 import sqlite3
@@ -359,7 +361,8 @@ def finalise_db(db_config, index_name="idx_postcode", table="property_data", col
     if isinstance(colname, list):
         colname = ",".join(colname)
     
-    logger.info("Creating index named '{}' on column(s) '{}'".format(index_name, colname))
+    time_str = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    logger.info("Creating index named '{}' on column(s) '{}' at {}".format(index_name, colname, time_str))
     if spatial:
         cursor.execute('CREATE SPATIAL INDEX {index_name} on {table}({colname})'
             .format(index_name=index_name, table=table, colname=colname))
