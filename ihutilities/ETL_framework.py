@@ -232,18 +232,16 @@ def do_etl(db_fields, db_config, data_path, data_field_lookup,
     # Fetch chunk progress
     chunk_skip = get_chunk_count(id_, db_config)
     chunk_count = chunk_skip
-    line_count_offset = chunk_size * chunk_skip
-    line_count = line_count_offset
+    if chunk_skip != 0:
+        line_count_offset = (chunk_size * chunk_skip) - 1
+        line_count = line_count_offset
+    else:
+        line_count_offset = 0
+        line_count = 0
+
     logging.info("Skipping {} chunks ({} lines)".format(chunk_skip, line_count))
     # # ** Skip chunks
     # key_chunks = key_method(chunk_size)
-
-    # if chunk_skip != 0:
-    #     for i in range(0, chunk_skip):
-    #         print("Skipping chunk {} in ({}, {})".format(i, key_method.__name__, make_row_method.__name__), flush=True) 
-    #         key_chunks.__next__()
-    #         line_count_offset = chunk_size * chunk_skip
-    #         chunk_count = chunk_skip
 
     # Update session log here
     time_ = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
