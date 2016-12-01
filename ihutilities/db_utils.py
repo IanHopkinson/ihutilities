@@ -7,6 +7,7 @@ This package contains functions relating to databases
 import datetime
 import os
 import time
+import socket
 import sqlite3
 import logging
 import mysql.connector
@@ -14,7 +15,8 @@ from mysql.connector import errorcode
 
 from collections import OrderedDict
 
-from ihutilities.es_utils import configure_es, write_to_es, read_es, update_to_es
+
+
 
 db_config_template = {"db_name": "test",
              "db_user": "root",
@@ -26,6 +28,13 @@ db_config_template = {"db_name": "test",
             }
 
 logger = logging.getLogger(__name__)
+
+# Conditional import if elasticsearch is running
+sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+result = sock.connect_ex(('localhost',9200))
+if result == 0:
+    logger.warning("Elasticsearch not running, so ihutilities.es_util not imported")
+    from ihutilities.es_utils import configure_es, write_to_es, read_es, update_to_es
 
 def configure_db(db_config, db_fields, tables="property_data", force=False):
     """This function sets up a sqlite or MariaDB/MySQL database
