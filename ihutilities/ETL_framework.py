@@ -76,6 +76,9 @@ def get_source_generator(data_path, headers, separator, encoding):
     # See data manager for detecting zip files, and then picking up the right part
     #
     fh = get_a_file_handle(data_path, encoding=encoding)
+    if fh is None:
+        logger.critical("No file handle for {}".format(data_path))
+
     with fh:
         if headers:
             rows = csv.DictReader(fh, delimiter=separator)
@@ -159,7 +162,7 @@ def do_etl(db_fields, db_config, data_path, data_field_lookup,
         if isinstance(db_config, str) and not db_config.endswith("-test.sqlite"):
             db_config = db_config.replace(".sqlite", "-test.sqlite")
             logger.info("Renamed output database to {} because we are in test mode".format(db_config))
-        elif not db_config["db_name"].endswith("_test"):
+        elif (db_config["db_type"] == "mysql" or db_config["db_type"] == "mariadb") and not db_config["db_name"].endswith("_test"):
             db_config["db_name"] = db_config["db_name"] + "_test"
             logger.info("Renamed output database to {} because we are in test mode".format(db_config["db_name"]))
     else:

@@ -404,6 +404,9 @@ def read_db(sql_query, db_config):
             cursor.execute(sql_query)
         else:
             raise
+    except sqlite3.OperationalError as err:
+        logger.debug("Caught exception {} on query '{}'".format(err, sql_query))
+        raise
 
     colnames = [x[0] for x in cursor.description]
 
