@@ -491,11 +491,12 @@ def create_mysql_database(db_config):
                                    password=password,
                                    host=db_config["db_host"])
     cursor = conn.cursor()
+    create_string = "CREATE DATABASE {} DEFAULT CHARACTER SET 'utf8'".format(db_config["db_name"]) 
     try:
-        cursor.execute(
-            "CREATE DATABASE {} DEFAULT CHARACTER SET 'utf8'".format(db_config["db_name"]))
+        cursor.execute(create_string)
     except mysql.connector.Error as err:
         logger.critical("Failed creating database: {}".format(err))
+        logger.critical("Creation commad: {}".format(create_string))
         exit(1)
 
     conn.commit()
