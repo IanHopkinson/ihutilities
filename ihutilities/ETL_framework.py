@@ -35,7 +35,7 @@ session_log_fields = OrderedDict([
     ("make_row_method", "TEXT"),
     ("start_time", "TEXT"),
     ("end_time", "TEXT"),
-    ("sha", "TEXT"),
+    ("datafile_sha", "TEXT"),
     ("first_chunk", "TEXT"),
     ("last_chunk", "FLOAT"),
     ])
@@ -216,7 +216,7 @@ def do_etl(db_fields, db_config, data_path, data_field_lookup,
         autoinc = False
 
     # Get metadata id_ back out of the database
-    sql_query = "select * from metadata order by SequenceNumber desc;"
+    sql_query = "select * from metadata where datafile_sha = '{}' order by SequenceNumber desc;".format(datafile_sha)
     results = list(read_db(sql_query, db_config))
     if len(results) == 0:
     # Write start to metadata table
@@ -224,7 +224,9 @@ def do_etl(db_fields, db_config, data_path, data_field_lookup,
         start_time = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         metadata = [(id_, data_path, datafile_sha,"Started", start_time, "", "", 0)]
         write_to_db(metadata, db_config, revised_db_fields["metadata"], table="metadata")
-        id_ = 1
+        sql_query = "select * from metadata where datafile_sha = '{}' order by SequenceNumber desc;".format(datafile_sha)
+        results = list(read_db(sql_query, db_config))
+        id_ = results[0]["SequenceNumber"] 
     else:
         id_ = results[0]["SequenceNumber"]
         start_time = results[0]["SequenceNumber"]
@@ -233,7 +235,7 @@ def do_etl(db_fields, db_config, data_path, data_field_lookup,
 
     # ** Add in session log code
     # Fetch chunk progress
-    chunk_skip = get_chunk_count(id_, db_config)
+    chunk_skip = get_chunk_count(id_, datafile_sha, db_config)
     chunk_count = chunk_skip
     if chunk_skip != 0:
         line_count_offset = (chunk_size * chunk_skip)
@@ -252,7 +254,7 @@ def do_etl(db_fields, db_config, data_path, data_field_lookup,
     write_to_db(session_log_data, db_config, revised_db_fields["session_log"], table="session_log")
 
     # Pick up session log data
-    sql_query = "select * from session_log order by ID desc;"
+    sql_query = "select * from session_log where datafile_sha = '{}' order by ID desc;".format(datafile_sha)
     results = list(read_db(sql_query, db_config))
     sessid = results[0]["ID"]
 
@@ -416,9 +418,13 @@ def make_dbfields(file_path):
 
     return DB_FIELDS, data_field_lookup
 
-def get_chunk_count(id_, cache_db):
-    sql_query = "select chunk_count from metadata where SequenceNumber = {};".format(id_) 
+def get_chunk_count(id_, datafile_sha, cache_db):
+    sql_query = "select chunk_count from metadata where datafile_sha='{}' and SequenceNumber = {};".format(datafile_sha, id_) 
     result = list(read_db(sql_query, cache_db))
     
-    chunk_count = result[0]["chunk_count"]
+    if len(result) == 1:
+        chunk_count = result[0]["chunk_count"]
+    else:
+        chunk_count = 0
+
     return chunk_count
