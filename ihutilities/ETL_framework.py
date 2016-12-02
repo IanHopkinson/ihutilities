@@ -91,7 +91,8 @@ def get_source_generator(data_path, headers, separator, encoding):
 def do_etl(db_fields, db_config, data_path, data_field_lookup, 
             mode="production", headers=True, null_equivalents=[""], force=False, 
             separator=",", encoding="utf-8-sig", table=None,
-            rowmaker=make_row, rowsource=get_source_generator):
+            rowmaker=make_row, rowsource=get_source_generator,
+            test_line_limit=10000):
     """This function uploads CSV files to a sqlite or MariaDB/MySQL database
 
     Args:
@@ -153,11 +154,11 @@ def do_etl(db_fields, db_config, data_path, data_field_lookup,
         logger.info("Measuring length of input file...")
         file_length = report_input_length(rowsource, test_line_limit, data_path, headers, separator, encoding)   
     elif mode == "test":
-        test_line_limit = 10000 # float('inf')
+        test_line_limit = test_line_limit # float('inf')
         chunk_size = 1000 # 10000
         report_size = 1000 # 10000
         logger.info("Test mode so file_length is set to test_line_limit of {}".format(test_line_limit))
-        file_length = test_line_limit
+        file_length = report_input_length(rowsource, test_line_limit, data_path, headers, separator, encoding)
         # Rename output database if we are in test mode but not if it already ends with test
         if isinstance(db_config, str) and not db_config.endswith("-test.sqlite"):
             db_config = db_config.replace(".sqlite", "-test.sqlite")
