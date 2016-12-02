@@ -491,7 +491,7 @@ def create_mysql_database(db_config):
                                    password=password,
                                    host=db_config["db_host"])
     cursor = conn.cursor()
-    create_string = "CREATE DATABASE {} DEFAULT CHARACTER SET 'utf8'".format(db_config["db_name"]) 
+    create_string = "CREATE DATABASE {} DEFAULT CHARACTER SET 'utf8' COLLATE 'utf8_unicode_ci'".format(db_config["db_name"]) 
     try:
         cursor.execute(create_string)
     except mysql.connector.Error as err:
