@@ -158,7 +158,10 @@ def do_etl(db_fields, db_config, data_path, data_field_lookup,
         chunk_size = 1000 # 10000
         report_size = 1000 # 10000
         logger.info("Test mode so file_length is set to test_line_limit of {}".format(test_line_limit))
-        file_length = report_input_length(rowsource, test_line_limit, data_path, headers, separator, encoding)
+        if test_line_limit == float("inf"):
+            file_length = report_input_length(rowsource, test_line_limit, data_path, headers, separator, encoding)
+        else:
+            file_length = test_line_limit
         # Rename output database if we are in test mode but not if it already ends with test
         if isinstance(db_config, str) and not db_config.endswith("-test.sqlite"):
             db_config = db_config.replace(".sqlite", "-test.sqlite")
@@ -391,6 +394,7 @@ def get_primary_key_from_db_fields(db_fields):
     return primary_key
 
 def report_input_length(rowsource, test_line_limit, data_path, headers, separator, encoding):
+    logger.info("Measuring length of input file...")
     t0 = time.time()
 
     file_length = sum(1 for row in rowsource(data_path, headers, separator, encoding)) - 1 #Take off the header line
