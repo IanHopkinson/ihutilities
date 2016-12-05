@@ -525,6 +525,32 @@ def check_mysql_database_exists(db_config):
     conn.close()
     return exists
 
+def check_table_exists(db_config, table):
+    db_config = _normalise_config(db_config)
+    conn = _make_connection(db_config)
+    
+    if db_config["db_type"] == "sqlite":
+        table_check_query = "SELECT name FROM sqlite_master WHERE type='table' AND name='{}';"
+        DB_CREATE_TAIL = ")"
+        name = os.path.basename(db_config["db_path"])
+    elif db_config["db_type"] == "mariadb" or db_config["db_type"] == "mysql":
+        table_check_query = "SELECT table_name as name FROM information_schema.tables WHERE table_schema = '{}'".format(db_config["db_name"]) + " AND table_name = '{}';"
+        DB_CREATE_TAIL = ") ENGINE = MyISAM"
+        name = db_config["db_name"]
+    
+    cursor = conn.cursor()
+
+    cursor.execute(table_check_query.format(table))
+    result = cursor.fetchall()
+    logger.debug("table_check_query result: {}".format(result))
+    if len(result) != 0 and result[0][0].lower() == table.lower():
+        table_exists = True
+    else:
+        table_exists = False
+
+    return table_exists
+
+
 def _create_tables_db(db_config, db_fields, tables, force):
     """
     This is a private function responsible for creating a database table
