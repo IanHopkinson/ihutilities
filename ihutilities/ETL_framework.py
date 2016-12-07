@@ -394,7 +394,6 @@ def get_primary_key_from_db_fields(db_fields):
     return primary_key
 
 def report_input_length(rowsource, test_line_limit, data_path, headers, separator, encoding):
-    logger.info("Measuring length of input file...")
     t0 = time.time()
 
     file_length = sum(1 for row in rowsource(data_path, headers, separator, encoding)) - 1 #Take off the header line
