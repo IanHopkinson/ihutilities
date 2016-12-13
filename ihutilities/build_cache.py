@@ -40,11 +40,17 @@ session_log_fields = OrderedDict([
     ("last_chunk", "FLOAT"),
     ])
 
+user_fields = OrderedDict([
+    ("key", "TEXT PRIMARY KEY"),
+    ("value", "TEXT")
+    ])
+
 logger = logging.getLogger(__name__)
 
 def build_cache(constructors, cache_db, cache_fields, sha, chunk_size=1000, test=True):
     if test:
-        cache_db = "test.sqlite"
+        output_dir = os.path.dirname(cache_db)
+        cache_db = os.path.join(output_dir, "test.sqlite")
         print("** test is True therefore cache_db set to {}".format(cache_db))
 
     print("Making cache file: {}".format(cache_db), flush=True)
@@ -53,12 +59,13 @@ def build_cache(constructors, cache_db, cache_fields, sha, chunk_size=1000, test
     # Create database
 
     db_fields = {"property_data": cache_fields, "metadata":metadata_fields, 
-                 "session_log": session_log_fields}
+                 "session_log": session_log_fields, "user_fields":user_fields}
 
     if os.path.isfile(cache_db):
         print("Database file {} already exists, attempting to update. Delete file for a fresh start".format(cache_db))
         configure_db(cache_db, db_fields, tables = list(db_fields.keys()))
     else:
+        print("Creating database at {}".format(cache_db), flush=True)
         configure_db(cache_db, db_fields, tables = list(db_fields.keys()))
 
     # Loop over the constructors
@@ -95,6 +102,8 @@ def build_cache(constructors, cache_db, cache_fields, sha, chunk_size=1000, test
     elapsed = t1 - t0
     print("\nWrote a total {0} records to {1} in {2:.2f}s".format(total_line_count, os.path.basename(cache_db), elapsed), flush=True)
 
+    return cache_db
+
 def updater(id_, key_method, get_key_count, make_row_method, cache_db, db_fields, sha, chunk_size):
     # Get a bunch of UPRNs
     key_count = get_key_count()
@@ -104,7 +113,7 @@ def updater(id_, key_method, get_key_count, make_row_method, cache_db, db_fields
     # chunk_size = 1000 #100000 #1000 #100000 for production, 1000 for test
     line_count = 0
     chunk_count = 0
-    test_limit = float('inf') # 10000 # float('inf')
+    test_limit = 1000 #float('inf') # 10000 # float('inf')
     uprn_types = 1
     line_count_offset = 0
     print("Test_limit set to {}".format(test_limit), flush=True)
