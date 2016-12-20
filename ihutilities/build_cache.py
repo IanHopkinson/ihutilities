@@ -113,7 +113,7 @@ def updater(id_, key_method, get_key_count, make_row_method, cache_db, db_fields
     # chunk_size = 1000 #100000 #1000 #100000 for production, 1000 for test
     line_count = 0
     chunk_count = 0
-    test_limit = 1000 #float('inf') # 10000 # float('inf')
+    test_limit = float('inf') # 10000 # float('inf')
     uprn_types = 1
     line_count_offset = 0
     print("Test_limit set to {}".format(test_limit), flush=True)
