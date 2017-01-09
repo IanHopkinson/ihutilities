@@ -5,6 +5,7 @@
 # It is resumable and logs the methods and sessions used to generate a database
 # Ideal for building databases which require a long time to make
 
+import functools
 import mysql.connector
 import os
 import datetime
@@ -71,13 +72,18 @@ def build_cache(constructors, cache_db, cache_fields, sha, chunk_size=1000, test
     # Loop over the constructors
     total_line_count = 0
     for id_, (key_generator, key_count, make_row_method) in enumerate(constructors):
+        if isinstance(key_generator, functools.partial):
+            key_generator_name = key_generator.func.__name__
+        else:
+            key_generator_name = key_generator.__name__
+
         stage_status = check_stage_status(key_generator, make_row_method, cache_db)
         if stage_status == "Complete":
             print("Flatfile db already updated with {}, continuing to next stage".format(make_row_method.__name__), flush=True)
             continue
         elif stage_status == "Not started":
             finish_time = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-            metadata = [(id_, key_generator.__name__, make_row_method.__name__, "Started", "{:.2f}".format(0), 0, finish_time, 0)]
+            metadata = [(id_, key_generator_name, make_row_method.__name__, "Started", "{:.2f}".format(0), 0, finish_time, 0)]
             write_to_db(metadata, cache_db, db_fields["metadata"], table="metadata")
             
         t_update0 = time.time()
@@ -91,7 +97,7 @@ def build_cache(constructors, cache_db, cache_fields, sha, chunk_size=1000, test
         elapsed = t_update1 - t_update0
         finish_time = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         print("Wrote {0} '{1}' records to {2} in {3:.2f}s".format(line_count, make_row_method.__name__, os.path.basename(cache_db), elapsed), flush=True)
-        metadata = [(id_, key_generator.__name__, make_row_method.__name__, "Complete", "{:.2f}".format(elapsed), line_count, finish_time)]
+        metadata = [(id_, key_generator_name, make_row_method.__name__, "Complete", "{:.2f}".format(elapsed), line_count, finish_time)]
         update_fields = [x for x in db_fields["metadata"].keys()]
         update_to_db(metadata, cache_db, update_fields, table="metadata", key="SequenceNumber")
         # update_to_db(metadata, db_file_path, db_fields["metadata"], table="metadata")
@@ -201,9 +207,13 @@ def get_chunk_count(id_, cache_db):
     return chunk_count
 
 def check_stage_status(key_method, make_row_method, cache_db):
+    if isinstance(key_method, functools.partial):
+        key_method_name = key_method.func.__name__
+    else:
+        key_method_name = key_method.__name__
     conn = sqlite3.connect(cache_db)
     c = conn.cursor()
-    c.execute("select status from metadata where key_method = ? and make_row_method = ?;", (key_method.__name__, make_row_method.__name__))
+    c.execute("select status from metadata where key_method = ? and make_row_method = ?;", (key_method_name, make_row_method.__name__))
     result = c.fetchall()
     stage_complete = "Not started"
     if len(result) == 1:
