@@ -32,7 +32,8 @@ logger = logging.getLogger(__name__)
 # Conditional import if elasticsearch is running
 sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 result = sock.connect_ex(('localhost',9200))
-if result == 0:
+# print(result, flush=True)
+if result != 0:
     logger.warning("Elasticsearch not running, so ihutilities.es_util not imported")
     from ihutilities.es_utils import configure_es, write_to_es, read_es, update_to_es
 

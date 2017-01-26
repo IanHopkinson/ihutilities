@@ -146,22 +146,17 @@ def do_etl(db_fields, db_config, data_path, data_field_lookup,
     """
     logger.info("Starting ETL to database at {}".format(datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")))
     logger.info("Input file is {}".format(data_path))
+
     # Scan parameters
     if mode == "production":
         test_line_limit = float('inf') # float('inf')
         chunk_size = 10000 # 10000
-        report_size = 10000 # 10000
-        logger.info("Measuring length of input file...")
-        file_length = report_input_length(rowsource, test_line_limit, data_path, headers, separator, encoding)   
+        report_size = 10000 # 10000   
     elif mode == "test":
         test_line_limit = test_line_limit # float('inf')
         chunk_size = 1000 # 10000
         report_size = 1000 # 10000
         logger.info("Test mode so file_length is set to test_line_limit of {}".format(test_line_limit))
-        if test_line_limit == float("inf"):
-            file_length = report_input_length(rowsource, test_line_limit, data_path, headers, separator, encoding)
-        else:
-            file_length = test_line_limit
         # Rename output database if we are in test mode but not if it already ends with test
         if isinstance(db_config, str) and not db_config.endswith("-test.sqlite"):
             db_config = db_config.replace(".sqlite", "-test.sqlite")
@@ -178,13 +173,29 @@ def do_etl(db_fields, db_config, data_path, data_field_lookup,
     # If force is false then return if ETL on this file has already been done
     zip_path, name_in_zip = split_zipfile_path(data_path)
 
+    logger.info("Calculating file sha...")
+    t0 = time.time()
     datafile_sha = calculate_file_sha(data_path)
+    t1 = time.time()
+    logger.info("Calculating file sha took {:.2} seconds".format(t1 - t0))
+    
     already_done = check_if_already_done(data_path, db_config, datafile_sha)
     
     if already_done and not force:
-        logger.warning("Data file has already been uploaded to database, therefore returning. Delete database to allow ETL")
+        logger.info("Data file has already been uploaded to database.")
         return db_config, "Already done"
 
+    # Calculating file lengths can be slow so we leave doing it as late as possible
+    if mode == "production":
+        logger.info("Measuring length of input file...")
+        file_length = report_input_length(rowsource, test_line_limit, data_path, headers, separator, encoding)   
+    elif mode == "test":
+        logger.info("Test mode so file_length is set to test_line_limit of {}".format(test_line_limit))
+        if test_line_limit == float("inf"):
+            file_length = report_input_length(rowsource, test_line_limit, data_path, headers, separator, encoding)
+        else:
+            file_length = test_line_limit
+    
     # If the table argument is None we assume we are writing to the property_data table and that db_fields describes one flat level table
     if table is None:
         table = "property_data"
@@ -271,7 +282,7 @@ def do_etl(db_fields, db_config, data_path, data_field_lookup,
             # Line skipping code goes here
             if i < line_count_offset:
                 if (i % chunk_size) == 0:
-                    logging.info("Skipping chunk {:.0f}, line = ({:d})".format(i/chunk_size, i))
+                    print("Skipping chunk {:.0f}, line = ({:d})".format(i/chunk_size, i), flush=True, end="\r")
                 continue
 
             
@@ -361,6 +372,8 @@ def check_if_already_done(data_path, db_config, datafile_sha):
 
     # Look for the datafile_sha in the metadata table and if it exists, return True
     sql_query = "select * from metadata where datafile_sha = '{}' and status = 'Complete'".format(datafile_sha)
+    #sql_query = "select * from metadata where datafile_path = '{}' and status = 'Complete'".format(datafile_path)
+    logging.debug("Checking for completeness of {} with {}".format(db_config, sql_query))
     results = list(read_db(sql_query, db_config))
 
     if len(results) == 1:

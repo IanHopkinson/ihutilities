@@ -111,10 +111,14 @@ def build_cache(constructors, cache_db, cache_fields, sha, chunk_size=1000, test
     return cache_db
 
 def updater(id_, key_method, get_key_count, make_row_method, cache_db, db_fields, sha, chunk_size):
+    if isinstance(key_method, functools.partial):
+        key_method_name = key_method.func.__name__
+    else:
+        key_method_name = key_method.__name__
     # Get a bunch of UPRNs
     key_count = get_key_count()
     # uprn_cursor = get_uprn_cursor(data_source_dictionary[uprn_method])
-    print("Found {} keys in {}".format(key_count, key_method.__name__), flush=True)
+    print("Found {} keys in {}".format(key_count, key_method_name), flush=True)
     # Set loop control variables
     # chunk_size = 1000 #100000 #1000 #100000 for production, 1000 for test
     line_count = 0
@@ -133,7 +137,7 @@ def updater(id_, key_method, get_key_count, make_row_method, cache_db, db_fields
 
     if chunk_skip != 0:
         for i in range(0, chunk_skip):
-            print("Skipping chunk {} in ({}, {})".format(i, key_method.__name__, make_row_method.__name__), flush=True) 
+            print("Skipping chunk {} in ({}, {})".format(i, key_method_name, make_row_method.__name__), flush=True) 
             key_chunks.__next__()
             line_count_offset = chunk_size * chunk_skip
             chunk_count = chunk_skip
