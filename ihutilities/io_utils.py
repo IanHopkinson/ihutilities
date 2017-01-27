@@ -25,7 +25,7 @@ def write_dictionary(filename, data, append=True):
        data (list of dictionaries):
             A list of ordered dictionaries to write
 
-    Kwargs:
+    Keyword args:
        append (bool): 
             if True then data is appended to an existing file 
             if False and the file exists then the file is deleted 
@@ -33,9 +33,7 @@ def write_dictionary(filename, data, append=True):
     Returns:
        No return value
 
-    Raises:
-
-    Usage:
+    Example:
         >>> 
     """    
     keys = data[0].keys()
@@ -119,7 +117,7 @@ def get_a_file_handle(file_path, encoding="utf-8-sig", mode="rU", zip_guess=True
         file_path (str): 
             file path which may point to a file inside a zip
 
-    Kwargs:
+    Keyword args:
         encoding (str): 
             character encoding of the taregt file
         mode (str): 
@@ -130,9 +128,7 @@ def get_a_file_handle(file_path, encoding="utf-8-sig", mode="rU", zip_guess=True
     Returns:
        a file handler
 
-    Raises:
-
-    Usage:
+    Example:
         >>> 
     """
     # If we have a straightforward file then return that

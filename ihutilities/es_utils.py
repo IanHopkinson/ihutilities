@@ -62,7 +62,7 @@ def configure_es(es_config, es_fields, tables="data", force=False):
        es_fields (OrderedDict or dictionary of OrderedDicts):
             A dictionary of fieldnames and types per table
 
-    Kwargs:
+    Keyword args:
        tables (string or list of strings): 
             names of tables required, keys to db_fields
        force (bool): 
@@ -71,10 +71,6 @@ def configure_es(es_config, es_fields, tables="data", force=False):
     Returns:
        es_config structure
 
-    Raises:
-
-    Usage:
-        >>> 
     """
     # Cunning polymorphism: 
     # If we get a list and string then we convert them to a dictionary and a list
@@ -102,7 +98,7 @@ def delete_es(es_config):
        es_config (str or dict): 
             db_name contains the name of the index to be deleted
 
-    Kwargs:
+    Keyword args:
        tables (string or list of strings): 
             names of tables required, keys to db_fields
        force (bool): 
@@ -111,10 +107,6 @@ def delete_es(es_config):
     Returns:
        es_config structure
 
-    Raises:
-
-    Usage:
-        >>> 
     """
     status = es.indices.delete(index=es_config["db_name"], ignore=[400, 404])
     logger.info("Index '{}' deleted with status = {}".format(es_config["db_name"], status))
@@ -134,7 +126,7 @@ def write_to_es(data, es_config, es_fields, table="data", whatever=False):
        db_fields (OrderedDict or dictionary of OrderedDicts):
             A dictionary of fieldnames and types per table
 
-    Kwargs:
+    Keyword args:
        table (str): 
             name of table to which we are writing, key to db_fields
        whatever (bool):
@@ -143,12 +135,6 @@ def write_to_es(data, es_config, es_fields, table="data", whatever=False):
     Returns:
        No return value
 
-    Raises:
-
-    Comments:
-        
-    Usage:
-        >>> 
     """ 
     es_config = _normalise_config(es_config)
 
@@ -181,7 +167,7 @@ def update_to_es(data, es_config, es_fields, table="data", key="UPRN"):
             A list of fieldnames in an OrderedDict containing the fields to update and
             the key field in the order in which the fields are presented in the data lists
 
-    Kwargs:
+    Keyword args:
        table (str): 
             name of table to which we are writing, key to db_fields
        key (str):
@@ -190,10 +176,6 @@ def update_to_es(data, es_config, es_fields, table="data", key="UPRN"):
     Returns:
        No return value
 
-    Raises:
-
-    Usage:
-        >>> 
     """
     es_config = _normalise_config(es_config)
 

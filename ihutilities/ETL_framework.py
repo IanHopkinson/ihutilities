@@ -133,15 +133,11 @@ def do_etl(db_fields, db_config, data_path, data_field_lookup,
             the rowsource function yields input data rows which are handed off to the rowmaker to make database rows. The function call is:
             get_source_generator(data_path, headers, separator, encoding)
 
-    Returns:
+    Return:
        db_config (dict):
             a db_config structure with, if in test mode this will contain the modified database name/path
        status (string):
             "Completed" if the ETL runs to completion, "Already done" if ETL has already been done
-
-    Raises:
-
-    Usage:
 
     """
     logger.info("Starting ETL to database at {}".format(datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")))

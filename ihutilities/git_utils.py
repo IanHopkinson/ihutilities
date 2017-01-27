@@ -1,9 +1,7 @@
 #!/usr/bin/env python
 # encoding: utf-8
-from __future__ import unicode_literals
 
 import subprocess
-import os
     
 def git_sha(repo_dir):
     """This function returns the short SHA-1 hash of a repo
@@ -14,9 +12,8 @@ def git_sha(repo_dir):
 
     Returns:
        A string containing the short SHA-1 hash of the repo
-    Raises:
 
-    Usage:
+    Example:
         >>> sha = git_sha(".")
 
     """
@@ -47,9 +44,8 @@ def git_uncommitted_changes(filename, repo_dir):
 
     Returns:
        True if there are uncommitted changes on the requested filename
-    Raises:
 
-    Usage:
+    Example:
         >>> sha = git_sha(".")
 
     """
@@ -81,11 +77,10 @@ def git_calculate_file_sha(filepath):
 
     Returns:
        A string containing the SHA-1 hash of the repo
-    Raises:
 
-    Usage:
+    Example:
         >>> sha = git_sha(".")
-        
+
     """
 
     cmd = ['git','hash-object',filepath]

@@ -128,12 +128,12 @@ def write_to_db(data, db_config, db_fields, table="property_data", whatever=Fals
     Returns:
        No return value
 
-    Raises:
 
-    Comments:
+    Notes:
         If data is prepared as a dictionary then it can be converted using:
         >>> ([x for x in new_row.values()])
-    Usage:
+        
+    Example:
         >>> db_fields = OrderedDict([
               ("UPRN","INTEGER PRIMARY KEY"),
               ("PropertyID", "INT"),
@@ -234,9 +234,7 @@ def update_to_db(data, db_config, db_fields, table="property_data", key=["UPRN"]
     Returns:
        No return value
 
-    Raises:
-
-    Usage:
+    Example:
         >>> db_fields = OrderedDict([
               ("UPRN","INTEGER PRIMARY KEY"),
               ("PropertyID", "INT"),
@@ -353,9 +351,6 @@ def finalise_db(db_config, index_name="idx_postcode", table="property_data", col
     Returns:
        No return value
 
-    Raises:
-
-    Example:
     """
 
     db_config = _normalise_config(db_config)

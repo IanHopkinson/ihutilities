@@ -35,17 +35,17 @@ def load_shapefile_data(data_path):
     """This function loads a shapefile into a reader
 
     Args:
-       data_path (str): 
+        data_path (str): 
             A file path to a shapefile
 
     Returns:
-       sf:
+        sf:
             A shapefile reader object over which you can iterate
-       file_length (integer):
+        file_length (integer):
             the number of shapes in the file
 
     """
-    
+
     sf = shapefile.Reader(data_path)
 
     shapes = sf.shapes()
@@ -62,10 +62,6 @@ def make_bbox_polygon(shp_bbox):
     Returns:
        polygon (str):
 
-    Raises:
-
-    Usage:
-        >>> 
     """
     bb_str = [str(round(x,1)) for x in shp_bbox]
     bb_polygon = (" ".join([bb_str[0], bb_str[1]]) + "," +
