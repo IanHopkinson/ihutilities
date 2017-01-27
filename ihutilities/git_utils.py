@@ -6,8 +6,7 @@ import subprocess
 import os
     
 def git_sha(repo_dir):
-    """
-    This function returns the short SHA-1 hash of a repo
+    """This function returns the short SHA-1 hash of a repo
 
     Args:
        repo_dir (str):
@@ -19,6 +18,7 @@ def git_sha(repo_dir):
 
     Usage:
         >>> sha = git_sha(".")
+
     """
 
     cmd = ['git','rev-parse','--short', 'HEAD']
@@ -51,7 +51,9 @@ def git_uncommitted_changes(filename, repo_dir):
 
     Usage:
         >>> sha = git_sha(".")
+
     """
+
     if filename == ' ' or filename == '':
         filename = '--'
     cmd = ['git', 'diff', filename]
@@ -71,8 +73,7 @@ def git_uncommitted_changes(filename, repo_dir):
         return False
 
 def git_calculate_file_sha(filepath):
-    """
-    This function returns the full SHA-1 hash of file, it does not require the file to be committed
+    """This function returns the full SHA-1 hash of file, it does not require the file to be committed
 
     Args:
        filepath (str):
@@ -84,6 +85,7 @@ def git_calculate_file_sha(filepath):
 
     Usage:
         >>> sha = git_sha(".")
+        
     """
 
     cmd = ['git','hash-object',filepath]
@@ -97,3 +99,4 @@ def git_calculate_file_sha(filepath):
         print(error)
 
     return out.strip().decode("utf-8")
+

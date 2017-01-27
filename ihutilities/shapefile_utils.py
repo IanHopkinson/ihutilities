@@ -44,11 +44,8 @@ def load_shapefile_data(data_path):
        file_length (integer):
             the number of shapes in the file
 
-    Raises:
-
-    Usage:
-        >>> 
     """
+    
     sf = shapefile.Reader(data_path)
 
     shapes = sf.shapes()

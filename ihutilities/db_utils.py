@@ -15,9 +15,6 @@ from mysql.connector import errorcode
 
 from collections import OrderedDict
 
-
-
-
 db_config_template = {"db_name": "test",
              "db_user": "root",
              "db_pw_environ": "MARIA_DB_PASSWORD",
@@ -41,24 +38,22 @@ def configure_db(db_config, db_fields, tables="property_data", force=False):
     """This function sets up a sqlite or MariaDB/MySQL database
 
     Args:
-       db_config (str or dict): 
+        db_config (str or dict): 
             For sqlite a file path in a string is sufficient, MariaDB/MySQL require
             a dictionary and example of which is found in db_config_template
-       db_fields (OrderedDict or dictionary of OrderedDicts):
+        db_fields (OrderedDict or dictionary of OrderedDicts):
             A dictionary of fieldnames and types per table
 
-    Kwargs:
-       tables (string or list of strings): 
+    Keyword Args:
+        tables (string or list of strings): 
             names of tables required, keys to db_fields
-       force (bool): 
+        force (bool): 
             If using sqlite, force=True deletes existing files of db_config 
 
-    Returns:
+    Returns
        db_config structure, in particular with the db_conn field populated for MariaDB/MySQL
 
-    Raises:
-
-    Usage:
+    Example
         >>> db_fields = OrderedDict([
               ("UPRN","INTEGER PRIMARY KEY"),
               ("PropertyID", "INT"),
@@ -123,7 +118,7 @@ def write_to_db(data, db_config, db_fields, table="property_data", whatever=Fals
        db_fields (OrderedDict or dictionary of OrderedDicts):
             A dictionary of fieldnames and types per table
 
-    Kwargs:
+    Keyword args:
        table (str): 
             name of table to which we are writing, key to db_fields
        whatever (bool):
@@ -230,7 +225,7 @@ def update_to_db(data, db_config, db_fields, table="property_data", key=["UPRN"]
             A list of fieldnames in an OrderedDict containing the fields to update and
             the key field in the order in which the fields are presented in the data lists
 
-    Kwargs:
+    Keyword args:
        table (str): 
             name of table to which we are writing, key to db_fields
        key (str):
@@ -345,7 +340,7 @@ def finalise_db(db_config, index_name="idx_postcode", table="property_data", col
             For sqlite a file path in a string is sufficient, MariaDB/MySQL require
             a dictionary and example of which is found in db_config_template
 
-    Kwargs:
+    Keyword args:
        index_name (str): 
             name of the index to be created
        table (str):
@@ -360,7 +355,7 @@ def finalise_db(db_config, index_name="idx_postcode", table="property_data", col
 
     Raises:
 
-    Usage:
+    Example:
     """
 
     db_config = _normalise_config(db_config)

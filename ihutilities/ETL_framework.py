@@ -109,7 +109,7 @@ def do_etl(db_fields, db_config, data_path, data_field_lookup,
             values are column numbers. If a field ID is specified with value None then it creates
             autoincrement unique key
 
-    Kwargs:
+    Keyword args:
        mode (str): 
             "production" or "test". 
             "test" loads 10000 lines to the database in 1000 line chunks.

@@ -3,3 +3,4 @@ ihutilities/fixtures
 /dist/
 /build/
 *.sqlite
+doc/build
