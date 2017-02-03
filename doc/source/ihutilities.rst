@@ -1,6 +1,14 @@
 ihutilities package
 ===================
 
+Module contents
+---------------
+
+.. automodule:: ihutilities
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 Submodules
 ----------
 
@@ -72,15 +80,6 @@ ihutilities.survey_csv module
 -----------------------------
 
 .. automodule:: ihutilities.survey_csv
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
-
-Module contents
----------------
-
-.. automodule:: ihutilities
     :members:
     :undoc-members:
     :show-inheritance:
