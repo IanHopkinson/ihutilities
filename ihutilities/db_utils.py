@@ -32,7 +32,7 @@ result = sock.connect_ex(('localhost',9200))
 # print(result, flush=True)
 if result != 0:
     logger.warning("Elasticsearch not running, so ihutilities.es_util not imported")
-    from ihutilities.es_utils import configure_es, write_to_es, read_es, update_to_es
+    #from ihutilities.es_utils import configure_es, write_to_es, read_es, update_to_es
 
 def configure_db(db_config, db_fields, tables="property_data", force=False):
     """This function sets up a sqlite or MariaDB/MySQL database

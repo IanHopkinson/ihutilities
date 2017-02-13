@@ -30,9 +30,10 @@ logging.basicConfig(level=logging.INFO)
 
 
 
-#@unittest.skipIf(elastic_search_not_running, "Elasticsearch is not running so skipping tests")
+
 #@unittest.skip("Elasticsearch is not running so skipping tests")
-@unittest.expectedFailure
+#@unittest.expectedFailure
+@unittest.skipIf(elastic_search_not_running, "Elasticsearch is not running so skipping tests")
 class ElasticsearchUtilitiesTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
@@ -63,7 +64,8 @@ class ElasticsearchUtilitiesTests(unittest.TestCase):
 
         test_root = os.path.dirname(__file__)
         cls.db_dir = os.path.join(test_root, "fixtures")
-        cls.es = elasticsearch.Elasticsearch()
+        if not elastic_search_not_running:
+            cls.es = elasticsearch.Elasticsearch()
 
     def test_configure_es(self):
         # Connect to engine and delete test table if it exists
