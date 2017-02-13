@@ -299,6 +299,7 @@ class DatabaseUtilitiesTests(unittest.TestCase):
             for i, row in enumerate(rows):
                 assert_equal([x for x in data[i].values()], list(row))
 
+
     def test_update_to_db(self):
         db_filename = "test_update_db.sqlite"
         db_file_path = os.path.join(self.db_dir, db_filename)

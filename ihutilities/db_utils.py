@@ -10,6 +10,9 @@ import time
 import socket
 import sqlite3
 import logging
+# import mysql.connector
+# from mysql.connector import errorcode
+import pymysql
 
 from ihutilities.es_utils import read_es, configure_es, write_to_es, update_to_es
 
@@ -206,10 +209,10 @@ def write_to_db(data, db_config, db_fields, table="property_data", whatever=Fals
         try:
             logger.debug("Insert statement = {}\nData line 1 = {}".format(INSERT_statement, converted_data[0]))
             cursor.executemany(INSERT_statement, converted_data)
-        except (mysql.connector.errors.IntegrityError, sqlite3.IntegrityError):
+        except (pymysql.connector.errors.IntegrityError, sqlite3.IntegrityError):
             conn.close()
             raise
-        except (mysql.connector.errors.DataError):
+        except (pymysql.connector.errors.DataError):
             conn.close()
             logger.info("write_to_db failed with {}".format(converted_data))
             raise
@@ -382,7 +385,7 @@ def finalise_db(db_config, index_name="idx_postcode", table="property_data", col
 
 def read_db(sql_query, db_config):
     # For MariaDB we need to trap this error:
-    # mysql.connector.errors.InterfaceError: 2003: Can't connect to MySQL server on '127.0.0.1:3306' 
+    # pymysql.connector.errors.InterfaceError: 2003: Can't connect to MySQL server on '127.0.0.1:3306' 
     # (10055 An operation on a socket could not be performed because the system lacked sufficient buffer space or because a queue was full)
     # This post explains the problem, we're creating too many ephemeral ports (and not discarding of them properly)
     # https://blogs.msdn.microsoft.com/sql_protocols/2009/03/09/understanding-the-error-an-operation-on-a-socket-could-not-be-performed-because-the-system-lacked-sufficient-buffer-space-or-because-a-queue-was-full/
@@ -403,7 +406,7 @@ def read_db(sql_query, db_config):
         conn = _make_connection(db_config)
         cursor = conn.cursor()
         cursor.execute(sql_query)
-    except mysql.connector.Error as err:
+    except pymysql.connector.Error as err:
         if err.errno == errorcode.CR_CONN_HOST_ERROR:
             logger.warning("Caught exception '{}'. errno = '{}', waiting {} seconds and having another go".format(err, err.errno, err_wait))
             time.sleep(err_wait)
@@ -502,12 +505,12 @@ def _make_connection(db_config):
         # I was getting pool exhaustion because I wasn't closing connections, this should now be fixed (fingers crossed)
         #if db_config["db_conn"] is None or True:
         password = os.environ[db_config["db_pw_environ"]]
-        conn = mysql.connector.connect( database=db_config["db_name"],
+        conn = pymysql.connect( database=db_config["db_name"],
                                         user=db_config["db_user"], 
                                         password=password,
-                                        host=db_config["db_host"],
-                                        pool_name=db_config["db_name"],
-                                        pool_size=10)
+                                        host=db_config["db_host"])
+                                        #pool_name=db_config["db_name"],
+                                        #pool_size=10)
         db_config["db_conn"] = conn
         #else:
         #    print("Returning old connection", flush=True)
@@ -516,7 +519,7 @@ def _make_connection(db_config):
         # Bit messy, sometimes we make a connection without db existing
         try:
             conn.database = db_config["db_name"]
-        except mysql.connector.Error as err:
+        except pymysql.connector.Error as err:
             if err.errno != errorcode.ER_BAD_DB_ERROR:
                 raise
 
@@ -524,14 +527,14 @@ def _make_connection(db_config):
 
 def create_mysql_database(db_config):
     password = os.environ[db_config["db_pw_environ"]]
-    conn = mysql.connector.connect(user=db_config["db_user"], 
+    conn = pymysql.connect(user=db_config["db_user"], 
                                    password=password,
                                    host=db_config["db_host"])
     cursor = conn.cursor()
     create_string = "CREATE DATABASE {} DEFAULT CHARACTER SET 'utf8' COLLATE 'utf8_unicode_ci'".format(db_config["db_name"]) 
     try:
         cursor.execute(create_string)
-    except mysql.connector.Error as err:
+    except pymysql.connector.Error as err:
         logger.critical("Failed creating database: {}".format(err))
         logger.critical("Creation commad: {}".format(create_string))
         exit(1)
@@ -543,7 +546,7 @@ def create_mysql_database(db_config):
 def check_mysql_database_exists(db_config):
     sql_query = "SELECT SCHEMA_NAME FROM INFORMATION_SCHEMA.SCHEMATA WHERE SCHEMA_NAME = '{}'".format(db_config["db_name"])
     password = os.environ[db_config["db_pw_environ"]]
-    conn = mysql.connector.connect(user=db_config["db_user"], 
+    conn = pymysql.connect(user=db_config["db_user"], 
                                    password=password,
                                    host=db_config["db_host"])
     cursor = conn.cursor()

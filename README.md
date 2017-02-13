@@ -29,6 +29,10 @@
 
 # TODO
 
+* Allow ihutilities to install if MySQL is not present
+* Use PyMySQL as the connector to allow for updates in Python, currently most recent mysql connector is for 3.4:
+    http://stackoverflow.com/questions/35684400/how-to-use-python-3-5-1-with-a-mysql-database
+
 * I suspect that ETL for large files is slow if a primary key is specified up front because the index is built continuously
 * Use setup and teardown on a per test basis for test_db_utils
 * NROSH snapshot ETL using do_ETL shows that line count is misleading where we are dropping rows
