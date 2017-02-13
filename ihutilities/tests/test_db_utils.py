@@ -5,8 +5,12 @@ import unittest
 import os
 import sqlite3
 
-import mysql.connector
-from mysql.connector import errorcode
+try:
+    import mysql.connector
+    from mysql.connector import errorcode
+    mysql_connector_installed = True
+except ImportError:
+    mysql_connector_installed = False
 
 from collections import OrderedDict
 from nose.tools import assert_equal
@@ -16,6 +20,145 @@ from ihutilities.db_utils import (db_config_template, configure_db, write_to_db,
                                   _make_connection, read_db,
                                   update_to_db, finalise_db,
                                   check_mysql_database_exists)
+
+@unittest.skipIf(not mysql_connector_installed, "MariaDB/MySQL connector is not installed so skipping MySQL/MariaDB tests")
+class MariaDBUtilitiesTests(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        cls.db_fields = OrderedDict([
+              ("UPRN","INTEGER PRIMARY KEY"),
+              ("PropertyID", "INT"),
+              ("Addr1", "TEXT"),                   
+        ])
+        test_root = os.path.dirname(__file__)
+        cls.db_dir = os.path.join(test_root, "fixtures")
+
+    def test_configure_mariadb(self):
+        # Connect to engine and delete test table if it exists
+        db_config = db_config_template.copy()
+        db_config["db_name"] = "test"
+        password = os.environ['MARIA_DB_PASSWORD']
+        conn = mysql.connector.connect(user='root', password=password,
+                                 host='127.0.0.1')
+
+        cursor = conn.cursor()
+        cursor.execute("DROP DATABASE IF EXISTS test")
+        conn.commit()
+        configure_db(db_config, self.db_fields, tables="test")
+
+        # Test database exists
+        try:
+            conn.database = db_config["db_name"]   
+        except mysql.connector.Error as err:
+            raise
+        # Do a schema query
+        cursor = conn.cursor()
+        cursor.execute("""
+            select * from test;
+        """)
+        exp_columns = set([x for x in self.db_fields.keys()]) 
+        obs_columns = set([x[0] for x in cursor.description])
+        assert_equal(exp_columns, obs_columns)
+        # SELECT SCHEMA_NAME FROM INFORMATION_SCHEMA.SCHEMATA WHERE SCHEMA_NAME = 'DBName'
+        conn.close()
+
+    def test_write_to_mariadb(self):
+        db_config = db_config_template.copy()
+        db_config = configure_db(db_config, self.db_fields, tables="test", force=True)
+        data = [(1, 2, "hello"),
+                (2, 3, "Fred"),
+                (3, 3, "Beans")]
+        write_to_db(data, db_config, self.db_fields, table="test")
+        conn = _make_connection(db_config)
+        cursor = conn.cursor()
+        cursor.execute("""
+            select * from test;
+        """)
+        rows = cursor.fetchall()
+        assert_equal(data, rows)
+
+    def test_write_geom_to_mariadb(self):
+        db_config = db_config_template.copy()
+
+        db_fields = OrderedDict([
+              ("UPRN","INTEGER PRIMARY KEY"),
+              ("PropertyID", "INT"),
+              ("points", "POINT"),                   
+        ])
+
+        db_config = configure_db(db_config, db_fields, tables="test", force=True)
+        data = [(1, 2, "POINT(0 10)"),
+                (2, 3, "POINT(20 20)"),
+                (3, 3, "POINT(5 15)")]
+
+        expected = [(1, 2, 0.0, 10.0),
+                    (2, 3, 20.0, 20.0),
+                    (3, 3, 5.0, 15.0)]
+
+        write_to_db(data, db_config, db_fields, table="test")
+        conn = _make_connection(db_config)
+        cursor = conn.cursor()
+        cursor.execute("""
+            select UPRN, PropertyID, X(points), Y(points) from test;
+        """)
+        rows = cursor.fetchall()
+        assert_equal(expected, rows)
+
+    def test_update_mariadb(self):
+        db_config = db_config_template.copy()
+        db_config = configure_db(db_config, self.db_fields, tables="test", force=True)
+        data = [(1, 2, "hello"),
+                (2, 3, "Fred"),
+                (3, 3, "Beans")]
+        write_to_db(data, db_config, self.db_fields, table="test")
+
+        update_fields = ["Addr1", "UPRN"]
+        update = [("Some", 3)] 
+        update_to_db(update, db_config, update_fields, table="test", key="UPRN")
+
+        conn = _make_connection(db_config)
+        cursor = conn.cursor()
+        cursor.execute("""
+            select Addr1 from test where UPRN = 3 ;
+        """)
+        rows = cursor.fetchall()
+        expected = ("Some", )
+        assert_equal(expected, rows[0])
+
+    def test_finalise_mariadb(self):
+        db_config = db_config_template.copy()
+
+        data = [(1, 2, "hello"),
+                (2, 3, "Fred"),
+                (3, 3, "Beans")]
+        configure_db(db_config, self.db_fields, tables="test", force=True)
+        write_to_db(data, db_config, self.db_fields, table="test")
+        finalise_db(db_config, index_name="idx_propertyID", table="test", colname="propertyID")
+
+    def test_read_mariadb(self):
+        db_config = db_config_template.copy()
+
+        data = [(1, 2, "hello"),
+                (2, 3, "Fred"),
+                (3, 3, "Beans")]
+        configure_db(db_config, self.db_fields, tables="test", force=True)
+        write_to_db(data, db_config, self.db_fields, table="test")
+
+        sql_query = "select * from test;"
+
+        for i, row in enumerate(read_db(sql_query, db_config)):
+            test_data = OrderedDict(zip(self.db_fields.keys(), data[i]))
+            assert_equal(row, test_data)
+
+    def test_check_mysql_database_exists(self):
+        db_config = db_config_template.copy()
+        db_config["db_name"] = "djnfsjnf"
+
+        assert_equal(check_mysql_database_exists(db_config), False)
+
+        db_config["db_name"] = "INFORMATION_SCHEMA"
+        assert_equal(check_mysql_database_exists(db_config), True)
+
 
 class DatabaseUtilitiesTests(unittest.TestCase):
     @classmethod
@@ -71,36 +214,6 @@ class DatabaseUtilitiesTests(unittest.TestCase):
             exp_columns = set([x for x in self.db_fields.keys()]) 
             obs_columns = set([x[0] for x in cursor.description])
             assert_equal(exp_columns, obs_columns)
-
-    def test_configure_mariadb(self):
-        # Connect to engine and delete test table if it exists
-        db_config = db_config_template.copy()
-        db_config["db_name"] = "test"
-        password = os.environ['MARIA_DB_PASSWORD']
-        conn = mysql.connector.connect(user='root', password=password,
-                                 host='127.0.0.1')
-
-        cursor = conn.cursor()
-        cursor.execute("DROP DATABASE IF EXISTS test")
-        conn.commit()
-        configure_db(db_config, self.db_fields, tables="test")
-
-        # Test database exists
-        try:
-            conn.database = db_config["db_name"]   
-        except mysql.connector.Error as err:
-            raise
-        # Do a schema query
-        cursor = conn.cursor()
-        cursor.execute("""
-            select * from test;
-        """)
-        exp_columns = set([x for x in self.db_fields.keys()]) 
-        obs_columns = set([x[0] for x in cursor.description])
-        assert_equal(exp_columns, obs_columns)
-        # SELECT SCHEMA_NAME FROM INFORMATION_SCHEMA.SCHEMATA WHERE SCHEMA_NAME = 'DBName'
-        conn.close()
-        
 
     def test_configure_multi_db(self):
         db_filename = "test_config_multi_db.sqlite"
@@ -163,48 +276,6 @@ class DatabaseUtilitiesTests(unittest.TestCase):
             rows = cursor.fetchall()
             for i, row in enumerate(rows):
                 assert_equal([x for x in data[i].values()], list(row))
-
-    def test_write_to_mariadb(self):
-        db_config = db_config_template.copy()
-        db_config = configure_db(db_config, self.db_fields, tables="test", force=True)
-        data = [(1, 2, "hello"),
-                (2, 3, "Fred"),
-                (3, 3, "Beans")]
-        write_to_db(data, db_config, self.db_fields, table="test")
-        conn = _make_connection(db_config)
-        cursor = conn.cursor()
-        cursor.execute("""
-            select * from test;
-        """)
-        rows = cursor.fetchall()
-        assert_equal(data, rows)
-
-    def test_write_geom_to_mariadb(self):
-        db_config = db_config_template.copy()
-
-        db_fields = OrderedDict([
-              ("UPRN","INTEGER PRIMARY KEY"),
-              ("PropertyID", "INT"),
-              ("points", "POINT"),                   
-        ])
-
-        db_config = configure_db(db_config, db_fields, tables="test", force=True)
-        data = [(1, 2, "POINT(0 10)"),
-                (2, 3, "POINT(20 20)"),
-                (3, 3, "POINT(5 15)")]
-
-        expected = [(1, 2, 0.0, 10.0),
-                    (2, 3, 20.0, 20.0),
-                    (3, 3, 5.0, 15.0)]
-
-        write_to_db(data, db_config, db_fields, table="test")
-        conn = _make_connection(db_config)
-        cursor = conn.cursor()
-        cursor.execute("""
-            select UPRN, PropertyID, X(points), Y(points) from test;
-        """)
-        rows = cursor.fetchall()
-        assert_equal(expected, rows)
 
     def test_update_to_db(self):
         db_filename = "test_update_db.sqlite"
@@ -298,26 +369,7 @@ class DatabaseUtilitiesTests(unittest.TestCase):
         except KeyError:
             pass
 
-    def test_update_mariadb(self):
-        db_config = db_config_template.copy()
-        db_config = configure_db(db_config, self.db_fields, tables="test", force=True)
-        data = [(1, 2, "hello"),
-                (2, 3, "Fred"),
-                (3, 3, "Beans")]
-        write_to_db(data, db_config, self.db_fields, table="test")
-
-        update_fields = ["Addr1", "UPRN"]
-        update = [("Some", 3)] 
-        update_to_db(update, db_config, update_fields, table="test", key="UPRN")
-
-        conn = _make_connection(db_config)
-        cursor = conn.cursor()
-        cursor.execute("""
-            select Addr1 from test where UPRN = 3 ;
-        """)
-        rows = cursor.fetchall()
-        expected = ("Some", )
-        assert_equal(expected, rows[0])
+    
 
     def test_update_to_db_no_nones(self):
         db_filename = "test_update_db2.sqlite"
@@ -356,15 +408,7 @@ class DatabaseUtilitiesTests(unittest.TestCase):
         write_to_db(data, db_file_path, self.db_fields, table="test")
         finalise_db(db_file_path, index_name="idx_addr1", table="test", colname="Addr1")
 
-    def test_finalise_mariadb(self):
-        db_config = db_config_template.copy()
-
-        data = [(1, 2, "hello"),
-                (2, 3, "Fred"),
-                (3, 3, "Beans")]
-        configure_db(db_config, self.db_fields, tables="test", force=True)
-        write_to_db(data, db_config, self.db_fields, table="test")
-        finalise_db(db_config, index_name="idx_propertyID", table="test", colname="propertyID")
+    
 
     def test_read_db(self):
         db_filename = "test_finalise_db.sqlite"
@@ -399,28 +443,5 @@ class DatabaseUtilitiesTests(unittest.TestCase):
         
         self.assertEqual(os.path.isfile(db_config), False)
 
-    def test_read_mariadb(self):
-        db_config = db_config_template.copy()
-
-        data = [(1, 2, "hello"),
-                (2, 3, "Fred"),
-                (3, 3, "Beans")]
-        configure_db(db_config, self.db_fields, tables="test", force=True)
-        write_to_db(data, db_config, self.db_fields, table="test")
-
-        sql_query = "select * from test;"
-
-        for i, row in enumerate(read_db(sql_query, db_config)):
-            test_data = OrderedDict(zip(self.db_fields.keys(), data[i]))
-            assert_equal(row, test_data)
-
-    def test_check_mysql_database_exists(self):
-        db_config = db_config_template.copy()
-        db_config["db_name"] = "djnfsjnf"
-
-        assert_equal(check_mysql_database_exists(db_config), False)
-
-        db_config["db_name"] = "INFORMATION_SCHEMA"
-        assert_equal(check_mysql_database_exists(db_config), True)
-
+    
 
