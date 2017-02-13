@@ -10,8 +10,6 @@ import time
 import socket
 import sqlite3
 import logging
-import mysql.connector
-from mysql.connector import errorcode
 
 from collections import OrderedDict
 
@@ -33,6 +31,13 @@ result = sock.connect_ex(('localhost',9200))
 if result != 0:
     logger.warning("Elasticsearch not running, so ihutilities.es_util not imported")
     #from ihutilities.es_utils import configure_es, write_to_es, read_es, update_to_es
+
+# Conditional import of mysql connector
+try:
+    import mysql.connector
+    from mysql.connector import errorcode
+except ImportError:
+    logger.warning("MySQL/MariaDB connector is not present, so MariaDB/MySQL functionality not supported")
 
 def configure_db(db_config, db_fields, tables="property_data", force=False):
     """This function sets up a sqlite or MariaDB/MySQL database
