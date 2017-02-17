@@ -219,6 +219,7 @@ def do_etl(db_fields, db_config, data_path, data_field_lookup,
 
     primary_key_set = set()
     duplicate_primary_keys = set()
+    primary_key = None
     primary_key = get_primary_key_from_db_fields(revised_db_fields[table])
 
     if primary_key == "ID" and data_field_lookup["ID"] is None:
@@ -286,10 +287,11 @@ def do_etl(db_fields, db_config, data_path, data_field_lookup,
             new_row =  rowmaker(row, data_path, data_field_lookup, revised_db_fields[table], null_equivalents, autoinc, primary_key)
            
             # Decide whether or not to write new_row
-            if autoinc or (new_row[primary_key] not in primary_key_set):
+            if autoinc or primary_key is None or (new_row[primary_key] not in primary_key_set):
                 line_count += 1
                 data.append(([x for x in new_row.values()]))
-                primary_key_set.add(new_row[primary_key])
+                if primary_key is not None:
+                    primary_key_set.add(new_row[primary_key])
             else:
                 #print("UPRN is a duplicate: {}".format(new_row["UPRN"]))
                 duplicate_primary_keys.add(new_row[primary_key])
@@ -397,8 +399,8 @@ def get_primary_key_from_db_fields(db_fields):
         if "PRIMARY KEY" in value.upper():
             primary_key = key
 
-    if primary_key is None:
-        raise RuntimeError("No primary key found")
+    #if primary_key is None:
+    #    raise RuntimeError("No primary key found")
 
     return primary_key
 
