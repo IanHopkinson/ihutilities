@@ -182,15 +182,7 @@ def do_etl(db_fields, db_config, data_path, data_field_lookup,
         return db_config, "Already done"
 
     # Calculating file lengths can be slow so we leave doing it as late as possible
-    if mode == "production":
-        logger.info("Measuring length of input file...")
-        file_length = report_input_length(rowsource, test_line_limit, data_path, headers, separator, encoding)   
-    elif mode == "test":
-        logger.info("Test mode so file_length is set to test_line_limit of {}".format(test_line_limit))
-        if test_line_limit == float("inf"):
-            file_length = report_input_length(rowsource, test_line_limit, data_path, headers, separator, encoding)
-        else:
-            file_length = test_line_limit
+    file_length = get_input_file_length(mode, rowsource, test_line_limit, data_path, headers, separator, encoding)
     
     # If the table argument is None we assume we are writing to the property_data table and that db_fields describes one flat level table
     if table is None:
@@ -356,6 +348,18 @@ def do_etl(db_fields, db_config, data_path, data_field_lookup,
     update_to_db(metadata, db_config, update_fields, table="metadata", key="SequenceNumber")
 
     return db_config, "Completed"
+
+def get_input_file_length(mode, rowsource, test_line_limit, data_path, headers, separator, encoding):
+    if mode == "production":
+        logger.info("Measuring length of input file...")
+        file_length = report_input_length(rowsource, test_line_limit, data_path, headers, separator, encoding)   
+    elif mode == "test":
+        logger.info("Test mode so file_length is set to test_line_limit of {}".format(test_line_limit))
+        if test_line_limit == float("inf"):
+            file_length = report_input_length(rowsource, test_line_limit, data_path, headers, separator, encoding)
+        else:
+            file_length = test_line_limit
+    return file_length
 
 def check_if_already_done(data_path, db_config, datafile_sha):
     db_config = _normalise_config(db_config)
