@@ -34,8 +34,6 @@ logger = logging.getLogger(__name__)
 
 # This is problematic because we throw a bunch of ugly looking errors when we try to do this, and its slow
 
-
-    
 sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 result = sock.connect_ex(('localhost',9200))
 if result == 0:
@@ -109,7 +107,12 @@ def delete_es(es_config):
 
     """
     status = es.indices.delete(index=es_config["db_name"], ignore=[400, 404])
-    logger.info("Index '{}' deleted with status = {}".format(es_config["db_name"], status))
+    if status["status"] == 200:
+        logger.info("Index '{}' deleted.".format(es_config["db_name"]))
+    elif status["status"] == 404:
+        logger.info("Index '{}' not deleted because it did not exist.".format(es_config["db_name"]))
+    else:
+        logger.info("Index '{}' not deleted with status = '{}'".format(es_config["db_name"]), status)
 
     return status
 
@@ -251,9 +254,16 @@ def _create_tables_es(es_config, es_fields, tables, force):
     """
 
     status = es.indices.create(index=es_config["db_name"], ignore=400)
-    logger.info("Created index '{}' with status {}".format(es_config["db_name"], status))
+    if status["acknowledged"]:
+        logger.info("Created index '{}' successfully".format(es_config["db_name"]))
+    else:
+        logger.warning("Creating index '{}' failed".format(es_config["db_name"]))
     for table in tables:
         status = es.indices.put_mapping(index=es_config["db_name"], ignore=400, doc_type=table, body=es_fields[table]["mappings"])
-        logger.info("Put mapping '{}' on '{}' with status {}".format(es_fields[table]["mappings"], table, status))
-
+        # logger.info("Put mapping '{}' on '{}' with status {}".format(es_fields[table]["mappings"], table, status))
+        # {'error': {'reason': 'No type specified for field [UDPRN]', 'root_cause': [{'reason': 'No type specified for field [UDPRN]', 'type': 'mapper_parsing_exception'}], 'type': 'mapper_parsing_exception'}, 'status': 400}
+        if status["status"] == 200:
+            logger.info("Mappings for '{}' successfully applied".format(table))
+        if status["status"] == 400:
+            logger.warning("Mapping for '{}' failed with '{}'".format(table, status["error"]["reason"]))
     return status
