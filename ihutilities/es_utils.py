@@ -262,8 +262,8 @@ def _create_tables_es(es_config, es_fields, tables, force):
         status = es.indices.put_mapping(index=es_config["db_name"], ignore=400, doc_type=table, body=es_fields[table]["mappings"])
         # logger.info("Put mapping '{}' on '{}' with status {}".format(es_fields[table]["mappings"], table, status))
         # {'error': {'reason': 'No type specified for field [UDPRN]', 'root_cause': [{'reason': 'No type specified for field [UDPRN]', 'type': 'mapper_parsing_exception'}], 'type': 'mapper_parsing_exception'}, 'status': 400}
-        if status["status"] == 200:
+        if status["acknowledged"]:
             logger.info("Mappings for '{}' successfully applied".format(table))
-        if status["status"] == 400:
+        elif status["status"] == 400:
             logger.warning("Mapping for '{}' failed with '{}'".format(table, status["error"]["reason"]))
     return status
