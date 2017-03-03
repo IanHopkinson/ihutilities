@@ -186,13 +186,16 @@ def updater(id_, key_method, get_key_count, make_row_method, cache_db, db_fields
         update_to_db([(chunk_count, time_, sessid)], cache_db, ["last_chunk", "end_time", "ID"], table="session_log", key="ID")
 
         est_completion_time = ((time.time() - t0) / line_count) * (key_count - (line_count + line_count_offset))
+        total_runtime = ((time.time() - t0) + est_completion_time) / (60 * 60 * 24)
         completion_str = (datetime.datetime.now() + datetime.timedelta(seconds=est_completion_time)).strftime("%Y-%m-%d %H:%M:%S")
-        print("{}: {}/{} at ({}). Estimated completion time: {}".format(
+        print("{}: {}/{} at {}. Est. completion time: {}. Total runtime = {:.1f} days".format(
             make_row_method.__name__,
             line_count + line_count_offset, 
             key_count,
-            datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-            completion_str), flush=True)
+            datetime.datetime.now().strftime("%H:%M:%S"),
+            completion_str,
+            total_runtime
+            ), flush=True)
 
         #time.sleep(5)
         
