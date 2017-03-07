@@ -8,6 +8,7 @@ on the db_utils functions in ihutilities
 import elasticsearch
 import logging
 import socket
+import time
 import urllib3
 
 from elasticsearch import helpers
@@ -152,7 +153,12 @@ def write_to_es(data, es_config, es_fields, table="data", whatever=False):
 
         actions.append(action)
 
-    helpers.bulk(es, actions) 
+    try:
+        helpers.bulk(es, actions)
+    except Exception as ex:
+        logger.warning("Exception ({}) from Elasticsearch, waiting 120 seconds then retrying".format(ex))
+        time.sleep(120)
+        helpers.bulk(es, actions)
 
     return []
 
