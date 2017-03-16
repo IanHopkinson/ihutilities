@@ -54,7 +54,7 @@ def make_row(input_row, data_path, data_field_lookup, db_fields, null_equivalent
                     value = input_row[data_field_lookup[output_key]]
                 except (KeyError, IndexError) as e:
                     logger.warning("Required data field '{}' not found in input data = {}".format(data_field_lookup[output_key], input_row))
-                    value = None
+                    return None
                 if value in null_equivalents:
                     value = None
             # If output_key corresponds to a POINT field we need to process a two element array
@@ -279,7 +279,9 @@ def do_etl(db_fields, db_config, data_path, data_field_lookup,
             # Zip the input data into a row for the database
             new_row =  rowmaker(row, data_path, data_field_lookup, revised_db_fields[table], null_equivalents, autoinc, primary_key)
            
-            # Decide whether or not to write new_row
+            if new_row is None:
+                continue
+            # Drop row if it has a duplicate primary key
             if autoinc or primary_key is None or (new_row[primary_key] not in primary_key_set):
                 line_count += 1
                 data.append(([x for x in new_row.values()]))
