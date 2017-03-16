@@ -47,13 +47,14 @@ def make_row(input_row, data_path, data_field_lookup, db_fields, null_equivalent
      # zip input row into output row
     for output_key in new_row.keys():
         # This inserts blank fields
+        value = None
         if data_field_lookup[output_key] is not None:
             if not isinstance(data_field_lookup[output_key], list):
                 try:
                     value = input_row[data_field_lookup[output_key]]
-                except KeyError:
-                    logger.critical("Required data field '{}' not found in input data = {}".format(data_field_lookup[output_key], input_row))
-                    raise
+                except (KeyError, IndexError) as e:
+                    logger.warning("Required data field '{}' not found in input data = {}".format(data_field_lookup[output_key], input_row))
+                    value = None
                 if value in null_equivalents:
                     value = None
             # If output_key corresponds to a POINT field we need to process a two element array
@@ -63,7 +64,7 @@ def make_row(input_row, data_path, data_field_lookup, db_fields, null_equivalent
             elif db_fields[output_key].lower() == "integer" and value is not None:
                 new_row[output_key] = int(value.replace(",", ""))
             else:
-                if input_row[data_field_lookup[output_key]] != "":
+                if value != None:
                     new_row[output_key] = value
         # If we have a field called ID as Primary Key and there is no lookup
         # for it we assume it is a synthetic key and put in an autoincrement value
