@@ -74,20 +74,22 @@ def build_cache(constructors, cache_db, cache_fields, sha, chunk_size=1000, test
     for id_, (key_generator, key_count, make_row_method) in enumerate(constructors):
         if isinstance(key_generator, functools.partial):
             key_generator_name = key_generator.func.__name__
+            make_row_method_name = make_row_method.func.__name__
         else:
             key_generator_name = key_generator.__name__
+            make_row_method_name = make_row_method.__name__
 
         stage_status = check_stage_status(key_generator, make_row_method, cache_db)
         if stage_status == "Complete":
-            print("Flatfile db already updated with {}, continuing to next stage".format(make_row_method.__name__), flush=True)
+            print("Flatfile db already updated with {}, continuing to next stage".format(make_row_method_name), flush=True)
             continue
         elif stage_status == "Not started":
             finish_time = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-            metadata = [(id_, key_generator_name, make_row_method.__name__, "Started", "{:.2f}".format(0), 0, finish_time, 0)]
+            metadata = [(id_, key_generator_name, make_row_method_name, "Started", "{:.2f}".format(0), 0, finish_time, 0)]
             write_to_db(metadata, cache_db, db_fields["metadata"], table="metadata")
             
         t_update0 = time.time()
-        print("\nUpdating flatfile db with {}".format(make_row_method.__name__), flush=True)
+        print("\nUpdating flatfile db with {}".format(make_row_method_name), flush=True)
         # This is where we make the data
         line_count = updater(id_, key_generator, key_count, make_row_method, cache_db, db_fields, sha, chunk_size)
         # 
@@ -96,8 +98,8 @@ def build_cache(constructors, cache_db, cache_fields, sha, chunk_size=1000, test
         t_update1 = time.time()
         elapsed = t_update1 - t_update0
         finish_time = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        print("Wrote {0} '{1}' records to {2} in {3:.2f}s".format(line_count, make_row_method.__name__, os.path.basename(cache_db), elapsed), flush=True)
-        metadata = [(id_, key_generator_name, make_row_method.__name__, "Complete", "{:.2f}".format(elapsed), line_count, finish_time)]
+        print("Wrote {0} '{1}' records to {2} in {3:.2f}s".format(line_count, make_row_method_name, os.path.basename(cache_db), elapsed), flush=True)
+        metadata = [(id_, key_generator_name, make_row_method_name, "Complete", "{:.2f}".format(elapsed), line_count, finish_time)]
         update_fields = [x for x in db_fields["metadata"].keys()]
         update_to_db(metadata, cache_db, update_fields, table="metadata", key="SequenceNumber")
         # update_to_db(metadata, db_file_path, db_fields["metadata"], table="metadata")
@@ -113,8 +115,11 @@ def build_cache(constructors, cache_db, cache_fields, sha, chunk_size=1000, test
 def updater(id_, key_method, get_key_count, make_row_method, cache_db, db_fields, sha, chunk_size):
     if isinstance(key_method, functools.partial):
         key_method_name = key_method.func.__name__
+        make_row_method_name = make_row_method.func.__name__
     else:
         key_method_name = key_method.__name__
+        make_row_method_name = make_row_method.__name__
+
     # Get a bunch of UPRNs
     key_count = get_key_count()
     # uprn_cursor = get_uprn_cursor(data_source_dictionary[uprn_method])
@@ -137,14 +142,14 @@ def updater(id_, key_method, get_key_count, make_row_method, cache_db, db_fields
 
     if chunk_skip != 0:
         for i in range(0, chunk_skip):
-            print("Skipping chunk {} in ({}, {})".format(i, key_method_name, make_row_method.__name__), flush=True) 
+            print("Skipping chunk {} in ({}, {})".format(i, key_method_name, make_row_method_name), flush=True) 
             key_chunks.__next__()
             line_count_offset = chunk_size * chunk_skip
             chunk_count = chunk_skip
 
     # Update session log here
     time_ = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    session_log_data = [(None, make_row_method.__name__, time_, time_, sha, chunk_skip, chunk_skip)]
+    session_log_data = [(None, make_row_method_name, time_, time_, sha, chunk_skip, chunk_skip)]
     write_to_db(session_log_data, cache_db, db_fields["session_log"], table="session_log")
 
     # Pick up session log data
@@ -188,8 +193,8 @@ def updater(id_, key_method, get_key_count, make_row_method, cache_db, db_fields
         est_completion_time = ((time.time() - t0) / line_count) * (key_count - (line_count + line_count_offset))
         total_runtime = ((time.time() - t0) + est_completion_time) / (60 * 60 * 24)
         completion_str = (datetime.datetime.now() + datetime.timedelta(seconds=est_completion_time)).strftime("%Y-%m-%d %H:%M:%S")
-        print("{}: {}/{} at {}. Est. completion time: {}. Est. total runtime = {:.1f} days".format(
-            make_row_method.__name__,
+        print("{}: {}/{} at {}. Est. completion time: {}. Est. total runtime = {:.2f} days".format(
+            make_row_method_name,
             line_count + line_count_offset, 
             key_count,
             datetime.datetime.now().strftime("%H:%M:%S"),
@@ -216,11 +221,13 @@ def get_chunk_count(id_, cache_db):
 def check_stage_status(key_method, make_row_method, cache_db):
     if isinstance(key_method, functools.partial):
         key_method_name = key_method.func.__name__
+        make_row_method_name = make_row_method.func.__name__
     else:
         key_method_name = key_method.__name__
+        make_row_method_name = make_row_method.func.__name__
     conn = sqlite3.connect(cache_db)
     c = conn.cursor()
-    c.execute("select status from metadata where key_method = ? and make_row_method = ?;", (key_method_name, make_row_method.__name__))
+    c.execute("select status from metadata where key_method = ? and make_row_method = ?;", (key_method_name, make_row_method_name))
     result = c.fetchall()
     stage_complete = "Not started"
     if len(result) == 1:
