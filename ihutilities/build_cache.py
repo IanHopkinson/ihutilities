@@ -72,12 +72,8 @@ def build_cache(constructors, cache_db, cache_fields, sha, chunk_size=1000, test
     # Loop over the constructors
     total_line_count = 0
     for id_, (key_generator, key_count, make_row_method) in enumerate(constructors):
-        if isinstance(key_generator, functools.partial):
-            key_generator_name = key_generator.func.__name__
-            make_row_method_name = make_row_method.func.__name__
-        else:
-            key_generator_name = key_generator.__name__
-            make_row_method_name = make_row_method.__name__
+        key_generator_name = get_function_name(key_generator)
+        make_row_method_name = get_function_name(make_row_method)
 
         stage_status = check_stage_status(key_generator, make_row_method, cache_db)
         if stage_status == "Complete":
@@ -113,13 +109,9 @@ def build_cache(constructors, cache_db, cache_fields, sha, chunk_size=1000, test
     return cache_db
 
 def updater(id_, key_method, get_key_count, make_row_method, cache_db, db_fields, sha, chunk_size):
-    if isinstance(key_method, functools.partial):
-        key_method_name = key_method.func.__name__
-        make_row_method_name = make_row_method.func.__name__
-    else:
-        key_method_name = key_method.__name__
-        make_row_method_name = make_row_method.__name__
-
+    key_method_name = get_function_name(key_method)
+    make_row_method_name = get_function_name(make_row_method)
+    
     # Get a bunch of UPRNs
     key_count = get_key_count()
     # uprn_cursor = get_uprn_cursor(data_source_dictionary[uprn_method])
@@ -219,12 +211,9 @@ def get_chunk_count(id_, cache_db):
     return chunk_count
 
 def check_stage_status(key_method, make_row_method, cache_db):
-    if isinstance(key_method, functools.partial):
-        key_method_name = key_method.func.__name__
-        make_row_method_name = make_row_method.func.__name__
-    else:
-        key_method_name = key_method.__name__
-        make_row_method_name = make_row_method.func.__name__
+    key_method_name = get_function_name(key_method)
+    make_row_method_name = get_function_name(make_row_method)
+
     conn = sqlite3.connect(cache_db)
     c = conn.cursor()
     c.execute("select status from metadata where key_method = ? and make_row_method = ?;", (key_method_name, make_row_method_name))
@@ -234,6 +223,13 @@ def check_stage_status(key_method, make_row_method, cache_db):
         stage_complete = result[0][0]
     c.close()
     return stage_complete
+
+def get_function_name(a_function):
+    if isinstance(a_function, functools.partial):
+        function_name = a_function.func.__name__
+    else:
+        function_name = a_function.__name__
+    return function_name
 
 if __name__ == "__main__":
     main()
