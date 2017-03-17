@@ -7,7 +7,8 @@ import unittest
 from ihutilities.ETL_framework import (do_etl, make_point, report_input_length, 
                                        get_primary_key_from_db_fields,
                                        check_if_already_done,
-                                       get_source_generator)
+                                       get_source_generator,
+                                       make_row)
 
 from collections import OrderedDict
 
@@ -33,8 +34,8 @@ class TestETLFramework(unittest.TestCase):
         if os.path.isfile(cls.db_config):
             os.remove(cls.db_config)
 
-        db_config, status = do_etl(cls.DB_FIELDS, cls.db_config, cls.datapath, cls.data_field_lookup, mode="production", force=True)
-
+    def test_do_etl(self):
+        db_config, status = do_etl(self.DB_FIELDS, self.db_config, self.datapath, self.data_field_lookup, mode="production", force=True)
         assert status == "Completed"
 
     def test_check_if_already_done(self):
@@ -67,3 +68,17 @@ class TestETLFramework(unittest.TestCase):
         db_config, status = do_etl(self.DB_FIELDS, db_config, datapath, self.data_field_lookup, mode="production", force=True)
 
         assert status == "Completed"
+
+    def test_make_row_primary_key_to_null_for_autoinc(self):
+        input_row = {"Letter": "A", "Number": 1}
+        data_path = ""
+        autoinc_lookup = self.data_field_lookup.copy()
+        autoinc_lookup["ID"] = None
+        db_fields = self.DB_FIELDS.copy()
+        null_equivalents = []
+        autoinc = True
+        primary_key = "ID"
+
+        data_row = make_row(input_row, data_path, autoinc_lookup, db_fields, null_equivalents, autoinc, primary_key)
+
+        self.assertEqual(data_row, OrderedDict([('ID', None), ('Letter', 'A'), ('Number', 1)]))
