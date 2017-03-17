@@ -52,9 +52,12 @@ def make_row(input_row, data_path, data_field_lookup, db_fields, null_equivalent
             if not isinstance(data_field_lookup[output_key], list):
                 try:
                     value = input_row[data_field_lookup[output_key]]
-                except (KeyError, IndexError) as e:
-                    logger.warning("Required data field '{}' not found in input data = {}".format(data_field_lookup[output_key], input_row))
+                except IndexError:
+                    logger.warning("Required element number '{}' not found in input data list = {}".format(data_field_lookup[output_key], input_row))
                     return None
+                except KeyError:
+                    logger.warning("Required data field '{}' not found in input data = {}".format(data_field_lookup[output_key], input_row))
+                    raise
                 if value in null_equivalents:
                     value = None
             # If output_key corresponds to a POINT field we need to process a two element array
@@ -64,8 +67,7 @@ def make_row(input_row, data_path, data_field_lookup, db_fields, null_equivalent
             elif db_fields[output_key].lower() == "integer" and value is not None:
                 new_row[output_key] = int(value.replace(",", ""))
             else:
-                if value != None:
-                    new_row[output_key] = value
+                new_row[output_key] = value
     # If we have a field called ID as Primary Key and there is no lookup
     # for it we assume it is a synthetic key and put in an autoincrement value
     if autoinc:
@@ -279,10 +281,11 @@ def do_etl(db_fields, db_config, data_path, data_field_lookup,
             # Zip the input data into a row for the database
             new_row =  rowmaker(row, data_path, data_field_lookup, revised_db_fields[table], null_equivalents, autoinc, primary_key)
            
+            # Drop a line if it is malformed
             if new_row is None:
-                continue
+                logger.warning("Lines dropped = {} because it was malformed".format(row))
             # Drop row if it has a duplicate primary key
-            if autoinc or primary_key is None or (new_row[primary_key] not in primary_key_set):
+            elif autoinc or primary_key is None or (new_row[primary_key] not in primary_key_set):
                 line_count += 1
                 data.append(([x for x in new_row.values()]))
                 if primary_key is not None:
