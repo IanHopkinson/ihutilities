@@ -66,10 +66,10 @@ def make_row(input_row, data_path, data_field_lookup, db_fields, null_equivalent
             else:
                 if value != None:
                     new_row[output_key] = value
-        # If we have a field called ID as Primary Key and there is no lookup
-        # for it we assume it is a synthetic key and put in an autoincrement value
-        if autoinc:
-            new_row[primary_key] = None
+    # If we have a field called ID as Primary Key and there is no lookup
+    # for it we assume it is a synthetic key and put in an autoincrement value
+    if autoinc:
+        new_row[primary_key] = None
 
     return new_row
 
