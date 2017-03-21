@@ -91,7 +91,7 @@ class TestETLFramework(unittest.TestCase):
         assert status == "Completed"
 
     def test_make_row_primary_key_to_null_for_autoinc(self):
-        # Really we should put the make_row tests in a separate class
+        # Really we should put the make_row tests in a separate class with their own setup
         input_row = {"Letter": "A", "Number": 1}
         data_path = ""
         autoinc_lookup = self.data_field_lookup.copy()
