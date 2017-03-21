@@ -163,7 +163,7 @@ def updater(id_, key_method, get_key_count, make_row_method, cache_db, db_fields
         data = []
     
         for key in keys:
-            if key == '':
+            if key in ['', None]:
                 print("key is blank so continuing",flush=True)
                 continue
             line_count += 1
