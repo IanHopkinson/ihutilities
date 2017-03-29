@@ -65,7 +65,7 @@ def calculate_file_sha(filepath):
     if fh is None:
         return None
 
-    if ".zip" not in filepath:
+    if ".zip" not in filepath.lower():
         file_size = os.path.getsize(filepath)
     else:
         zip_path, name_in_zip = split_zipfile_path(filepath)
@@ -138,7 +138,7 @@ def get_a_file_handle(file_path, encoding="utf-8-sig", mode="rU", zip_guess=True
     if file_path is None:
         return fh
 
-    if ".zip" not in file_path:
+    if ".zip" not in file_path.lower():
         if mode == "rU":
             fh = file_handle_or_none(file_path, encoding=encoding, mode=mode)
         else: # This is what we do for binary files, no encoding permitted here
@@ -182,13 +182,18 @@ def file_handle_or_none(file_path, encoding="utf-8-sig", mode="rU"):
     return fh
 
 def split_zipfile_path(zipfile_path):
-    if ".zip" not in zipfile_path:
+    if ".zip" not in zipfile_path.lower():
         zip_path = zipfile_path
         name_in_zip = ""
         return zip_path, name_in_zip
 
-    parts = zipfile_path.split(".zip")
-    zip_path = parts[0] + ".zip"
+    if ".zip" in zipfile_path:
+        parts = zipfile_path.split(".zip")
+        zip_path = parts[0] + ".zip"
+    else:
+        parts = zipfile_path.split(".ZIP")
+        zip_path = parts[0] + ".ZIP"
+
     if len(parts) != 0 and len(parts) == 2:
         name_in_zip = parts[1][1:]
     else:
