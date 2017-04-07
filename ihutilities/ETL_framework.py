@@ -298,7 +298,7 @@ def do_etl(db_fields, db_config, data_path, data_field_lookup,
                 #print("UPRN = {} has already been seen".format(row[0])) 
 
             # Write an interim report
-            if (line_count % report_size) ==0:
+            if (line_count % report_size) == 0 and line_count != 0:
                 est_completion_time = ((time.time() - t0) / line_count) * (min(file_length, test_line_limit) - (line_count + line_count_offset))
                 completion_str = (datetime.datetime.now() + datetime.timedelta(seconds=est_completion_time)).strftime("%Y-%m-%d %H:%M:%S")
                 logger.info("Wrote {}/{} at ({}). Estimated completion time: {}".format(
