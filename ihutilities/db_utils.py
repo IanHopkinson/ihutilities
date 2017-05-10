@@ -11,6 +11,8 @@ import socket
 import sqlite3
 import logging
 
+from ihutilities.es_utils import read_es, configure_es, write_to_es, update_to_es
+
 from collections import OrderedDict
 
 db_config_template = {"db_name": "test",

@@ -108,12 +108,20 @@ def delete_es(es_config):
 
     """
     status = es.indices.delete(index=es_config["db_name"], ignore=[400, 404])
-    if status["status"] == 200:
+
+
+    try:
+        status_no = status["status"]
+    except KeyError:
+        status_no = status
+        # print("Status = {}".format(status_no), flush=True)
+
+    if status_no == 200:
         logger.info("Index '{}' deleted.".format(es_config["db_name"]))
-    elif status["status"] == 404:
+    elif status_no == 404:
         logger.info("Index '{}' not deleted because it did not exist.".format(es_config["db_name"]))
     else:
-        logger.info("Index '{}' not deleted with status = '{}'".format(es_config["db_name"]), status)
+        logger.info("Index '{}' not deleted with status = '{}'".format(es_config["db_name"], status_no))
 
     return status
 
@@ -162,7 +170,7 @@ def write_to_es(data, es_config, es_fields, table="data", whatever=False):
 
     return []
 
-def update_to_es(data, es_config, es_fields, table="data", key="UPRN"):
+def update_to_es(data, es_config, es_fields, table="data", key=["UPRN"]):
     """
     This function updates rows in an elasticsearch database
 
@@ -188,33 +196,37 @@ def update_to_es(data, es_config, es_fields, table="data", key="UPRN"):
     """
     es_config = _normalise_config(es_config)
 
-    # We need to find the _id of the documents that match
-    ids_query = {
-      "query": {
-        "constant_score": {
-          "filter": {
-            "term": {
-              "{}".format(key): 3
-            }
-          }
-        }
-      }
-    }
-    # We can set 
+    # # We need to find the _id of the documents that match
+    # ids_query = {
+    #   "query": {
+    #     "constant_score": {
+    #       "filter": {
+    #         "term": {
+    #           "{}".format(key): 3
+    #         }
+    #       }
+    #     }
+    #   }
+    # }
+    
+    if len(key) != 1:
+        print("Multiple key update not implmented for Elasticsearch")
+        raise NotImplementedError
+
     for row in data:
         ids_query = {
                     "query": {
                         "constant_score": {
                             "filter": {
                                 "term": {
-                                    "{}".format(key): row[key]
+                                    "{}".format(key[0]): row[key[0]]
                                     }
                                 }
                             }
                         }
                     }
 
-        row.pop(key)
+        row.pop(key[0])
         data_modified = dict(row)
         results = es.search(index=es_config["db_name"], body=ids_query)
         for matching_record in results["hits"]["hits"]:
@@ -260,6 +272,7 @@ def _create_tables_es(es_config, es_fields, tables, force):
     """
 
     status = es.indices.create(index=es_config["db_name"], ignore=400)
+    
     if status["acknowledged"]:
         logger.info("Created index '{}' successfully".format(es_config["db_name"]))
     else:
@@ -268,6 +281,7 @@ def _create_tables_es(es_config, es_fields, tables, force):
         status = es.indices.put_mapping(index=es_config["db_name"], ignore=400, doc_type=table, body=es_fields[table]["mappings"])
         # logger.info("Put mapping '{}' on '{}' with status {}".format(es_fields[table]["mappings"], table, status))
         # {'error': {'reason': 'No type specified for field [UDPRN]', 'root_cause': [{'reason': 'No type specified for field [UDPRN]', 'type': 'mapper_parsing_exception'}], 'type': 'mapper_parsing_exception'}, 'status': 400}
+
         if status["acknowledged"]:
             logger.info("Mappings for '{}' successfully applied".format(table))
         elif status["status"] == 400:
