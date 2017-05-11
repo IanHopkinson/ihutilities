@@ -100,6 +100,33 @@ def make_row(input_row, data_path, data_field_lookup, db_fields, null_equivalent
 
     return new_row
 
+def make_row_es(input_row, data_path, data_field_lookup, db_fields, null_equivalents, autoinc, primary_key):
+    new_row = OrderedDict([(x,None) for x in data_field_lookup.keys()])
+     # zip input row into output row
+    for output_key in new_row.keys():
+        # This inserts blank fields
+        value = None
+        if data_field_lookup[output_key] is not None:
+            if not isinstance(data_field_lookup[output_key], list):
+                try:
+                    value = input_row[data_field_lookup[output_key]]
+                except IndexError:
+                    logger.warning("Required element number '{}' not found in input data list = {}".format(data_field_lookup[output_key], input_row))
+                    return None
+                except KeyError:
+                    logger.warning("Required data field '{}' not found in input data = {}".format(data_field_lookup[output_key], input_row))
+                    raise
+                if value in null_equivalents:
+                    value = None
+        
+            new_row[output_key] = value
+    # If we have a field called ID as Primary Key and there is no lookup
+    # for it we assume it is a synthetic key and put in an autoincrement value
+    if autoinc:
+        new_row[primary_key] = None
+
+    return new_row
+
 def get_source_generator(data_path, headers, separator, encoding):
     # See data manager for detecting zip files, and then picking up the right part
     #
@@ -119,7 +146,7 @@ def get_source_generator(data_path, headers, separator, encoding):
 def do_etl(db_fields, db_config, data_path, data_field_lookup, 
             mode="production", headers=True, null_equivalents=[""], force=False, 
             separator=",", encoding="utf-8-sig", table=None,
-            rowmaker=make_row, rowsource=get_source_generator,
+            rowmaker=make_row, rowmaker_es=make_row_es, rowsource=get_source_generator,
             test_line_limit=10000):
     """This function uploads CSV files to a sqlite or MariaDB/MySQL database
 
@@ -157,6 +184,9 @@ def do_etl(db_fields, db_config, data_path, data_field_lookup,
        rowmaker (function):
             the rowmaker function takes an input data row and converts it to a line for the output database. The function call is:
             rowmaker(row, data_path, data_field_lookup, db_fields, null_equivalents, autoinc, primary_key)
+       rowmaker_es (function):
+            the rowmaker function takes an input data row and converts it to a line for the output elasticsearch index. The function call is:
+            rowmaker_es(row, data_path, data_field_lookup, db_fields, null_equivalents, autoinc, primary_key)
        rowsource (function):
             the rowsource function yields input data rows which are handed off to the rowmaker to make database rows. The function call is:
             get_source_generator(data_path, headers, separator, encoding)
@@ -287,7 +317,7 @@ def do_etl(db_fields, db_config, data_path, data_field_lookup,
     results = list(read_db(sql_query, db_config))
     if len(results) == 0:
     # Write start to metadata table
-        id_ = None
+        id_ = 1
         start_time = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         # metadata = [(id_, data_path, datafile_sha,"Started", start_time, "", "", 0)]
 
@@ -303,7 +333,9 @@ def do_etl(db_fields, db_config, data_path, data_field_lookup,
             ]
 
         write_to_db(metadata, db_config, revised_db_fields["metadata"], table="metadata")
-        # time.sleep(2)
+        # Elasticsearch needs a little sleep before we can query for the results
+        if db_config["db_type"] == "elasticsearch":
+            time.sleep(2)
         #sql_query = "select * from metadata where datafile_sha = '{}' order by SequenceNumber desc;".format(datafile_sha)
         #print(results, flush=True)
         results = list(read_db(sql_query, db_config))
@@ -345,7 +377,8 @@ def do_etl(db_fields, db_config, data_path, data_field_lookup,
     ])]
 
     write_to_db(session_log_data, db_config, revised_db_fields["session_log"], table="session_log")
-
+    if db_config["db_type"] == "elasticsearch":
+        time.sleep(2)
     # Pick up session log data
     if db_config["db_type"] != "elasticsearch":
         sql_query = "select * from session_log where datafile_sha = '{}' order by ID desc;".format(datafile_sha)
@@ -381,15 +414,19 @@ def do_etl(db_fields, db_config, data_path, data_field_lookup,
 
             
             # Zip the input data into a row for the database
-            new_row =  rowmaker(row, data_path, data_field_lookup, revised_db_fields[table], null_equivalents, autoinc, primary_key)
-           
+            if db_config["db_type"] != "elasticsearch":
+                new_row =  rowmaker(row, data_path, data_field_lookup, revised_db_fields[table], null_equivalents, autoinc, primary_key)
+            else:
+                new_row =  rowmaker_es(row, data_path, data_field_lookup, revised_db_fields[table], null_equivalents, autoinc, primary_key)
+
             # Drop a line if it is malformed
             if new_row is None:
                 logger.warning("Lines dropped = {} because it was malformed".format(row))
             # Drop row if it has a duplicate primary key
             elif autoinc or primary_key is None or (new_row[primary_key] not in primary_key_set):
                 line_count += 1
-                data.append(([x for x in new_row.values()]))
+                #data.append(([x for x in new_row.values()]))
+                data.append(new_row)
                 if primary_key is not None:
                     primary_key_set.add(new_row[primary_key])
             else:
@@ -415,10 +452,12 @@ def do_etl(db_fields, db_config, data_path, data_field_lookup,
                 write_to_db(data, db_config, revised_db_fields[table], table=table)
                 chunk_count += 1
                 # Update chunk_count to db metadata
-                update_to_db([(chunk_count, id_)], db_config, ["chunk_count", "SequenceNumber"], table="metadata", key="SequenceNumber")
+                metadata = [OrderedDict([("chunk_count", chunk_count), ("SequenceNumber",id_)])]
+                update_to_db(metadata, db_config, ["chunk_count", "SequenceNumber"], table="metadata", key="SequenceNumber")
                 # Update current time and chunk count to session log
                 time_ = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-                update_to_db([(chunk_count, time_, sessid)], db_config, ["last_chunk", "end_time", "ID"], table="session_log", key="ID")
+                session_log = [OrderedDict([("chunk_count", chunk_count), ("end_time",time_), ("ID", sessid)])]
+                update_to_db(session_log, db_config, ["last_chunk", "end_time", "ID"], table="session_log", key="ID")
                 data = []
 
             # Break if we have reached test_line_limit
