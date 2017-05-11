@@ -190,13 +190,12 @@ def unwind_nested_dictionary(source, destination, root=""):
     
     for k, v in source.items():
         #print(k,v, type(v))
-        if k == "ATMServices":
-            print(k, v, flush=True)
         if isinstance(v, dict):
             unwind_nested_dictionary(v, destination, root=root+"-"+k)
-        elif isinstance(v, list):
+        elif isinstance(v, list) and len(v) != 0:
             if isinstance(v[0], dict):
-                unwind_nested_dictionary(v[0], destination, root=root+"-"+k)
+                n = len(v)
+                unwind_nested_dictionary(v[0], destination, root=root+"-"+k+"[1of{}]".format(n))
             elif isinstance(v[0], str):
                 destination[root + "-" + k] = "|".join(v)
         else:
@@ -214,7 +213,9 @@ if __name__ == "__main__":
         print("survey_json.py file_path [line_limit = {integer or all}] [encoding]")
         print("\n Default file encoding is utf-8-sig, cp1252 is Windows default so worth a try, and iso-8859-1 encodes all bytes so at least it won't barf")
         #sys.exit()
-        file_path = "https://api.bankofscotland.co.uk/open-banking/v1.2/atms"
+        # file_path = "https://api.bankofscotland.co.uk/open-banking/v1.2/branches"
+        # file_path = "https://openapi.bankofireland.com/open-banking/v1.2/branches" - doesn't work because of ssl problems
+        file_path = "https://atlas.api.barclays/open-banking/v1.3/branches"
         line_limit = 1000
 
     elif len(arg) == 1:
