@@ -22,7 +22,7 @@ from ihutilities.es_utils import check_es_database_exists
 # write_to_db functions
 
 metadata_fields = OrderedDict([
-    ("SequenceNumber", "INTEGER PRIMARY KEY AUTOINCREMENT"),
+    ("SequenceNumber", "INTEGER PRIMARY KEY"),
     ("data_path", "TEXT"),
     ("datafile_sha", "TEXT"),
     ("status", "TEXT"),
@@ -33,7 +33,7 @@ metadata_fields = OrderedDict([
     ])
 
 session_log_fields = OrderedDict([
-    ("ID", "INTEGER PRIMARY KEY AUTOINCREMENT"),
+    ("ID", "INTEGER PRIMARY KEY"),
     ("make_row_method", "TEXT"),
     ("start_time", "TEXT"),
     ("end_time", "TEXT"),
@@ -343,7 +343,7 @@ def do_etl(db_fields, db_config, data_path, data_field_lookup,
         id_ = results[0]["SequenceNumber"] 
     else:
         id_ = results[0]["SequenceNumber"]
-        start_time = results[0]["SequenceNumber"]
+        start_time = results[0]["start_time"]
 
     #print(id_, start_time, flush=True)
 
@@ -363,7 +363,7 @@ def do_etl(db_fields, db_config, data_path, data_field_lookup,
         line_count_offset = 0
         line_count = 0
 
-    logging.info("Skipping {} chunks ({} lines)".format(chunk_skip, line_count))
+    logging.info("Skipping {} chunks ({} lines)".format(chunk_skip, line_count_offset))
     # # ** Skip chunks
     # key_chunks = key_method(chunk_size)
 
@@ -372,6 +372,27 @@ def do_etl(db_fields, db_config, data_path, data_field_lookup,
     #session_log_data = [(None, rowsource.__name__, time_, time_, datafile_sha, chunk_skip, chunk_skip)]
 
     # We need to get the latest sessid here rather than using autoincrement
+    if db_config["db_type"] != "elasticsearch":
+        sql_query = "select max(ID) as ID from session_log;"
+    else:
+        sql_query = {"sort" : [
+        { "ID" : {"order" : "desc"}}
+                        ],
+                        "query": {
+                        "bool" : {
+                            "must" : [
+                                {"term" : { "_type": "session_log"}}
+                                    ]
+                                    }
+                                }
+                            }
+
+    results = list(read_db(sql_query, db_config))
+    
+    if len(results) > 0 and results[0]["ID"] is not None:
+        new_sessid = results[0]["ID"] + 1
+    else:
+        new_sessid = 1
     
     # We need 
     session_log_data = [OrderedDict([
@@ -651,7 +672,6 @@ def get_chunk_count(id_, datafile_sha, cache_db):
     return chunk_count
 
 def get_chunk_count_es(id_, datafile_sha, cache_db):
-    sql_query = "select chunk_count from metadata where datafile_sha='{}' and SequenceNumber = {};".format(datafile_sha, id_)
     sql_query = {"query": {
                  "bool" : {
                             "must" : [

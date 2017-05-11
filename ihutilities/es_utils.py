@@ -243,12 +243,13 @@ def read_es(es_query, es_config):
     es_config = _normalise_config(es_config)
     index = es_config["db_name"]
 
-    try:
-        results = es.search(index=index, body=es_query)
-    except elasticsearch.exceptions.RequestError:
-        results = {}
-        results["hits"] = {}
-        results["hits"]["hits"] = []
+    # try:
+    #     results = es.search(index=index, body=es_query)
+    # except elasticsearch.exceptions.RequestError:
+    #     results = {}
+    #     results["hits"] = {}
+    #     results["hits"]["hits"] = []
+    results = es.search(index=index, body=es_query)
 
     for result in results["hits"]["hits"]:
         yield result["_source"]
