@@ -67,7 +67,7 @@ class ElasticsearchUtilitiesTests(unittest.TestCase):
         if not elastic_search_not_running:
             cls.es = elasticsearch.Elasticsearch()
 
-    def test_configure_es(self):
+    def test_configure_es_clean(self):
         # Connect to engine and delete test table if it exists
         es_config = es_config_template.copy()
         es_config["db_name"] = "test"
@@ -76,6 +76,33 @@ class ElasticsearchUtilitiesTests(unittest.TestCase):
         status = delete_es(es_config)
 
         configure_db(es_config, self.es_fields, tables="testrecord", force=True)
+
+        # Test es exists
+        exists = check_es_database_exists(es_config)
+        self.assertEqual(exists, True)
+
+        # Check details of config
+        # settings = self.es.indices.get_settings(index='test')
+
+        mappings = self.es.indices.get_mapping(index='test')
+
+        fields = set(list(mappings["test"]["mappings"]["testrecord"]["properties"].keys()))
+
+        self.assertEqual(set(['UPRN', 'Addr1', 'PropertyID', 'geocode']), fields)
+
+    def test_configure_es_preexisting(self):
+        # Connect to engine and delete test table if it exists
+        es_config = es_config_template.copy()
+        es_config["db_name"] = "test"
+        
+        # Delete "test" index if it exists
+        status = delete_es(es_config)
+
+        configure_db(es_config, self.es_fields, tables="testrecord", force=False)
+
+        time.sleep(2)
+
+        configure_db(es_config, self.es_fields, tables="testrecord", force=False)
 
         # Test es exists
         exists = check_es_database_exists(es_config)
