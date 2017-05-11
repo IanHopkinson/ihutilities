@@ -163,6 +163,7 @@ def write_to_es(data, es_config, es_fields, table="data", whatever=False):
         helpers.bulk(es, actions)
     except Exception as ex:
         logger.warning("Exception ({}) from Elasticsearch, waiting 120 seconds then retrying".format(ex))
+        logger.warning("{}".format(actions))
         time.sleep(120)
         helpers.bulk(es, actions)
 
@@ -242,7 +243,12 @@ def read_es(es_query, es_config):
     es_config = _normalise_config(es_config)
     index = es_config["db_name"]
 
-    results = es.search(index=index, body=es_query)
+    try:
+        results = es.search(index=index, body=es_query)
+    except elasticsearch.exceptions.RequestError:
+        results = {}
+        results["hits"] = {}
+        results["hits"]["hits"] = []
 
     for result in results["hits"]["hits"]:
         yield result["_source"]
@@ -290,5 +296,5 @@ def _create_tables_es(es_config, es_fields, tables, force):
             logger.info("Mappings for '{}' successfully applied".format(table))
         elif status["status"] == 400:
             logger.warning("Mapping for '{}' failed with '{}'".format(table, status["error"]["reason"]))
-            
+
     return status

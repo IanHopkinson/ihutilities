@@ -204,6 +204,7 @@ def write_to_db(data, db_config, db_fields, table="property_data", whatever=Fals
 
     else:
         try:
+            logger.debug("Insert statement = {}\nData line 1 = {}".format(INSERT_statement, converted_data[0]))
             cursor.executemany(INSERT_statement, converted_data)
         except (mysql.connector.errors.IntegrityError, sqlite3.IntegrityError):
             conn.close()
