@@ -85,7 +85,7 @@ class ElasticsearchQueryTests(unittest.TestCase):
         time.sleep(2)
 
         es_query = {"query": {
-                        "bool" : {
+                    "bool" : {
                             "must" : {
                                 "match_all" : {}
                             },
@@ -130,6 +130,7 @@ class ElasticsearchQueryTests(unittest.TestCase):
                             "bool" : {
                                 "must" : [
                                     {"term" : { "PropertyID" : 2 }},
+                                    {"term" : { "_type": "testrecord"}}
                                         ]
                                         }
                                     }
