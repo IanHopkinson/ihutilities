@@ -342,7 +342,7 @@ def do_etl(db_fields, db_config, data_path, data_field_lookup,
         results = list(read_db(sql_query, db_config))
         id_ = results[0]["SequenceNumber"] 
     else:
-        id_ = results[0]["SequenceNumber"]
+        id_ = results[0]["SequenceNumber"] + 1
         start_time = results[0]["start_time"]
 
     #print(id_, start_time, flush=True)
