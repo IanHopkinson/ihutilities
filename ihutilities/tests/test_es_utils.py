@@ -283,6 +283,39 @@ class ElasticsearchUtilitiesTests(unittest.TestCase):
 
         self.assertEqual(results[0], data[1])
 
+    def test_sort_query(self):
+        es_config = es_config_template.copy()
+        es_config["db_name"] = "test"
+        
+        # Delete "test" index if it exists
+        status = delete_es(es_config)
+
+        status = configure_db(es_config, self.es_fields, tables="testrecord", force=True)
+
+        data = [{"UPRN": 1, "PropertyID": 2, "Addr1": "Aardvark", "geocode": {"lat": 63.20710, "lon": -1.89310}},
+                {"UPRN": 2, "PropertyID": 2, "Addr1": "Barbarosa", "geocode": {"lat":53.30710, "lon": -2.89310}},
+                {"UPRN": 3, "PropertyID": 2, "Addr1": "Camel", "geocode": {"lat":63.40710, "lon": -3.89310}}]
+        write_to_db(data, es_config, self.es_fields, table="testrecord")
+
+        # Writes to Elasticsearch are not available immediately
+        time.sleep(2)
+
+        es_query = {"sort" : [
+                            { "UPRN" : {"order" : "desc"}},
+                            ],
+                            "query": {
+                            "bool" : {
+                                "must" : [
+                                    {"term" : { "PropertyID" : 2 }},
+                                        ]
+                                        }
+                                    }
+                                }
+        
+        results = list(read_db(es_query, es_config))
+
+        self.assertEqual(results[0], data[2])
+
     # def test_geopoint_query(self):
     #     es_config = es_config_template.copy()
     #     es_config["db_name"] = "test"
