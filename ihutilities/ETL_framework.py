@@ -42,6 +42,29 @@ session_log_fields = OrderedDict([
     ("last_chunk", "FLOAT"),
     ])
 
+metadata_fields_es = {"metadata": { "properties": {
+    "SequenceNumber": {"type": "integer"},
+    "data_path": {"type": "string"},
+    "datafile_sha": {"type": "string"},
+    "status": {"type": "string"},
+    "start_time": {"type": "string"},
+    "finish_time": {"type": "string"},
+    "last_write_time": {"type": "string"},
+    "chunk_count": {"type": "integer"},
+}    
+}}
+
+session_log_fields_es = {"session_log": { "properties": {
+    "ID": {"type": "integer"},
+    "make_row_method": {"type": "string"},
+    "start_time": {"type": "string"},
+    "end_time": {"type": "string"},
+    "datafile_sha": {"type": "string"},
+    "first_chunk": {"type": "integer"},
+    "last_chunk": {"type": "integer"},
+}    
+}}
+
 logger = logging.getLogger(__name__)
 
 def make_row(input_row, data_path, data_field_lookup, db_fields, null_equivalents, autoinc, primary_key):
@@ -192,11 +215,20 @@ def do_etl(db_fields, db_config, data_path, data_field_lookup,
     # Calculating file lengths can be slow so we leave doing it as late as possible
     file_length = get_input_file_length(mode, rowsource, test_line_limit, data_path, headers, separator, encoding)
     
+
     # If the table argument is None we assume we are writing to the property_data table and that db_fields describes one flat level table
     if db_config["db_type"] == "elasticsearch":
-        revised_db_fields = {}
-        revised_db_fields[table] = db_fields
-        configure_db(db_config, db_fields, tables=table, force=force)
+        revised_db_fields = db_fields.copy()
+        revised_db_fields["metadata"] = {}
+        revised_db_fields["session_log"] = {}
+        revised_db_fields["metadata"]["mappings"] = metadata_fields_es
+        revised_db_fields["session_log"]["mappings"] = session_log_fields_es
+
+        tables = [table]
+        tables.append("metadata")
+        tables.append("session_log")
+
+        configure_db(db_config, revised_db_fields, tables=tables, force=force)
     else:
         if table is None:
             table = "property_data"
@@ -226,7 +258,8 @@ def do_etl(db_fields, db_config, data_path, data_field_lookup,
     primary_key_set = set()
     duplicate_primary_keys = set()
     primary_key = None
-    primary_key = get_primary_key_from_db_fields(revised_db_fields[table])
+    if db_config["db_type"] != "elasticsearch":
+        primary_key = get_primary_key_from_db_fields(revised_db_fields[table])
 
     if primary_key == "ID" and data_field_lookup["ID"] is None:
         autoinc = True
@@ -234,21 +267,52 @@ def do_etl(db_fields, db_config, data_path, data_field_lookup,
         autoinc = False
 
     # Get metadata id_ back out of the database
-    sql_query = "select * from metadata where datafile_sha = '{}' order by SequenceNumber desc;".format(datafile_sha)
+    if db_config["db_type"] != "elasticsearch":
+        sql_query = "select * from metadata where datafile_sha = '{}' order by SequenceNumber desc;".format(datafile_sha)
+    else:
+        sql_query = {"sort" : [
+        { "SequenceNumber" : {"order" : "desc"}},
+                        ],
+                        "query": {
+                        "bool" : {
+                            "must" : [
+                                {"term" : { "datafile_sha" : datafile_sha }},
+                                {"term" : { "_type": "metadata"}}
+                                    ]
+                                    }
+                                }
+                            }
+
+
     results = list(read_db(sql_query, db_config))
     if len(results) == 0:
     # Write start to metadata table
         id_ = None
         start_time = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        metadata = [(id_, data_path, datafile_sha,"Started", start_time, "", "", 0)]
+        # metadata = [(id_, data_path, datafile_sha,"Started", start_time, "", "", 0)]
+
+        metadata = [OrderedDict([
+            ("SequenceNumber", id_),
+            ("data_path", data_path),
+            ("datafile_sha", datafile_sha),
+            ("status", "Started"),
+            ("start_time", start_time),
+            ("finish_time", ""),
+            ("last_write_time", ""),
+            ("chunk_count", 0)])
+            ]
+
         write_to_db(metadata, db_config, revised_db_fields["metadata"], table="metadata")
-        sql_query = "select * from metadata where datafile_sha = '{}' order by SequenceNumber desc;".format(datafile_sha)
+        # time.sleep(2)
+        #sql_query = "select * from metadata where datafile_sha = '{}' order by SequenceNumber desc;".format(datafile_sha)
+        #print(results, flush=True)
         results = list(read_db(sql_query, db_config))
         id_ = results[0]["SequenceNumber"] 
     else:
         id_ = results[0]["SequenceNumber"]
         start_time = results[0]["SequenceNumber"]
 
+    #print(id_, start_time, flush=True)
 
 
     # ** Add in session log code
@@ -268,11 +332,38 @@ def do_etl(db_fields, db_config, data_path, data_field_lookup,
 
     # Update session log here
     time_ = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    session_log_data = [(None, rowsource.__name__, time_, time_, datafile_sha, chunk_skip, chunk_skip)]
+    #session_log_data = [(None, rowsource.__name__, time_, time_, datafile_sha, chunk_skip, chunk_skip)]
+    
+    session_log_data = [OrderedDict([
+    ("ID", 1),
+    ("make_row_method", rowsource.__name__),
+    ("start_time", time_),
+    ("end_time", time_),
+    ("datafile_sha", datafile_sha),
+    ("first_chunk", chunk_skip),
+    ("last_chunk", chunk_skip),
+    ])]
+
     write_to_db(session_log_data, db_config, revised_db_fields["session_log"], table="session_log")
 
     # Pick up session log data
-    sql_query = "select * from session_log where datafile_sha = '{}' order by ID desc;".format(datafile_sha)
+    if db_config["db_type"] != "elasticsearch":
+        sql_query = "select * from session_log where datafile_sha = '{}' order by ID desc;".format(datafile_sha)
+    else:
+        sql_query = {"sort" : [
+        { "ID" : {"order" : "desc"}},
+                        ],
+                        "query": {
+                        "bool" : {
+                            "must" : [
+                                {"term" : { "datafile_sha" : datafile_sha }},
+                                {"term" : { "_type": "session_log"}}
+                                    ]
+                                    }
+                                }
+                            }
+
+    
     results = list(read_db(sql_query, db_config))
     sessid = results[0]["ID"]
 
@@ -408,6 +499,7 @@ def check_if_already_done(data_path, db_config, datafile_sha):
                             }
     
     results = list(read_db(sql_query, db_config))
+    #print(results, flush=True)
     #sql_query = "select * from metadata where datafile_path = '{}' and status = 'Complete'".format(datafile_path)
     logging.debug("Checking for completeness of {} with {}".format(db_config, sql_query))
     
