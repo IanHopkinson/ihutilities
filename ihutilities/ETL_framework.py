@@ -487,11 +487,38 @@ def do_etl(db_fields, db_config, data_path, data_field_lookup,
     finish_time = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
     # Now we are autoincrementing the SequenceNumber field, we need to do a read_db to find the value
-    sql_query = "select max(SequenceNumber) as actual_id from metadata;"
-    actual_id = list(read_db(sql_query, db_config))[0]["actual_id"]
+    # Get metadata id_ back out of the database
+    if db_config["db_type"] != "elasticsearch":
+        sql_query = "select max(SequenceNumber) as SequenceNumber from metadata;"
+    else:
+        sql_query = {"sort" : [
+        { "SequenceNumber" : {"order" : "desc"}},
+                        ],
+                        "query": {
+                        "bool" : {
+                            "must" : [
+                                {"term" : { "_type": "metadata"}}
+                                    ]
+                                    }
+                                }
+                            }
+
+    
+    actual_id = list(read_db(sql_query, db_config))[0]["SequenceNumber"]
 
     metadata = [(actual_id, data_path, datafile_sha,"Complete", start_time, finish_time, finish_time)]
     update_fields = [x for x in revised_db_fields["metadata"].keys()]
+    metadata = [OrderedDict([
+            ("SequenceNumber", actual_id),
+            ("data_path", data_path),
+            ("datafile_sha", datafile_sha),
+            ("status", "Complete"),
+            ("start_time", start_time),
+            ("finish_time", finish_time),
+            ("last_write_time", finish_time),
+            ("chunk_count", 0)])
+            ]
+
     update_to_db(metadata, db_config, update_fields, table="metadata", key="SequenceNumber")
 
     return db_config, "Completed"
