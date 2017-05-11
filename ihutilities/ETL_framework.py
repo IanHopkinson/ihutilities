@@ -16,6 +16,8 @@ from ihutilities import (configure_db, write_to_db, update_to_db, read_db,
                         calculate_file_sha, _normalise_config, check_mysql_database_exists,
                         get_a_file_handle, split_zipfile_path)
 
+from ihutilities.es_utils import check_es_database_exists
+
 # This dictionary has field names and field types. It should be reuseable between the configure_db and 
 # write_to_db functions
 
@@ -163,6 +165,9 @@ def do_etl(db_fields, db_config, data_path, data_field_lookup,
         elif (db_config["db_type"] == "mysql" or db_config["db_type"] == "mariadb") and not db_config["db_name"].endswith("_test"):
             db_config["db_name"] = db_config["db_name"] + "_test"
             logger.info("Renamed output database to {} because we are in test mode".format(db_config["db_name"]))
+        elif (db_config["db_type"] == "elasticsearch") and not db_config["db_name"].endswith("-test"):
+            db_config["db_name"] = db_config["db_name"] + "-test"
+            logger.info("Renamed output database to {} because we are in test mode".format(db_config["db_name"]))
     else:
         logger.critical("Mode should be either 'test' or 'production', mode supplied was '{}'".format(mode))
         sys.exit()
@@ -188,22 +193,28 @@ def do_etl(db_fields, db_config, data_path, data_field_lookup,
     file_length = get_input_file_length(mode, rowsource, test_line_limit, data_path, headers, separator, encoding)
     
     # If the table argument is None we assume we are writing to the property_data table and that db_fields describes one flat level table
-    if table is None:
-        table = "property_data"
+    if db_config["db_type"] == "elasticsearch":
         revised_db_fields = {}
-        revised_db_fields["property_data"] = db_fields
-        revised_db_fields["metadata"] = metadata_fields
-        revised_db_fields["session_log"] = session_log_fields   
-        tables = ["property_data", "metadata", "session_log"]
+        revised_db_fields[table] = db_fields
+        configure_db(db_config, db_fields, tables=table, force=force)
     else:
-        revised_db_fields = db_fields.copy()
-        revised_db_fields["metadata"] = metadata_fields   
-        revised_db_fields["session_log"] = session_log_fields
-        tables = list(db_fields.keys())
-        tables.append("metadata")
-        tables.append("session_log")
+        if table is None:
+            table = "property_data"
+            revised_db_fields = {}
+            revised_db_fields["property_data"] = db_fields
+            revised_db_fields["metadata"] = metadata_fields
+            revised_db_fields["session_log"] = session_log_fields   
+            tables = ["property_data", "metadata", "session_log"]
+        else:
+            revised_db_fields = db_fields.copy()
+            revised_db_fields["metadata"] = metadata_fields   
+            revised_db_fields["session_log"] = session_log_fields
+            tables = list(db_fields.keys())
+            tables.append("metadata")
+            tables.append("session_log")
 
-    configure_db(db_config, revised_db_fields, tables=tables, force=force)
+
+        configure_db(db_config, revised_db_fields, tables=tables, force=force)
 
     # Get on with the main business
     t0 = time.time()
@@ -377,13 +388,31 @@ def check_if_already_done(data_path, db_config, datafile_sha):
     elif db_config["db_type"] == "mysql" or db_config["db_type"] == "mariadb":
         if not check_mysql_database_exists(db_config):
             return False
+    elif db_config["db_type"] == "elasticsearch":
+        print(check_es_database_exists(db_config), flush=True)
+        if not check_es_database_exists(db_config):
+            return False
 
     # Look for the datafile_sha in the metadata table and if it exists, return True
-    sql_query = "select * from metadata where datafile_sha = '{}' and status = 'Complete'".format(datafile_sha)
+    if db_config["db_type"] != "elasticsearch":
+        sql_query = "select * from metadata where datafile_sha = '{}' and status = 'Complete'".format(datafile_sha)
+    else:
+        sql_query = {"query": {
+                        "bool" : {
+                            "must" : [
+                                {"term" : { "datafile_sha" : datafile_sha }},
+                                {"term" : { "status" : "Complete" }},
+                                    ]
+                                    }
+                                }
+                            }
+    
+    results = list(read_db(sql_query, db_config))
     #sql_query = "select * from metadata where datafile_path = '{}' and status = 'Complete'".format(datafile_path)
     logging.debug("Checking for completeness of {} with {}".format(db_config, sql_query))
-    results = list(read_db(sql_query, db_config))
-
+    
+    # print(results, flush=True)
+    
     if len(results) == 1:
         return True
     else:

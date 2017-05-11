@@ -272,7 +272,8 @@ def _create_tables_es(es_config, es_fields, tables, force):
     """
 
     status = es.indices.create(index=es_config["db_name"], ignore=400)
-    
+    #print("Create index", flush=True)
+    #print(status, flush=True)
     if status["acknowledged"]:
         logger.info("Created index '{}' successfully".format(es_config["db_name"]))
     else:
@@ -281,7 +282,9 @@ def _create_tables_es(es_config, es_fields, tables, force):
         status = es.indices.put_mapping(index=es_config["db_name"], ignore=400, doc_type=table, body=es_fields[table]["mappings"])
         # logger.info("Put mapping '{}' on '{}' with status {}".format(es_fields[table]["mappings"], table, status))
         # {'error': {'reason': 'No type specified for field [UDPRN]', 'root_cause': [{'reason': 'No type specified for field [UDPRN]', 'type': 'mapper_parsing_exception'}], 'type': 'mapper_parsing_exception'}, 'status': 400}
-
+        #print("Create index", flush=True)
+        #print(status, flush=True)
+    
         if status["acknowledged"]:
             logger.info("Mappings for '{}' successfully applied".format(table))
         elif status["status"] == 400:
