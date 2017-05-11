@@ -301,7 +301,7 @@ def do_etl(db_fields, db_config, data_path, data_field_lookup,
         sql_query = "select * from metadata where datafile_sha = '{}' order by SequenceNumber desc;".format(datafile_sha)
     else:
         sql_query = {"sort" : [
-        { "SequenceNumber" : {"order" : "desc"}},
+        { "SequenceNumber" : {"order" : "desc"}}
                         ],
                         "query": {
                         "bool" : {
@@ -315,6 +315,7 @@ def do_etl(db_fields, db_config, data_path, data_field_lookup,
 
 
     results = list(read_db(sql_query, db_config))
+
     if len(results) == 0:
     # Write start to metadata table
         id_ = 1
@@ -349,7 +350,11 @@ def do_etl(db_fields, db_config, data_path, data_field_lookup,
 
     # ** Add in session log code
     # Fetch chunk progress
-    chunk_skip = get_chunk_count(id_, datafile_sha, db_config)
+    if db_config["db_type"] != "elasticsearch":
+        chunk_skip = get_chunk_count(id_, datafile_sha, db_config)
+    else:
+        chunk_skip = get_chunk_count_es(id_, datafile_sha, db_config)
+
     chunk_count = chunk_skip
     if chunk_skip != 0:
         line_count_offset = (chunk_size * chunk_skip)
@@ -365,9 +370,12 @@ def do_etl(db_fields, db_config, data_path, data_field_lookup,
     # Update session log here
     time_ = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     #session_log_data = [(None, rowsource.__name__, time_, time_, datafile_sha, chunk_skip, chunk_skip)]
+
+    # We need to get the latest sessid here rather than using autoincrement
     
+    # We need 
     session_log_data = [OrderedDict([
-    ("ID", 1),
+    ("ID", new_sessid),
     ("make_row_method", rowsource.__name__),
     ("start_time", time_),
     ("end_time", time_),
@@ -456,7 +464,7 @@ def do_etl(db_fields, db_config, data_path, data_field_lookup,
                 update_to_db(metadata, db_config, ["chunk_count", "SequenceNumber"], table="metadata", key="SequenceNumber")
                 # Update current time and chunk count to session log
                 time_ = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-                session_log = [OrderedDict([("chunk_count", chunk_count), ("end_time",time_), ("ID", sessid)])]
+                session_log = [OrderedDict([("last_chunk", chunk_count), ("end_time",time_), ("ID", sessid)])]
                 update_to_db(session_log, db_config, ["last_chunk", "end_time", "ID"], table="session_log", key="ID")
                 data = []
 
@@ -492,7 +500,7 @@ def do_etl(db_fields, db_config, data_path, data_field_lookup,
         sql_query = "select max(SequenceNumber) as SequenceNumber from metadata;"
     else:
         sql_query = {"sort" : [
-        { "SequenceNumber" : {"order" : "desc"}},
+        { "SequenceNumber" : {"order" : "desc"}}
                         ],
                         "query": {
                         "bool" : {
@@ -516,7 +524,7 @@ def do_etl(db_fields, db_config, data_path, data_field_lookup,
             ("start_time", start_time),
             ("finish_time", finish_time),
             ("last_write_time", finish_time),
-            ("chunk_count", 0)])
+            ("chunk_count", chunk_count)])
             ]
 
     update_to_db(metadata, db_config, update_fields, table="metadata", key="SequenceNumber")
@@ -546,7 +554,7 @@ def check_if_already_done(data_path, db_config, datafile_sha):
         if not check_mysql_database_exists(db_config):
             return False
     elif db_config["db_type"] == "elasticsearch":
-        print(check_es_database_exists(db_config), flush=True)
+        # print(check_es_database_exists(db_config), flush=True)
         if not check_es_database_exists(db_config):
             return False
 
@@ -554,18 +562,19 @@ def check_if_already_done(data_path, db_config, datafile_sha):
     if db_config["db_type"] != "elasticsearch":
         sql_query = "select * from metadata where datafile_sha = '{}' and status = 'Complete'".format(datafile_sha)
     else:
-        sql_query = {"query": {
+        sql_query = {   "query": {
                         "bool" : {
                             "must" : [
                                 {"term" : { "datafile_sha" : datafile_sha }},
-                                {"term" : { "status" : "Complete" }},
+                                {"term" : { "_type": "metadata"}},
+                                {"term" : { "status": "complete"}}
                                     ]
                                     }
                                 }
                             }
     
     results = list(read_db(sql_query, db_config))
-    #print(results, flush=True)
+    
     #sql_query = "select * from metadata where datafile_path = '{}' and status = 'Complete'".format(datafile_path)
     logging.debug("Checking for completeness of {} with {}".format(db_config, sql_query))
     
@@ -632,6 +641,28 @@ def make_dbfields(file_path):
 
 def get_chunk_count(id_, datafile_sha, cache_db):
     sql_query = "select chunk_count from metadata where datafile_sha='{}' and SequenceNumber = {};".format(datafile_sha, id_) 
+    result = list(read_db(sql_query, cache_db))
+    
+    if len(result) == 1:
+        chunk_count = result[0]["chunk_count"]
+    else:
+        chunk_count = 0
+
+    return chunk_count
+
+def get_chunk_count_es(id_, datafile_sha, cache_db):
+    sql_query = "select chunk_count from metadata where datafile_sha='{}' and SequenceNumber = {};".format(datafile_sha, id_)
+    sql_query = {"query": {
+                 "bool" : {
+                            "must" : [
+                                {"term" : { "datafile_sha" : datafile_sha }},
+                                {"term" : { "SequenceNumber" : id_ }},
+                                {"term" : { "_type": "metadata"}}
+                                    ]
+                                    }
+                                }
+                            }
+
     result = list(read_db(sql_query, cache_db))
     
     if len(result) == 1:
