@@ -109,13 +109,11 @@ def delete_es(es_config):
     """
     status = es.indices.delete(index=es_config["db_name"], ignore=[400, 404])
 
-
-    try:
+    if "acknowledged" in status.keys():
+        status_no = 200
+    else:
         status_no = status["status"]
-    except KeyError:
-        status_no = status
-        # print("Status = {}".format(status_no), flush=True)
-
+    
     if status_no == 200:
         logger.info("Index '{}' deleted.".format(es_config["db_name"]))
     elif status_no == 404:
@@ -268,16 +266,19 @@ def check_es_database_exists(es_config):
 
 def _create_tables_es(es_config, es_fields, tables, force):
     """
-    This is a private function responsible for creating a database table
+    This is a private function responsible for creating an Elasticsearch index, and
+    record types within that index
     """
 
     status = es.indices.create(index=es_config["db_name"], ignore=400)
-    #print("Create index", flush=True)
-    #print(status, flush=True)
-    if status["acknowledged"]:
+
+    if "error" in status.keys() and status["error"]["type"] == "index_already_exists_exception":
+        logging.info("Index '{}' already exists".format(es_config["db_name"]))
+    elif "acknowledged" in status.keys() and status["acknowledged"]:
         logger.info("Created index '{}' successfully".format(es_config["db_name"]))
     else:
         logger.warning("Creating index '{}' failed".format(es_config["db_name"]))
+
     for table in tables:
         status = es.indices.put_mapping(index=es_config["db_name"], ignore=400, doc_type=table, body=es_fields[table]["mappings"])
         # logger.info("Put mapping '{}' on '{}' with status {}".format(es_fields[table]["mappings"], table, status))
@@ -289,4 +290,5 @@ def _create_tables_es(es_config, es_fields, tables, force):
             logger.info("Mappings for '{}' successfully applied".format(table))
         elif status["status"] == 400:
             logger.warning("Mapping for '{}' failed with '{}'".format(table, status["error"]["reason"]))
+            
     return status
