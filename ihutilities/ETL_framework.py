@@ -264,8 +264,10 @@ def do_etl(db_fields, db_config, data_path, data_field_lookup,
             tables = ["property_data", "metadata", "session_log"]
         else:
             revised_db_fields = db_fields.copy()
+            revised_db_fields[table] = {}
             revised_db_fields["metadata"] = {}
             revised_db_fields["session_log"] = {}
+            revised_db_fields[table]["mappings"] = db_fields
             revised_db_fields["metadata"]["mappings"] = metadata_fields_es
             revised_db_fields["session_log"]["mappings"] = session_log_fields_es
 
