@@ -446,8 +446,8 @@ def do_etl(db_fields, db_config, data_path, data_field_lookup,
     try:
         for i, row in enumerate(rows):
             if mode == "test" and chaos_monkey and (i > chunk_size + 1):
-                print("Chaos monkey invoked, hitting exit at input file line {}".format(i), flush=True)
-                print("If you don't want this to happen don't set chaos_monkey=True in do_etl!", flush=True)
+                logger.critical("Chaos monkey invoked, hitting exit at input file line {}".format(i))
+                logger.critical("If you don't want this to happen don't set chaos_monkey=True in do_etl!")
                 return db_config, "Chaos monkey invoked"
             # Line skipping code goes here
             if i < line_count_offset:

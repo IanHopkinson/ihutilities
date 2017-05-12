@@ -43,12 +43,23 @@ class TestETLFramework(unittest.TestCase):
     def test_do_etl_two_stage(self):
         _, status = do_etl(self.DB_FIELDS, self.db_config, self.datapath, self.data_field_lookup, mode="production", force=True)
         _, status = do_etl(self.DB_FIELDS, self.db_config, self.datapath2, self.data_field_lookup, mode="production", force=False)
-        assert status == "Completed"
+        # Check for stages one and two in the metadata table
+        sql_query = "select SequenceNumber from metadata"
+        results = list(read_db(sql_query, self.db_config))
+        sequence_numbers = {x["SequenceNumber"] for x in results}
+
+        assert sequence_numbers == set([1, 2])
     
     def test_do_etl_session_log(self):
         _, status = do_etl(self.DB_FIELDS, self.db_config, self.datapath, self.data_field_lookup, mode="test", chunk_size=10, force=True, chaos_monkey=True)
-        _, status = do_etl(self.DB_FIELDS, self.db_config, self.datapath, self.data_field_lookup, mode="test", chunk_size=10, force=False, chaos_monkey=False)
-        assert status == "Completed"
+        mod_config, status = do_etl(self.DB_FIELDS, self.db_config, self.datapath, self.data_field_lookup, mode="test", chunk_size=10, force=False, chaos_monkey=False)
+        # check for sessions 1 and 2 in the session log, check we have 35 lines in the data table
+        # Check for stages one and two in the metadata table
+        sql_query = "select ID from session_log"
+        results = list(read_db(sql_query, mod_config))
+        session_ids = {x["ID"] for x in results}
+
+        assert session_ids == set([1, 2])
 
     def test_do_etl_check_malformed_rows_dropped(self):
         datapath = os.path.join(self.test_root, "fixtures", "malformed.csv")
