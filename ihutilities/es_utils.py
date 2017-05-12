@@ -213,14 +213,25 @@ def update_to_es(data, es_config, es_fields, table="data", key=["UPRN"]):
         raise NotImplementedError
 
     for row in data:
+        # ids_query = {
+        #             "query": {
+        #                 "constant_score": {
+        #                     "filter": {
+        #                         "term": {
+        #                             "{}".format(key[0]): row[key[0]]
+        #                             }
+        #                         }
+        #                     }
+        #                 }
+        #             }
+
         ids_query = {
                     "query": {
-                        "constant_score": {
-                            "filter": {
-                                "term": {
-                                    "{}".format(key[0]): row[key[0]]
-                                    }
-                                }
+                        "bool": {
+                            "must": [
+                                {"term": {"{}".format(key[0]): row[key[0]]}},
+                                {"term": {"_type": table}}
+                                ]
                             }
                         }
                     }
@@ -292,10 +303,15 @@ def _create_tables_es(es_config, es_fields, tables, force):
         # {'error': {'reason': 'No type specified for field [UDPRN]', 'root_cause': [{'reason': 'No type specified for field [UDPRN]', 'type': 'mapper_parsing_exception'}], 'type': 'mapper_parsing_exception'}, 'status': 400}
         #print("Create index", flush=True)
         #print(status, flush=True)
-    
-        if status["acknowledged"]:
-            logger.info("Mappings for '{}' successfully applied".format(table))
-        elif status["status"] == 400:
-            logger.warning("Mapping for '{}' failed with '{}'".format(table, status["error"]["reason"]))
+        
+        if "acknowledged" in status.keys():
+            status_no = 200
+        else:
+            status_no = status["status"]
+        
+        if status_no == 200:
+            logger.info("Mappings for '{}' successfully applied.".format(table))
+        else:
+            logger.info("Mappings for '{}' failed because '{}'".format(table, status["error"]["reason"]))
 
     return status
