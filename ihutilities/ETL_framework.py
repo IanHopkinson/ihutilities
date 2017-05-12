@@ -145,7 +145,7 @@ def do_etl(db_fields, db_config, data_path, data_field_lookup,
            mode="production", headers=True, null_equivalents=[""], force=False,
            separator=",", encoding="utf-8-sig", table=None,
            rowmaker=make_row, rowmaker_es=make_row_es, rowsource=get_source_generator,
-           test_line_limit=10000):
+           test_line_limit=10000, chunk_size=None, chaos_monkey=False):
     """This function uploads CSV files to a sqlite or MariaDB/MySQL database
 
     Args:
@@ -202,12 +202,18 @@ def do_etl(db_fields, db_config, data_path, data_field_lookup,
     # Scan parameters
     if mode == "production":
         test_line_limit = float('inf') # float('inf')
-        chunk_size = 10000 # 10000
-        report_size = 10000 # 10000   
+        if chunk_size is None:
+            chunk_size = 10000 # 10000
+            report_size = 10000 # 10000
+        else:
+            report_size = chunk_size   
     elif mode == "test":
         test_line_limit = test_line_limit # float('inf')
-        chunk_size = 1000 # 10000
-        report_size = 1000 # 10000
+        if chunk_size is None:
+            chunk_size = 1000 # 10000
+            report_size = 1000 # 10000
+        else:
+            report_size = chunk_size
         logger.info("Test mode so file_length is set to test_line_limit of {}".format(test_line_limit))
         # Rename output database if we are in test mode but not if it already ends with test
         if isinstance(db_config, str) and not db_config.endswith("-test.sqlite"):
@@ -439,6 +445,10 @@ def do_etl(db_fields, db_config, data_path, data_field_lookup,
         # Loop over input rows
     try:
         for i, row in enumerate(rows):
+            if mode == "test" and chaos_monkey and (i > chunk_size + 1):
+                print("Chaos monkey invoked, hitting exit at input file line {}".format(i), flush=True)
+                print("If you don't want this to happen don't set chaos_monkey=True in do_etl!", flush=True)
+                return db_config, "Chaos monkey invoked"
             # Line skipping code goes here
             if i < line_count_offset:
                 if (i % chunk_size) == 0:

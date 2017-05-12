@@ -44,6 +44,11 @@ class TestETLFramework(unittest.TestCase):
         _, status = do_etl(self.DB_FIELDS, self.db_config, self.datapath, self.data_field_lookup, mode="production", force=True)
         _, status = do_etl(self.DB_FIELDS, self.db_config, self.datapath2, self.data_field_lookup, mode="production", force=False)
         assert status == "Completed"
+    
+    def test_do_etl_session_log(self):
+        _, status = do_etl(self.DB_FIELDS, self.db_config, self.datapath, self.data_field_lookup, mode="test", chunk_size=10, force=True, chaos_monkey=True)
+        _, status = do_etl(self.DB_FIELDS, self.db_config, self.datapath, self.data_field_lookup, mode="test", chunk_size=10, force=False, chaos_monkey=False)
+        assert status == "Completed"
 
     def test_do_etl_check_malformed_rows_dropped(self):
         datapath = os.path.join(self.test_root, "fixtures", "malformed.csv")
