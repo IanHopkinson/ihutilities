@@ -294,7 +294,10 @@ def do_etl(db_fields, db_config, data_path, data_field_lookup,
     else:
         autoinc = False
 
-    # Get metadata id_ back out of the database
+    # 
+    
+
+    # Find out if we have already uploaded this file
     if db_config["db_type"] != "elasticsearch":
         sql_query = "select * from metadata where datafile_sha = '{}' order by SequenceNumber desc;".format(datafile_sha)
     else:
@@ -311,12 +314,15 @@ def do_etl(db_fields, db_config, data_path, data_field_lookup,
                                 }
                             }
 
-
     results = list(read_db(sql_query, db_config))
 
     if len(results) == 0:
     # Write start to metadata table
-        id_ = 1
+        last_id = get_current_sequencenumber(db_config)
+        if last_id is None:
+            id_ = 1
+        else:
+            id_ = last_id + 1
         start_time = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         # metadata = [(id_, data_path, datafile_sha,"Started", start_time, "", "", 0)]
 
@@ -340,7 +346,7 @@ def do_etl(db_fields, db_config, data_path, data_field_lookup,
         results = list(read_db(sql_query, db_config))
         id_ = results[0]["SequenceNumber"] 
     else:
-        id_ = results[0]["SequenceNumber"] + 1
+        id_ = results[0]["SequenceNumber"]
         start_time = results[0]["start_time"]
 
     #print(id_, start_time, flush=True)
@@ -514,6 +520,27 @@ def do_etl(db_fields, db_config, data_path, data_field_lookup,
     finish_time = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
     # Now we are autoincrementing the SequenceNumber field, we need to do a read_db to find the value
+    actual_id = get_current_sequencenumber(db_config)
+
+    # Make a final write to the metadata table
+    metadata = [(actual_id, data_path, datafile_sha,"Complete", start_time, finish_time, finish_time)]
+    update_fields = [x for x in revised_db_fields["metadata"].keys()]
+    metadata = [OrderedDict([
+            ("SequenceNumber", actual_id),
+            ("data_path", data_path),
+            ("datafile_sha", datafile_sha),
+            ("status", "Complete"),
+            ("start_time", start_time),
+            ("finish_time", finish_time),
+            ("last_write_time", finish_time),
+            ("chunk_count", chunk_count)])
+            ]
+
+    update_to_db(metadata, db_config, update_fields, table="metadata", key="SequenceNumber")
+
+    return db_config, "Completed"
+
+def get_current_sequencenumber(db_config):
     # Get metadata id_ back out of the database
     if db_config["db_type"] != "elasticsearch":
         sql_query = "select max(SequenceNumber) as SequenceNumber from metadata;"
@@ -533,22 +560,7 @@ def do_etl(db_fields, db_config, data_path, data_field_lookup,
     
     actual_id = list(read_db(sql_query, db_config))[0]["SequenceNumber"]
 
-    metadata = [(actual_id, data_path, datafile_sha,"Complete", start_time, finish_time, finish_time)]
-    update_fields = [x for x in revised_db_fields["metadata"].keys()]
-    metadata = [OrderedDict([
-            ("SequenceNumber", actual_id),
-            ("data_path", data_path),
-            ("datafile_sha", datafile_sha),
-            ("status", "Complete"),
-            ("start_time", start_time),
-            ("finish_time", finish_time),
-            ("last_write_time", finish_time),
-            ("chunk_count", chunk_count)])
-            ]
-
-    update_to_db(metadata, db_config, update_fields, table="metadata", key="SequenceNumber")
-
-    return db_config, "Completed"
+    return actual_id
 
 def get_input_file_length(mode, rowsource, test_line_limit, data_path, headers, separator, encoding):
     if mode == "production":
