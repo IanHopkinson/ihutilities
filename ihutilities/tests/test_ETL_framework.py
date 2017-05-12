@@ -4,14 +4,14 @@
 import os
 import unittest
 
-from ihutilities.ETL_framework import (do_etl, make_point, report_input_length, 
-                                       get_primary_key_from_db_fields,
+from collections import OrderedDict
+
+from ihutilities.ETL_framework import (do_etl, report_input_length,
                                        check_if_already_done,
-                                       get_source_generator,
-                                       make_row)
+                                       get_source_generator)
 
 from ihutilities import read_db
-from collections import OrderedDict
+
 
 class TestETLFramework(unittest.TestCase):
     @classmethod
@@ -30,13 +30,19 @@ class TestETLFramework(unittest.TestCase):
 
         cls.test_root = os.path.dirname(__file__)
         cls.datapath = os.path.join(cls.test_root, "fixtures", "survey_csv.csv")
+        cls.datapath2 = os.path.join(cls.test_root, "fixtures", "survey_csv2.csv")
         cls.db_config = os.path.join(cls.test_root, "fixtures", "do_etl.sqlite")
 
         if os.path.isfile(cls.db_config):
             os.remove(cls.db_config)
 
     def test_do_etl_1(self):
-        db_config, status = do_etl(self.DB_FIELDS, self.db_config, self.datapath, self.data_field_lookup, mode="production", force=True)
+        _, status = do_etl(self.DB_FIELDS, self.db_config, self.datapath, self.data_field_lookup, mode="production", force=True)
+        assert status == "Completed"
+    
+    def test_do_etl_two_stage(self):
+        _, status = do_etl(self.DB_FIELDS, self.db_config, self.datapath, self.data_field_lookup, mode="production", force=True)
+        _, status = do_etl(self.DB_FIELDS, self.db_config, self.datapath2, self.data_field_lookup, mode="production", force=False)
         assert status == "Completed"
 
     def test_do_etl_check_malformed_rows_dropped(self):
