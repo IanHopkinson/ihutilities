@@ -252,17 +252,29 @@ def do_etl(db_fields, db_config, data_path, data_field_lookup,
 
     # If the table argument is None we assume we are writing to the property_data table and that db_fields describes one flat level table
     if db_config["db_type"] == "elasticsearch":
-        revised_db_fields = db_fields.copy()
-        revised_db_fields["metadata"] = {}
-        revised_db_fields["session_log"] = {}
-        revised_db_fields["metadata"]["mappings"] = metadata_fields_es
-        revised_db_fields["session_log"]["mappings"] = session_log_fields_es
+        if table is None:
+            table = "property_data"
+            revised_db_fields = {}
+            revised_db_fields["property_data"] = {}
+            revised_db_fields["metadata"] = {}
+            revised_db_fields["session_log"] = {}
+            revised_db_fields["property_data"]["mappings"] = db_fields
+            revised_db_fields["metadata"]["mappings"] = metadata_fields_es
+            revised_db_fields["session_log"]["mappings"] = session_log_fields_es   
+            tables = ["property_data", "metadata", "session_log"]
+        else:
+            revised_db_fields = db_fields.copy()
+            revised_db_fields["metadata"] = {}
+            revised_db_fields["session_log"] = {}
+            revised_db_fields["metadata"]["mappings"] = metadata_fields_es
+            revised_db_fields["session_log"]["mappings"] = session_log_fields_es
 
-        tables = [table]
-        tables.append("metadata")
-        tables.append("session_log")
+            tables = [table]
+            tables.append("metadata")
+            tables.append("session_log")
 
         configure_db(db_config, revised_db_fields, tables=tables, force=force)
+        time.sleep(2)
     else:
         if table is None:
             table = "property_data"
@@ -500,6 +512,7 @@ def do_etl(db_fields, db_config, data_path, data_field_lookup,
                 # Update current time and chunk count to session log
                 time_ = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
                 session_log = [OrderedDict([("last_chunk", chunk_count), ("end_time",time_), ("ID", sessid)])]
+                
                 update_to_db(session_log, db_config, ["last_chunk", "end_time", "ID"], table="session_log", key="ID")
                 data = []
 
@@ -568,7 +581,11 @@ def get_current_sequencenumber(db_config):
                             }
 
     
-    actual_id = list(read_db(sql_query, db_config))[0]["SequenceNumber"]
+    results = list(read_db(sql_query, db_config))
+    if len(results) != 0:
+        actual_id = results[0]["SequenceNumber"]
+    else:
+        actual_id = None
 
     return actual_id
 
