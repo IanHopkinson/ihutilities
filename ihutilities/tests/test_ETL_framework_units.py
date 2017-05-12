@@ -4,14 +4,19 @@
 import os
 import unittest
 
-from ihutilities.ETL_framework import (make_point, report_input_length, 
+from collections import OrderedDict
+
+from ihutilities.ETL_framework import (make_point, report_input_length,
                                        get_primary_key_from_db_fields,
                                        get_source_generator,
                                        make_row)
 
-from collections import OrderedDict
+
 
 class TestETLUnits(unittest.TestCase):
+    """
+    Class containing tests for the units of do_etl
+    """
     @classmethod
     def setUpClass(cls):
         cls.DB_FIELDS = OrderedDict([

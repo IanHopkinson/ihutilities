@@ -42,7 +42,7 @@ session_log_fields = OrderedDict([
     ("last_chunk", "FLOAT"),
     ])
 
-metadata_fields_es = {"metadata": { "properties": {
+metadata_fields_es = {"metadata": {"properties": {
     "SequenceNumber": {"type": "integer"},
     "data_path": {"type": "string"},
     "datafile_sha": {"type": "string"},
@@ -51,10 +51,9 @@ metadata_fields_es = {"metadata": { "properties": {
     "finish_time": {"type": "string"},
     "last_write_time": {"type": "string"},
     "chunk_count": {"type": "integer"},
-}    
-}}
+}}}
 
-session_log_fields_es = {"session_log": { "properties": {
+session_log_fields_es = {"session_log": {"properties": {
     "ID": {"type": "integer"},
     "make_row_method": {"type": "string"},
     "start_time": {"type": "string"},
@@ -62,13 +61,12 @@ session_log_fields_es = {"session_log": { "properties": {
     "datafile_sha": {"type": "string"},
     "first_chunk": {"type": "integer"},
     "last_chunk": {"type": "integer"},
-}    
-}}
+}}}
 
 logger = logging.getLogger(__name__)
 
 def make_row(input_row, data_path, data_field_lookup, db_fields, null_equivalents, autoinc, primary_key):
-    new_row = OrderedDict([(x,None) for x in db_fields.keys()])
+    new_row = OrderedDict([(x, None) for x in db_fields.keys()])
      # zip input row into output row
     for output_key in new_row.keys():
         # This inserts blank fields
@@ -143,19 +141,19 @@ def get_source_generator(data_path, headers, separator, encoding):
         for row in rows:
             yield row
 
-def do_etl(db_fields, db_config, data_path, data_field_lookup, 
-            mode="production", headers=True, null_equivalents=[""], force=False, 
-            separator=",", encoding="utf-8-sig", table=None,
-            rowmaker=make_row, rowmaker_es=make_row_es, rowsource=get_source_generator,
-            test_line_limit=10000):
+def do_etl(db_fields, db_config, data_path, data_field_lookup,
+           mode="production", headers=True, null_equivalents=[""], force=False,
+           separator=",", encoding="utf-8-sig", table=None,
+           rowmaker=make_row, rowmaker_es=make_row_es, rowsource=get_source_generator,
+           test_line_limit=10000):
     """This function uploads CSV files to a sqlite or MariaDB/MySQL database
 
     Args:
-       db_config (str or dict): 
+       db_config (str or dict):
             For sqlite a file path in a string is sufficient, MariaDB/MySQL require
             a dictionary and example of which is found in db_config_template
        db_fields (OrderedDict or dictionary of OrderedDicts):
-            A dictionary of fieldnames and types per table. 
+            A dictionary of fieldnames and types per table.
        data_path (str):
             A file path to the input CSV data or a zip file containing a CSV file with the same name
        data_field_lookup (dict):
@@ -165,13 +163,13 @@ def do_etl(db_fields, db_config, data_path, data_field_lookup,
             autoincrement unique key
 
     Keyword args:
-       mode (str): 
-            "production" or "test". 
+       mode (str):
+            "production" or "test".
             "test" loads 10000 lines to the database in 1000 line chunks.
        headers (bool): 
             Indicates whether headers are present in the input CSV file
             True indicates headers are present, DictReader is used for import and the data_field_lookup is to field names
-            False indicates no headers, csvreader is used for import and the data_field_lookup lookup is to column numbers 
+            False indicates no headers, csvreader is used for import and the data_field_lookup lookup is to column numbers
        null_equivalents (list of strings):
             cell contents which should be considered equivalent of null i.e ["-"]
        separator (str):
