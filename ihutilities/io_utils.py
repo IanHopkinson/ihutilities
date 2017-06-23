@@ -182,6 +182,8 @@ def file_handle_or_none(file_path, encoding="utf-8-sig", mode="rU"):
     return fh
 
 def split_zipfile_path(zipfile_path):
+    if zipfile_path is None:
+        return None, None
     if ".zip" not in zipfile_path.lower():
         zip_path = zipfile_path
         name_in_zip = ""
