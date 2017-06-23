@@ -237,6 +237,8 @@ def do_etl(db_fields, db_config, data_path, data_field_lookup,
     logger.info("Calculating file sha...")
     t0 = time.time()
     datafile_sha = calculate_file_sha(data_path)
+    if datafile_sha is None:
+        datafile_sha = "sha_placeholder"
     t1 = time.time()
     logger.info("Calculating file sha took {:.2} seconds".format(t1 - t0))
     
@@ -302,6 +304,7 @@ def do_etl(db_fields, db_config, data_path, data_field_lookup,
     data = []
     line_count = 0
     lines_dropped = 0
+    malformed_lines = 0
 
     primary_key_set = set()
     duplicate_primary_keys = set()
@@ -469,29 +472,36 @@ def do_etl(db_fields, db_config, data_path, data_field_lookup,
                     print("Skipping chunk {:.0f}, line = ({:d})".format(i/chunk_size, i), flush=True, end="\r")
                 continue
 
-            
             # Zip the input data into a row for the database
             if db_config["db_type"] != "elasticsearch":
-                new_row =  rowmaker(row, data_path, data_field_lookup, revised_db_fields[table], null_equivalents, autoinc, primary_key)
+                new_rows =  rowmaker(row, data_path, data_field_lookup, revised_db_fields[table], null_equivalents, autoinc, primary_key)
             else:
-                new_row =  rowmaker_es(row, data_path, data_field_lookup, revised_db_fields[table], null_equivalents, autoinc, primary_key)
+                new_rows =  rowmaker_es(row, data_path, data_field_lookup, revised_db_fields[table], null_equivalents, autoinc, primary_key)
+            
+                        # Drop a line if it is malformed
+            if new_rows is None:
+                logger.debug("Dropped input line = {} because a valid row could not be made from it".format(row))
+                malformed_lines += 1
+                continue
 
-            # Drop a line if it is malformed
-            if new_row is None:
-                logger.warning("Lines dropped = {} because it was malformed".format(row))
+            if not isinstance(new_rows, list):
+                new_rows = [new_rows]
+
             # Drop row if it has a duplicate primary key
-            elif autoinc or primary_key is None or (new_row[primary_key] not in primary_key_set):
-                line_count += 1
-                #data.append(([x for x in new_row.values()]))
-                data.append(new_row)
-                if primary_key is not None:
-                    primary_key_set.add(new_row[primary_key])
-            else:
-                #print("UPRN is a duplicate: {}".format(new_row["UPRN"]))
-                duplicate_primary_keys.add(new_row[primary_key])
-                lines_dropped += 1
-                logger.warning("Lines dropped = {}, do not use resume".format(lines_dropped))
-                #print("UPRN = {} has already been seen".format(row[0])) 
+
+            for new_row in new_rows:
+                if autoinc or (primary_key is None) or (new_row[primary_key] not in primary_key_set):
+                    line_count += 1
+                    #data.append(([x for x in new_row.values()]))
+                    data.append(new_row)
+                    if primary_key is not None:
+                        primary_key_set.add(new_row[primary_key])
+                else:
+                    #print("UPRN is a duplicate: {}".format(new_row["UPRN"]))
+                    duplicate_primary_keys.add(new_row[primary_key])
+                    lines_dropped += 1
+                    logger.warning("Lines dropped = {}, do not use resume".format(lines_dropped))
+                    #print("UPRN = {} has already been seen".format(row[0])) 
 
             # Write an interim report
             if (line_count % report_size) == 0 and line_count != 0:
@@ -506,7 +516,8 @@ def do_etl(db_fields, db_config, data_path, data_field_lookup,
 
             # Write a chunk to the database            
             if (line_count % chunk_size) == 0:
-                write_to_db(data, db_config, revised_db_fields[table], table=table)
+                if len(data) != 0:
+                    write_to_db(data, db_config, revised_db_fields[table], table=table)
                 chunk_count += 1
                 # Update chunk_count to db metadata
                 metadata = [OrderedDict([("chunk_count", chunk_count), ("SequenceNumber",id_)])]
@@ -541,6 +552,9 @@ def do_etl(db_fields, db_config, data_path, data_field_lookup,
     logger.info("Wrote a total {} lines to the database in {:.2f}s".format(line_count + line_count_offset, elapsed))
     if lines_dropped > 0:
         logger.warning("Dropped {} lines because they contained duplicate primary key ({})".format(lines_dropped, primary_key))
+
+    if malformed_lines > 0:
+        logger.warning("Dropped {} lines because they were malformed".format(malformed_lines))
 
     finish_time = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
