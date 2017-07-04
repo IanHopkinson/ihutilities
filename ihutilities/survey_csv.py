@@ -56,7 +56,7 @@ def survey_csv(file_path, line_limit=1000, encoding=None):
                         print("==============")
                         t1 = time.time()
                         elapsed = t1 - t0
-                        print_report(file_path, elapsed, line_limit, line_count, headers, filled_count)
+                        print_report(file_path, elapsed, line_limit, line_count, headers, filled_count, field_set)
         except Exception as ex:
             print("Encountered exception '{}' at line_count = {}".format(ex, line_count))
             print("Aborting")
