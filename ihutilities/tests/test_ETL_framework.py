@@ -101,3 +101,34 @@ class TestETLFramework(unittest.TestCase):
         db_config, status = do_etl(self.DB_FIELDS, db_config, datapath, self.data_field_lookup, mode="production", force=True)
 
         assert status == "Completed"
+    
+    def test_that_multilines_per_input_row_are_uploaded(self):
+        _, status = do_etl(self.DB_FIELDS, self.db_config, self.datapath, self.data_field_lookup, rowmaker=make_row, mode="test", chunk_size=10, force=True, chaos_monkey=True)
+        mod_config, status = do_etl(self.DB_FIELDS, self.db_config, self.datapath, self.data_field_lookup, rowmaker=make_row, mode="test", chunk_size=10, force=False, chaos_monkey=False)
+        # check for sessions 1 and 2 in the session log, check we have 35 lines in the data table
+        # Check for stages one and two in the metadata table
+        sql_query = "select count(*) as cnt from property_data"
+        results = list(read_db(sql_query, mod_config))
+        
+
+        assert results[0]["cnt"] == 70
+    
+def make_row(input_row, data_path, data_field_lookup, db_fields, null_equivalents, autoinc, primary_key):
+    new_rows = []
+    new_row = OrderedDict([(x, None) for x in db_fields.keys()])
+     # zip input row into output row
+    for output_key in new_row.keys():
+        # This inserts blank fields
+        value = None
+        if data_field_lookup[output_key] is not None:
+            value = input_row[data_field_lookup[output_key]]
+        new_row[output_key] = value
+                
+    new_rows = [new_row]
+    second_row = new_row.copy()
+    second_row["Letter"] = "B"
+    second_row["ID"] = str(35 + int(new_row["ID"]))
+    new_rows.append(second_row)
+
+    return new_rows
+

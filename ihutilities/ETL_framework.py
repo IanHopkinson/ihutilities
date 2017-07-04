@@ -462,6 +462,7 @@ def do_etl(db_fields, db_config, data_path, data_field_lookup,
         # Loop over input rows
     try:
         for i, row in enumerate(rows):
+            line_count += 1
             if mode == "test" and chaos_monkey and (i > chunk_size + 1):
                 logger.critical("Chaos monkey invoked, hitting exit at input file line {}".format(i))
                 logger.critical("If you don't want this to happen don't set chaos_monkey=True in do_etl!")
@@ -491,7 +492,6 @@ def do_etl(db_fields, db_config, data_path, data_field_lookup,
 
             for new_row in new_rows:
                 if autoinc or (primary_key is None) or (new_row[primary_key] not in primary_key_set):
-                    line_count += 1
                     #data.append(([x for x in new_row.values()]))
                     data.append(new_row)
                     if primary_key is not None:
