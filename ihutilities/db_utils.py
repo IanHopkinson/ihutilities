@@ -211,7 +211,7 @@ def write_to_db(data, db_config, db_fields, table="property_data", whatever=Fals
             raise
         except (mysql.connector.errors.DataError):
             conn.close()
-            logger.info("write_to_db failed with {}".format(converted_data), flush=True)
+            logger.info("write_to_db failed with {}".format(converted_data))
             raise
 
     conn.commit()

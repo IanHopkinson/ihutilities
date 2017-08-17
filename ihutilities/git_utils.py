@@ -95,3 +95,30 @@ def git_calculate_file_sha(filepath):
 
     return out.strip().decode("utf-8")
 
+def git_describe(repo_dir):
+    """This function returns the git describe --tags output
+
+    Args:
+       repo_dir (str):
+            A string containing the repo_dir of interest
+
+    Returns:
+       A string containing the output of git describe --tags for the specified repository directory
+
+    Example:
+        >>> description = git_describe(".")
+
+    """
+
+    cmd = ['git','describe','--tags']
+    pr = subprocess.Popen(cmd,                  
+            cwd=repo_dir, 
+            stdout=subprocess.PIPE, 
+            stderr=subprocess.PIPE, 
+            shell=False)
+    (out, error) = pr.communicate()
+
+    if len(error) > 0:
+        print(error)
+
+    return out.strip().decode("utf-8")
