@@ -166,23 +166,39 @@ def updater(id_, key_method, get_key_count, make_row_method, cache_db, db_fields
             if key in ['', None]:
                 print("key is blank so continuing",flush=True)
                 continue
-            line_count += 1
+            
             
             # This is what makes a cache row
             # time.sleep(4/1000)
             data_row = make_row_method(key)
-
-            data.append(data_row)    
             
+            # Location Intelligence returns a list at this point
+            # Location Intelligence LIDAR will return a list of lists
+            # 
+            if len(data_row) == 0:
+                continue
+
+            if isinstance(data_row[0], list):
+                data.extend(data_row)
+                line_count += len(data_row)
+            else: 
+                data.append(data_row)
+                line_count += 1
+                
         # Insert record batch
-        write_to_db(data, cache_db, db_fields["property_data"])
+        if len(data) != 0:
+            write_to_db(data, cache_db, db_fields["property_data"])
         # Update chunk_count to db metadata
         update_to_db([(chunk_count, id_)], cache_db, ["chunk_count", "SequenceNumber"], table="metadata", key="SequenceNumber")
         # Update current time and chunk count to session log
         time_ = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         update_to_db([(chunk_count, time_, sessid)], cache_db, ["last_chunk", "end_time", "ID"], table="session_log", key="ID")
 
-        est_completion_time = ((time.time() - t0) / line_count) * (key_count - (line_count + line_count_offset))
+        if line_count != 0:
+            est_completion_time = ((time.time() - t0) / line_count) * (key_count - (line_count + line_count_offset))
+        else:
+            est_completion_time = ((time.time() - t0) / 1) * (key_count - (1 + line_count_offset))
+            
         total_runtime = ((time.time() - t0) + est_completion_time) / (60 * 60 * 24)
         completion_str = (datetime.datetime.now() + datetime.timedelta(seconds=est_completion_time)).strftime("%Y-%m-%d %H:%M:%S")
         print("{}: {}/{} at {}. Est. completion time: {}. Est. total runtime = {:.2f} days".format(
