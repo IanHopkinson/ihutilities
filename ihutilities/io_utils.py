@@ -11,10 +11,13 @@ import operator
 import glob
 import os
 import math
+import requests
 import subprocess
 import zipfile
 
 from collections import OrderedDict
+
+logger = logging.getLogger(__name__)
 
 def write_dictionary(filename, data, append=True):
     """This function writes a list of dictionaries to a CSV file
@@ -202,3 +205,37 @@ def split_zipfile_path(zipfile_path):
         name_in_zip = ""
 
     return zip_path, name_in_zip
+
+def download_file_from_url(url, local_filepath):
+    """
+    A function to download and save a file from a url
+    
+    Args:
+        url (str): url of file to download
+        local_filepath (str): local file path to which to save
+    
+    Returns:
+        local_filepath (str): the path to which the file was saved
+    """
+
+    if not os.path.isdir(os.path.dirname(local_filepath)):
+        os.makedirs(os.path.dirname(local_filepath))
+
+    if os.path.isfile(local_filepath):
+        logger.warning("Local file {} already exists, delete to download again".format(local_filepath))
+        return local_filepath
+
+    # NOTE the stream=True parameter
+    try:
+        r = requests.get(url, stream=True)
+    except: 
+        logger.warning("Connection to {} failed on first try, making second attempt".format(url))
+        r = requests.get(url, stream=True)
+        
+    with open(local_filepath, 'wb') as f:
+        for chunk in r.iter_content(chunk_size=1024): 
+            if chunk: # filter out keep-alive new chunks
+                f.write(chunk)
+                #f.flush() commented by recommendation from J.F.Sebastian
+                
+    return local_filepath
