@@ -145,7 +145,7 @@ def do_etl(db_fields, db_config, data_path, data_field_lookup,
            mode="production", headers=True, null_equivalents=[""], force=False,
            separator=",", encoding="utf-8-sig", table=None,
            rowmaker=make_row, rowmaker_es=make_row_es, rowsource=get_source_generator,
-           test_line_limit=10000, chunk_size=None, chaos_monkey=False):
+           test_line_limit=10000, chunk_size=None, skip=None, chaos_monkey=False):
     """This function uploads CSV files to a sqlite or MariaDB/MySQL database
 
     Args:
@@ -377,10 +377,13 @@ def do_etl(db_fields, db_config, data_path, data_field_lookup,
 
     # ** Add in session log code
     # Fetch chunk progress
-    if db_config["db_type"] != "elasticsearch":
-        chunk_skip = get_chunk_count(id_, datafile_sha, db_config)
+    if skip is None:
+        if db_config["db_type"] != "elasticsearch":
+            chunk_skip = get_chunk_count(id_, datafile_sha, db_config)
+        else:
+            chunk_skip = get_chunk_count_es(id_, datafile_sha, db_config)
     else:
-        chunk_skip = get_chunk_count_es(id_, datafile_sha, db_config)
+        chunk_skip = skip
 
     chunk_count = chunk_skip
     if chunk_skip != 0:
@@ -517,7 +520,15 @@ def do_etl(db_fields, db_config, data_path, data_field_lookup,
             # Write a chunk to the database            
             if (line_count % chunk_size) == 0:
                 if len(data) != 0:
-                    write_to_db(data, db_config, revised_db_fields[table], table=table)
+                    try:
+                        write_to_db(data, db_config, revised_db_fields[table], table=table)
+                    except:
+                        logger.warning("A bad thing happened on attempting to upload chunk to db, doing it line by line to find problem")
+                        logger.warning("If this succeeds likely problem is oversized chunk of data")
+                        for i, d in enumerate(data):
+                            logger.info("{}. About to upload {}".format(i, d))
+                            write_to_db([d], db_config, revised_db_fields[table], table=table)
+                            
                 chunk_count += 1
                 # Update chunk_count to db metadata
                 metadata = [OrderedDict([("chunk_count", chunk_count), ("SequenceNumber",id_)])]
