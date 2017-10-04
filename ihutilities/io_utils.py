@@ -13,6 +13,7 @@ import os
 import math
 import requests
 import subprocess
+import time
 import zipfile
 
 from collections import OrderedDict
@@ -217,6 +218,8 @@ def download_file_from_url(url, local_filepath):
     Returns:
         local_filepath (str): the path to which the file was saved
     """
+    t0 = time.time()
+    logger.info("Downloading file from {}, saving to {}".format(url, local_filepath))
 
     if not os.path.isdir(os.path.dirname(local_filepath)):
         os.makedirs(os.path.dirname(local_filepath))
@@ -231,11 +234,16 @@ def download_file_from_url(url, local_filepath):
     except: 
         logger.warning("Connection to {} failed on first try, making second attempt".format(url))
         r = requests.get(url, stream=True)
-        
+    
+    chunk_count = 0
     with open(local_filepath, 'wb') as f:
         for chunk in r.iter_content(chunk_size=1024): 
             if chunk: # filter out keep-alive new chunks
                 f.write(chunk)
+                chunk_count += 1
                 #f.flush() commented by recommendation from J.F.Sebastian
-                
+    t1 = time.time()
+
+    logger.info("Download took {:.2f}seconds for {:.2f}mb".format(t1 - t0, chunk_count / 1024))
+
     return local_filepath
