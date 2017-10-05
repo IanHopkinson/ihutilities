@@ -247,3 +247,32 @@ def download_file_from_url(url, local_filepath):
     logger.info("Download took {:.2f}seconds for {:.2f}mb".format(t1 - t0, chunk_count / 1024))
 
     return local_filepath
+
+def colour_text(text, colour="red"):
+    """
+    Decorate a text string with ANSI escape codes for coloured text in bash-like shells
+    
+    Args:
+        text (str): A list of addresses
+    
+    Keyword arguments:
+        colour (str): the required colour (currently supported: red, yellow, green)
+    
+    Returns:
+        coloured_text (str): a dictionary containing the answers
+        
+    """
+    # Long list of colours/
+    # https://gist.github.com/vratiu/9780109
+    if colour == "red":
+        prefix = "\033[91m"
+    elif colour == "yellow":
+        prefix = "\033[93m"
+    elif colour == "green":
+        prefix = "\033[92m"
+    
+    suffix = "\033[0m"
+
+    coloured_text = prefix + text + suffix
+
+    return coloured_text
