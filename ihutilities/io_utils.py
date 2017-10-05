@@ -256,20 +256,37 @@ def colour_text(text, colour="red"):
         text (str): A list of addresses
     
     Keyword arguments:
-        colour (str): the required colour (currently supported: red, yellow, green)
+        colour (str): the required colour (currently supported: red, green, blue, cyan, white, yellow, magenta, grey, black)
     
     Returns:
         coloured_text (str): a dictionary containing the answers
         
     """
     # Long list of colours/
-    # https://gist.github.com/vratiu/9780109
-    if colour == "red":
-        prefix = "\033[91m"
-    elif colour == "yellow":
-        prefix = "\033[93m"
-    elif colour == "green":
-        prefix = "\033[92m"
+    # https://stackoverflow.com/questions/15580303/python-output-complex-line-with-floats-colored-by-value
+    #https://github.com/ryanoasis/public-bash-scripts/blob/master/unix-color-codes.sh
+    prefix_set = {}
+
+    prefix_set["red"] = '\033[91m'
+    prefix_set["green"] = '\033[92m'
+    prefix_set["blue"] = '\033[94m'
+    prefix_set["cyan"] = '\033[96m'
+    prefix_set["white"] = '\033[97m'
+    prefix_set["yellow"] = '\033[93m'
+    prefix_set["magenta"] = '\033[95m'
+    prefix_set["grey"] = '\033[90m'
+    prefix_set["black"] = '\033[30m'
+    prefix_set["default"] = '\033[99m'
+
+    prefix_set["light_red"] = '\033[31m'
+    prefix_set["light_green"] = '\033[32m'
+    prefix_set["light_yellow"] = '\033[33m'
+    prefix_set["light_blue"] = '\033[34m'
+    prefix_set["light_magenta"] = '\033[35m'
+    prefix_set["light_cyan"] = '\033[36m'
+    prefix_set["light_white"] = '\033[37m'
+
+    prefix = prefix_set.get(colour, prefix_set["default"])
     
     suffix = "\033[0m"
 
