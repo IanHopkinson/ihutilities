@@ -82,6 +82,7 @@ def build_cache(constructors, cache_db, cache_fields, sha, chunk_size=1000, test
         elif stage_status == "Not started":
             finish_time = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
             metadata = [(id_, key_generator_name, make_row_method_name, "Started", "{:.2f}".format(0), 0, finish_time, 0)]
+            print("Trying to add metadata line: {}".format(metadata), flush=True)
             write_to_db(metadata, cache_db, db_fields["metadata"], table="metadata")
             
         t_update0 = time.time()
