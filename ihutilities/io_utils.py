@@ -237,14 +237,16 @@ def download_file_from_url(url, local_filepath):
     
     chunk_count = 0
     with open(local_filepath, 'wb') as f:
-        for chunk in r.iter_content(chunk_size=1024): 
+        for i, chunk in enumerate(r.iter_content(chunk_size=1024)): 
             if chunk: # filter out keep-alive new chunks
                 f.write(chunk)
                 chunk_count += 1
                 #f.flush() commented by recommendation from J.F.Sebastian
+                if (i % 1000) == 0:
+                    print('.', end='', flush=True)
     t1 = time.time()
 
-    logger.info("Download took {:.2f}seconds for {:.2f}mb".format(t1 - t0, chunk_count / 1024))
+    logger.info("\nDownload took {:.2f}seconds for {:.2f}mb".format(t1 - t0, chunk_count / 1024))
 
     return local_filepath
 
