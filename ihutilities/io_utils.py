@@ -12,6 +12,7 @@ import glob
 import os
 import math
 import requests
+import shutil
 import subprocess
 import time
 import zipfile
@@ -236,7 +237,8 @@ def download_file_from_url(url, local_filepath):
         r = requests.get(url, stream=True)
     
     chunk_count = 0
-    with open(local_filepath, 'wb') as f:
+    tmp_path = local_filepath + "_tmp"
+    with open(tmp_path, 'wb') as f:
         for i, chunk in enumerate(r.iter_content(chunk_size=1024)): 
             if chunk: # filter out keep-alive new chunks
                 f.write(chunk)
@@ -245,6 +247,8 @@ def download_file_from_url(url, local_filepath):
                 if (i % 1000) == 0:
                     print('.', end='', flush=True)
     t1 = time.time()
+    shutil.copy(tmp_path, local_filepath)
+    os.remove(tmp_path)
 
     logger.info("\nDownload took {:.2f}seconds for {:.2f}mb".format(t1 - t0, chunk_count / 1024))
 
