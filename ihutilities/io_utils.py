@@ -231,10 +231,11 @@ def download_file_from_url(url, local_filepath):
 
     # NOTE the stream=True parameter
     try:
-        r = requests.get(url, stream=True)
+        r = requests.get(url, stream=True, timeout=3.5)
     except: 
+        time.sleep(5)
         logger.warning("Connection to {} failed on first try, making second attempt".format(url))
-        r = requests.get(url, stream=True)
+        r = requests.get(url, stream=True, timeout=3.5)
     
     chunk_count = 0
     tmp_path = local_filepath + "_tmp"
@@ -246,11 +247,12 @@ def download_file_from_url(url, local_filepath):
                 #f.flush() commented by recommendation from J.F.Sebastian
                 if (i % 1000) == 0:
                     print('.', end='', flush=True)
+    print("", flush=True)
     t1 = time.time()
     shutil.copy(tmp_path, local_filepath)
     os.remove(tmp_path)
 
-    logger.info("\nDownload took {:.2f}seconds for {:.2f}mb".format(t1 - t0, chunk_count / 1024))
+    logger.info("Download took {:.2f}seconds for {:.2f}mb\n".format(t1 - t0, chunk_count / 1024))
 
     return local_filepath
 
