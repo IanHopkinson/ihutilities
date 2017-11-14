@@ -465,7 +465,6 @@ def do_etl(db_fields, db_config, data_path, data_field_lookup,
         # Loop over input rows
     try:
         for i, row in enumerate(rows):
-            line_count += 1
             if mode == "test" and chaos_monkey and (i > chunk_size + 1):
                 logger.critical("Chaos monkey invoked, hitting exit at input file line {}".format(i))
                 logger.critical("If you don't want this to happen don't set chaos_monkey=True in do_etl!")
@@ -476,6 +475,7 @@ def do_etl(db_fields, db_config, data_path, data_field_lookup,
                     print("Skipping chunk {:.0f}, line = ({:d})".format(i/chunk_size, i), flush=True, end="\r")
                 continue
 
+            line_count += 1
             # Zip the input data into a row for the database
             if db_config["db_type"] != "elasticsearch":
                 new_rows =  rowmaker(row, data_path, data_field_lookup, revised_db_fields[table], null_equivalents, autoinc, primary_key)
