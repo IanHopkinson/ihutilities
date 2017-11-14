@@ -5,3 +5,4 @@ ihutilities/fixtures
 *.sqlite
 doc/build
 .vscode/*
+*.pyc
