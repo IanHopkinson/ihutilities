@@ -19,7 +19,8 @@ import nose
 from ihutilities.db_utils import (db_config_template, configure_db, write_to_db,
                                   _make_connection, read_db,
                                   update_to_db, finalise_db,
-                                  check_mysql_database_exists)
+                                  check_mysql_database_exists,
+                                  delete_from_db)
 
 @unittest.skipIf(not mysql_connector_installed, "MariaDB/MySQL connector is not installed so skipping MySQL/MariaDB tests")
 class MariaDBUtilitiesTests(unittest.TestCase):
@@ -257,6 +258,27 @@ class DatabaseUtilitiesTests(unittest.TestCase):
             """)
             rows = cursor.fetchall()
             assert_equal(data, rows)
+
+    def test_delete_from_db(self):
+        db_filename = "test_delete_from_db.sqlite"
+        db_file_path = os.path.join(self.db_dir, db_filename)
+        if os.path.isfile(db_file_path):
+            os.remove(db_file_path)
+        data = [(1, 2, "hello"),
+                (2, 3, "Fred"),
+                (3, 3, "Beans")]
+        configure_db(db_file_path, self.db_fields, tables="test")
+        write_to_db(data, db_file_path, self.db_fields, table="test")
+
+        delete_from_db("""delete from test where uprn=1""", db_file_path)
+
+        with sqlite3.connect(db_file_path) as c:
+            cursor = c.cursor()
+            cursor.execute("""
+                select * from test;
+            """)
+            rows = cursor.fetchall()
+            assert_equal(data[1:], rows)
 
     def test_write_dictionaries_to_db(self): 
         db_filename = "test_write_db.sqlite"

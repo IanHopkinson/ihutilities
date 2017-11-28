@@ -436,6 +436,43 @@ def read_db(sql_query, db_config):
            conn.close()
            raise StopIteration
 
+def delete_from_db(sql_query, db_config):
+    # For MariaDB we need to trap this error:
+    # mysql.connector.errors.InterfaceError: 2003: Can't connect to MySQL server on '127.0.0.1:3306' 
+    # (10055 An operation on a socket could not be performed because the system lacked sufficient buffer space or because a queue was full)
+    # This post explains the problem, we're creating too many ephemeral ports (and not discarding of them properly)
+    # https://blogs.msdn.microsoft.com/sql_protocols/2009/03/09/understanding-the-error-an-operation-on-a-socket-could-not-be-performed-because-the-system-lacked-sufficient-buffer-space-or-because-a-queue-was-full/
+    # At the moment we do this by just adding in a wait
+
+    db_config = _normalise_config(db_config)
+
+    err_wait = 30.0
+    
+    if db_config["db_type"] == "sqlite" and not os.path.isfile(db_config["db_path"]):
+        raise IOError("Database file '{}' does not exist".format(db_config["db_path"]))
+
+    try:
+        conn = _make_connection(db_config)
+        cursor = conn.cursor()
+        cursor.execute(sql_query)
+    except mysql.connector.Error as err:
+        if err.errno == errorcode.CR_CONN_HOST_ERROR:
+            logger.warning("Caught exception '{}'. errno = '{}', waiting {} seconds and having another go".format(err, err.errno, err_wait))
+            time.sleep(err_wait)
+            conn = _make_connection(db_config)
+            cursor = conn.cursor()
+            cursor.execute(sql_query)
+        else:
+            raise
+    except sqlite3.OperationalError as err:
+        logger.info("Caught exception {} on query '{}'".format(err, sql_query))
+        print("Caught exception {} on query '{}'".format(err, sql_query), flush=True)
+        raise
+
+    if conn:
+        conn.commit()
+        conn.close()
+
 def _normalise_config(db_config):
     """
     This is a private function which will expand a db_config string into 
