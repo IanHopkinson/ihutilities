@@ -88,7 +88,7 @@ def make_row(input_row, data_path, data_field_lookup, db_fields, null_equivalent
                 new_row[output_key] = make_point(input_row, data_field_lookup[output_key])
             # If output_key corresponds to an INTEGER then remove any commas in input
             elif db_fields[output_key].lower() == "integer" and value is not None:
-                new_row[output_key] = int(value.replace(",", ""))
+                new_row[output_key] = int(float(value.replace(",", "")))
             else:
                 new_row[output_key] = value
     # If we have a field called ID as Primary Key and there is no lookup
