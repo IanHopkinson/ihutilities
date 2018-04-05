@@ -14,6 +14,8 @@ import logging
 # from mysql.connector import errorcode
 import pymysql
 
+from pymysql.constants.CR import *
+from pymysql.constants.ER import *
 
 from ihutilities.es_utils import read_es, configure_es, write_to_es, update_to_es
 
@@ -408,7 +410,7 @@ def read_db(sql_query, db_config):
         cursor = conn.cursor()
         cursor.execute(sql_query)
     except pymysql.Error as err:
-        if err.errno == errorcode.CR_CONN_HOST_ERROR:
+        if err.args[0] == pymysql.constants.CR.CR_CONN_HOST_ERROR:
             logger.warning("Caught exception '{}'. errno = '{}', waiting {} seconds and having another go".format(err, err.errno, err_wait))
             time.sleep(err_wait)
             conn = _make_connection(db_config)
@@ -460,7 +462,7 @@ def delete_from_db(sql_query, db_config):
         cursor = conn.cursor()
         cursor.execute(sql_query)
     except pymysql.Error as err:
-        if err.errno == errorcode.CR_CONN_HOST_ERROR:
+        if err.args[0] == pymysql.constants.CR.CR_CONN_HOST_ERROR:
             logger.warning("Caught exception '{}'. errno = '{}', waiting {} seconds and having another go".format(err, err.errno, err_wait))
             time.sleep(err_wait)
             conn = _make_connection(db_config)
@@ -521,7 +523,7 @@ def _make_connection(db_config):
         try:
             conn.database = db_config["db_name"]
         except pymysql.Error as err:
-            if err.errno != errorcode.ER_BAD_DB_ERROR:
+            if err.args[0] != pymysql.constants.ER.BAD_DB_ERROR:
                 raise
 
     return db_config["db_conn"]
@@ -537,7 +539,7 @@ def create_mysql_database(db_config):
         cursor.execute(create_string)
     except pymysql.Error as err:
         logger.critical("Failed creating database: {}".format(err))
-        logger.critical("Creation commad: {}".format(create_string))
+        logger.critical("Creation command: {}".format(create_string))
         exit(1)
 
     conn.commit()
