@@ -14,6 +14,7 @@ import logging
 # from mysql.connector import errorcode
 import pymysql
 
+
 from ihutilities.es_utils import read_es, configure_es, write_to_es, update_to_es
 
 from collections import OrderedDict
@@ -202,17 +203,17 @@ def write_to_db(data, db_config, db_fields, table="property_data", whatever=Fals
         for row in converted_data:
             try:
                 cursor.execute(INSERT_statement, row)
-            except (pymysql.connector.errors.IntegrityError, sqlite3.IntegrityError):
+            except (pymysql.err.IntegrityError, sqlite3.IntegrityError):
                 rejected_data.append(row)
 
     else:
         try:
             logger.debug("Insert statement = {}\nData line 1 = {}".format(INSERT_statement, converted_data[0]))
             cursor.executemany(INSERT_statement, converted_data)
-        except (pymysql.connector.errors.IntegrityError, sqlite3.IntegrityError):
+        except (pymysql.err.IntegrityError, sqlite3.IntegrityError):
             conn.close()
             raise
-        except (pymysql.connector.errors.DataError):
+        except (pymysql.err.DataError):
             conn.close()
             logger.info("write_to_db failed with {}".format(converted_data))
             raise
@@ -406,7 +407,7 @@ def read_db(sql_query, db_config):
         conn = _make_connection(db_config)
         cursor = conn.cursor()
         cursor.execute(sql_query)
-    except pymysql.connector.Error as err:
+    except pymysql.Error as err:
         if err.errno == errorcode.CR_CONN_HOST_ERROR:
             logger.warning("Caught exception '{}'. errno = '{}', waiting {} seconds and having another go".format(err, err.errno, err_wait))
             time.sleep(err_wait)
@@ -458,7 +459,7 @@ def delete_from_db(sql_query, db_config):
         conn = _make_connection(db_config)
         cursor = conn.cursor()
         cursor.execute(sql_query)
-    except pymysql.connector.Error as err:
+    except pymysql.Error as err:
         if err.errno == errorcode.CR_CONN_HOST_ERROR:
             logger.warning("Caught exception '{}'. errno = '{}', waiting {} seconds and having another go".format(err, err.errno, err_wait))
             time.sleep(err_wait)
@@ -519,7 +520,7 @@ def _make_connection(db_config):
         # Bit messy, sometimes we make a connection without db existing
         try:
             conn.database = db_config["db_name"]
-        except pymysql.connector.Error as err:
+        except pymysql.Error as err:
             if err.errno != errorcode.ER_BAD_DB_ERROR:
                 raise
 
@@ -534,7 +535,7 @@ def create_mysql_database(db_config):
     create_string = "CREATE DATABASE {} DEFAULT CHARACTER SET 'utf8' COLLATE 'utf8_unicode_ci'".format(db_config["db_name"]) 
     try:
         cursor.execute(create_string)
-    except pymysql.connector.Error as err:
+    except pymysql.Error as err:
         logger.critical("Failed creating database: {}".format(err))
         logger.critical("Creation commad: {}".format(create_string))
         exit(1)

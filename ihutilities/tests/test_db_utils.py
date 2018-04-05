@@ -40,8 +40,8 @@ class MariaDBUtilitiesTests(unittest.TestCase):
         db_config = db_config_template.copy()
         db_config["db_name"] = "test"
         password = os.environ['MARIA_DB_PASSWORD']
-        conn = mysql.connector.connect(user='root', password=password,
-                                 host='127.0.0.1')
+        conn = pymysql.connect(user='root', password=password,
+                                host='127.0.0.1')
 
         cursor = conn.cursor()
         cursor.execute("DROP DATABASE IF EXISTS test")
@@ -51,25 +51,27 @@ class MariaDBUtilitiesTests(unittest.TestCase):
         # Test database exists
         try:
             conn.database = db_config["db_name"]   
-        except mysql.connector.Error as err:
+        except pymysql.Error as err:
             raise
         # Do a schema query
-        cursor = conn.cursor()
-        cursor.execute("""
-            select * from test;
-        """)
-        exp_columns = set([x for x in self.db_fields.keys()]) 
-        obs_columns = set([x[0] for x in cursor.description])
-        assert_equal(exp_columns, obs_columns)
-        # SELECT SCHEMA_NAME FROM INFORMATION_SCHEMA.SCHEMATA WHERE SCHEMA_NAME = 'DBName'
         conn.close()
+
+        # Now we've created the database, query it for correct columns
+        db_config = db_config_template.copy()
+        db_config["db_name"] = "information_schema"
+        sql_query = "select COLUMN_NAME from COLUMNS where table_schema='test' and table_name='test'"
+        rows = read_db(sql_query, db_config)
+
+        exp_columns = set([x for x in self.db_fields.keys()]) 
+        obs_columns = set([x["COLUMN_NAME"] for x in rows])
+        assert_equal(exp_columns, obs_columns)
 
     def test_write_to_mariadb(self):
         db_config = db_config_template.copy()
         db_config = configure_db(db_config, self.db_fields, tables="test", force=True)
-        data = [(1, 2, "hello"),
+        data = ((1, 2, "hello"),
                 (2, 3, "Fred"),
-                (3, 3, "Beans")]
+                (3, 3, "Beans"))
         write_to_db(data, db_config, self.db_fields, table="test")
         conn = _make_connection(db_config)
         cursor = conn.cursor()
@@ -93,9 +95,9 @@ class MariaDBUtilitiesTests(unittest.TestCase):
                 (2, 3, "POINT(20 20)"),
                 (3, 3, "POINT(5 15)")]
 
-        expected = [(1, 2, 0.0, 10.0),
+        expected = ((1, 2, 0.0, 10.0),
                     (2, 3, 20.0, 20.0),
-                    (3, 3, 5.0, 15.0)]
+                    (3, 3, 5.0, 15.0))
 
         write_to_db(data, db_config, db_fields, table="test")
         conn = _make_connection(db_config)
