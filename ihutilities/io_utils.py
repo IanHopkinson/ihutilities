@@ -54,7 +54,7 @@ def write_dictionary(filename, data, append=True):
     else:
         logging.info("New file {} is being created".format(filename))
 
-    with open(filename, 'a') as output_file:
+    with open(filename, 'a', encoding="utf-8") as output_file:
         dict_writer = csv.DictWriter(output_file, keys, lineterminator='\n')
         if newfile:
             dict_writer.writeheader()
