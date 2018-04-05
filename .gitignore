@@ -4,5 +4,6 @@ ihutilities/fixtures
 /build/
 *.sqlite
 doc/build
-.vscode/*
+\.vscode/\.ropeproject/config\.py
+
 *.pyc
