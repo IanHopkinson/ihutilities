@@ -5,12 +5,13 @@ import unittest
 import os
 import sqlite3
 
-try:
-    import mysql.connector
-    from mysql.connector import errorcode
-    mysql_connector_installed = True
-except ImportError:
-    mysql_connector_installed = False
+# try:
+#     import mysql.connector
+#     from mysql.connector import errorcode
+#     mysql_connector_installed = True
+# except ImportError:
+#     mysql_connector_installed = False
+import pymysql
 
 from collections import OrderedDict
 from nose.tools import assert_equal
@@ -22,7 +23,7 @@ from ihutilities.db_utils import (db_config_template, configure_db, write_to_db,
                                   check_mysql_database_exists,
                                   delete_from_db)
 
-@unittest.skipIf(not mysql_connector_installed, "MariaDB/MySQL connector is not installed so skipping MySQL/MariaDB tests")
+# @unittest.skipIf(not mysql_connector_installed, "MariaDB/MySQL connector is not installed so skipping MySQL/MariaDB tests")
 class MariaDBUtilitiesTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):

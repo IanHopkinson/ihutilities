@@ -38,11 +38,11 @@ if result != 0:
     #from ihutilities.es_utils import configure_es, write_to_es, read_es, update_to_es
 
 # Conditional import of mysql connector
-try:
-    import mysql.connector
-    from mysql.connector import errorcode
-except ImportError:
-    logger.warning("MySQL/MariaDB connector is not present, so MariaDB/MySQL functionality not supported")
+# try:
+#     import mysql.connector
+#     from mysql.connector import errorcode
+# except ImportError:
+#     logger.warning("MySQL/MariaDB connector is not present, so MariaDB/MySQL functionality not supported")
 
 def configure_db(db_config, db_fields, tables="property_data", force=False):
     """This function sets up a sqlite or MariaDB/MySQL database
@@ -202,7 +202,7 @@ def write_to_db(data, db_config, db_fields, table="property_data", whatever=Fals
         for row in converted_data:
             try:
                 cursor.execute(INSERT_statement, row)
-            except (mysql.connector.errors.IntegrityError, sqlite3.IntegrityError):
+            except (pymysql.connector.errors.IntegrityError, sqlite3.IntegrityError):
                 rejected_data.append(row)
 
     else:
@@ -458,7 +458,7 @@ def delete_from_db(sql_query, db_config):
         conn = _make_connection(db_config)
         cursor = conn.cursor()
         cursor.execute(sql_query)
-    except mysql.connector.Error as err:
+    except pymysql.connector.Error as err:
         if err.errno == errorcode.CR_CONN_HOST_ERROR:
             logger.warning("Caught exception '{}'. errno = '{}', waiting {} seconds and having another go".format(err, err.errno, err_wait))
             time.sleep(err_wait)
