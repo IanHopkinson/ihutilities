@@ -6,7 +6,6 @@
 # Ideal for building databases which require a long time to make
 
 import functools
-import mysql.connector
 import os
 import datetime
 import signal
