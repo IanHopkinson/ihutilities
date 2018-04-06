@@ -3,15 +3,27 @@
 
 import os
 import unittest
+import socket
 import time
 
 from collections import OrderedDict
 
 from ihutilities.ETL_framework import (do_etl, check_if_already_done)
 
-from ihutilities.es_utils import configure_es, write_to_es, es_config_template, delete_es
+sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+result = sock.connect_ex(('localhost',9200))
+if result == 0:
+    elastic_search_not_running = False
+    import elasticsearch
+    from ihutilities.es_utils import (es_config_template, delete_es,
+                                  check_es_database_exists, write_to_es)
+else:
+    elastic_search_not_running = True
+
+#from ihutilities.es_utils import configure_es,  es_config_template, delete_es
 
 
+@unittest.skipIf(elastic_search_not_running, "Elasticsearch is not running so skipping tests")
 class TestETLFramework_es(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
