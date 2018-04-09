@@ -117,7 +117,7 @@ def sort_dict_by_value(unordered_dict):
     sorted_dict = sorted(unordered_dict.items(), key=operator.itemgetter(1))
     return OrderedDict(sorted_dict)
 
-def get_a_file_handle(file_path, encoding="utf-8-sig", mode="rU", zip_guess=True):
+def get_a_file_handle(file_path, encoding="utf-8-sig", mode="r", zip_guess=True):
     """This function returns a file handle, even if a file is within a zip
 
     Args:
@@ -144,7 +144,7 @@ def get_a_file_handle(file_path, encoding="utf-8-sig", mode="rU", zip_guess=True
         return fh
 
     if ".zip" not in file_path.lower():
-        if mode == "rU":
+        if mode == "r":
             fh = file_handle_or_none(file_path, encoding=encoding, mode=mode)
         else: # This is what we do for binary files, no encoding permitted here
             fh = file_handle_or_none(file_path, encoding=None, mode=mode)
@@ -155,10 +155,10 @@ def get_a_file_handle(file_path, encoding="utf-8-sig", mode="rU", zip_guess=True
 
         if len(name_in_zip) == 0:
             try:
-                cf = zf.open(namelist[0], "rU")
+                cf = zf.open(namelist[0], "r")
             except (NotImplementedError, OSError):
                 raise
-            if mode == "rU":
+            if mode == "r":
                 fh = io.TextIOWrapper(io.BytesIO(cf.read()), encoding=encoding)
             else:
                 fh = io.BytesIO(cf.read())
@@ -166,17 +166,17 @@ def get_a_file_handle(file_path, encoding="utf-8-sig", mode="rU", zip_guess=True
             for name in namelist:
                 if fnmatch.fnmatch(name, name_in_zip):
                     try:
-                        cf = zf.open(name, "rU")
+                        cf = zf.open(name, "r")
                     except (NotImplementedError, OSError):
                         raise
-                    if mode == "rU":
+                    if mode == "r":
                         fh = io.TextIOWrapper(io.BytesIO(cf.read()), encoding=encoding)
                     else:
                         fh = io.BytesIO(cf.read())               
     
     return fh
 
-def file_handle_or_none(file_path, encoding="utf-8-sig", mode="rU"):
+def file_handle_or_none(file_path, encoding="utf-8-sig", mode="r"):
     try:
         if encoding is not None:
             fh = open(file_path, encoding=encoding, mode=mode)
