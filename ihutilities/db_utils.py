@@ -440,7 +440,8 @@ def read_db(sql_query, db_config):
            yield labelled_row
        else:
            conn.close()
-           raise StopIteration
+           # raise StopIteration # - this is depreciated in Python 3.5 onwards
+           return
 
 def delete_from_db(sql_query, db_config):
     # For MariaDB we need to trap this error:
