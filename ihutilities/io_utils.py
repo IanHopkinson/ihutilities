@@ -21,7 +21,7 @@ from collections import OrderedDict
 
 logger = logging.getLogger(__name__)
 
-def write_dictionary(filename, data, append=True):
+def write_dictionary(filename, data, append=True, delimiter=","):
     """This function writes a list of dictionaries to a CSV file
 
     Args:
@@ -34,7 +34,8 @@ def write_dictionary(filename, data, append=True):
        append (bool): 
             if True then data is appended to an existing file 
             if False and the file exists then the file is deleted 
-       
+       delimiter (str):
+            Delimiter character as per dictwriter interface
     Returns:
        No return value
 
@@ -55,7 +56,7 @@ def write_dictionary(filename, data, append=True):
         logging.info("New file {} is being created".format(filename))
 
     with open(filename, 'a', encoding="utf-8") as output_file:
-        dict_writer = csv.DictWriter(output_file, keys, lineterminator='\n')
+        dict_writer = csv.DictWriter(output_file, keys, lineterminator='\n', delimiter=delimiter)
         if newfile:
             dict_writer.writeheader()
         dict_writer.writerows(data)
