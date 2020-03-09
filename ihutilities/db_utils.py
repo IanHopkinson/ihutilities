@@ -184,7 +184,7 @@ def write_to_db(data, db_config, db_fields, table="property_data", whatever=Fals
     for k in db_fields.keys():
         DB_FIELDS = DB_FIELDS + k + ","
         if db_fields[k] in ["POINT", "POLYGON", "LINESTRING", "MULTIPOLYGON"]:
-            DB_PLACEHOLDERS = DB_PLACEHOLDERS + "(GeomFromText(%s)),"
+            DB_PLACEHOLDERS = DB_PLACEHOLDERS + "GeomFromText(%s),"
         else:
             DB_PLACEHOLDERS = DB_PLACEHOLDERS + ONE_PLACEHOLDER
 
