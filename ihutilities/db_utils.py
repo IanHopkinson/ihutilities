@@ -405,6 +405,10 @@ def read_db(sql_query, db_config):
     if db_config["db_type"] == "sqlite" and not os.path.isfile(db_config["db_path"]):
         raise IOError("Database file '{}' does not exist".format(db_config["db_path"]))
 
+    if db_config["db_type"] == "mariadb" or db_config["db_type"] == "mysql":
+        if not check_mysql_database_exists(db_config):
+            raise IOError("{} database '{}' does not exist".format(db_config["db_type"], db_config["db_name"]))
+    
     try:
         conn = _make_connection(db_config)
         cursor = conn.cursor()
