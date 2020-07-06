@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 # encoding: utf-8
+
 from __future__ import unicode_literals
 
 import csv
@@ -8,12 +9,10 @@ import hashlib
 import io
 import logging
 import operator
-import glob
 import os
 import math
 import requests
 import shutil
-import subprocess
 import time
 import zipfile
 
@@ -21,7 +20,9 @@ from collections import OrderedDict
 
 logger = logging.getLogger(__name__)
 
-def write_dictionary(filename, data, append=True, delimiter=","):
+from typing import List, Optional, Tuple, Any
+
+def write_dictionary(filename: str, data: List[dict[str,str]], append:Optional[bool]=True, delimiter:Optional[str]="'") -> None:
     """This function writes a list of dictionaries to a CSV file
 
     Args:
@@ -61,7 +62,7 @@ def write_dictionary(filename, data, append=True, delimiter=","):
             dict_writer.writeheader()
         dict_writer.writerows(data)
 
-def calculate_file_sha(filepath):
+def calculate_file_sha(filepath:str):
     file_sha = hashlib.sha1()
 
     # Switched this to get sha calculation for files within zip files working
@@ -75,7 +76,7 @@ def calculate_file_sha(filepath):
         file_size = os.path.getsize(filepath)
     else:
         zip_path, name_in_zip = split_zipfile_path(filepath)
-        if len(name_in_zip) != 0:
+        if (name_in_zip is not None) and (zip_path is not None) and len(name_in_zip) != 0:
             zf = zipfile.ZipFile(zip_path)
             file_size = zf.getinfo(name_in_zip).file_size
         else: # if no name in zip is specified then calculate the sha of the zip file as a whole
@@ -118,7 +119,7 @@ def sort_dict_by_value(unordered_dict):
     sorted_dict = sorted(unordered_dict.items(), key=operator.itemgetter(1))
     return OrderedDict(sorted_dict)
 
-def get_a_file_handle(file_path, encoding="utf-8-sig", mode="r", zip_guess=True):
+def get_a_file_handle(file_path:str, encoding:Optional[str] ="utf-8-sig", mode:Optional[str]="r", zip_guess:Optional[bool]=True):
     """This function returns a file handle, even if a file is within a zip
 
     Args:
@@ -177,7 +178,7 @@ def get_a_file_handle(file_path, encoding="utf-8-sig", mode="r", zip_guess=True)
     
     return fh
 
-def file_handle_or_none(file_path, encoding="utf-8-sig", mode="r"):
+def file_handle_or_none(file_path, encoding="utf-8-sig", mode="r") -> Any:
     try:
         if encoding is not None:
             fh = open(file_path, encoding=encoding, mode=mode)
@@ -187,7 +188,7 @@ def file_handle_or_none(file_path, encoding="utf-8-sig", mode="r"):
         fh = None
     return fh
 
-def split_zipfile_path(zipfile_path):
+def split_zipfile_path(zipfile_path:str) -> Tuple[Any, Any]:
     if zipfile_path is None:
         return None, None
     if ".zip" not in zipfile_path.lower():
@@ -209,7 +210,7 @@ def split_zipfile_path(zipfile_path):
 
     return zip_path, name_in_zip
 
-def download_file_from_url(url, local_filepath):
+def download_file_from_url(url:str, local_filepath:str) -> str:
     """
     A function to download and save a file from a url
     
@@ -257,7 +258,7 @@ def download_file_from_url(url, local_filepath):
 
     return local_filepath
 
-def colour_text(text, colour="red"):
+def colour_text(text:str, colour: Optional[str]="red") -> str:
     """
     Decorate a text string with ANSI escape codes for coloured text in bash-like shells
     
