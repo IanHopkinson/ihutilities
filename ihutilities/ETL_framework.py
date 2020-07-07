@@ -87,7 +87,7 @@ def make_row(input_row, data_path, data_field_lookup, db_fields, null_equivalent
             if db_fields[output_key] == "POINT":
                 new_row[output_key] = make_point(input_row, data_field_lookup[output_key])
             # If output_key corresponds to an INTEGER then remove any commas in input
-            elif db_fields[output_key].lower() == "integer" and value is not None:
+            elif db_fields[output_key].lower() == "integer" and isinstance(value, str):
                 new_row[output_key] = int(float(value.replace(",", "")))
             else:
                 new_row[output_key] = value
@@ -238,7 +238,7 @@ def do_etl(db_fields, db_config, data_path, data_field_lookup,
     t0 = time.time()
     datafile_sha = calculate_file_sha(data_path)
     if datafile_sha is None:
-        datafile_sha = "sha_placeholder"
+        datafile_sha = rowsource.__name__
     t1 = time.time()
     logger.info("Calculating file sha took {:.2} seconds".format(t1 - t0))
     
