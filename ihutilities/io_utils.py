@@ -8,21 +8,21 @@ import fnmatch
 import hashlib
 import io
 import logging
+import math
 import operator
 import os
-import math
-import requests
 import shutil
 import time
 import zipfile
-
 from collections import OrderedDict
+from typing import Any, Dict, List, Optional, Tuple
+
+import requests
 
 logger = logging.getLogger(__name__)
 
-from typing import List, Optional, Tuple, Any
 
-def write_dictionary(filename: str, data: List[dict[str,str]], append:Optional[bool]=True, delimiter:Optional[str]="'") -> None:
+def write_dictionary(filename: str, data: List[Dict[str,Any]], append:Optional[bool]=True, delimiter:Optional[str]=",") -> None:
     """This function writes a list of dictionaries to a CSV file
 
     Args:
@@ -52,7 +52,7 @@ def write_dictionary(filename: str, data: List[dict[str,str]], append:Optional[b
         os.remove(filename)
         newfile = True
     elif not newfile and append:
-        logging.info("Append is True, and {} exists therefore data is being appended".format(filename))
+        logger.info("Append is True, and {} exists therefore data is being appended".format(filename))
     else:
         logging.info("New file {} is being created".format(filename))
 
