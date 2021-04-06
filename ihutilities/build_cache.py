@@ -51,9 +51,9 @@ def build_cache(constructors, cache_db, cache_fields, sha, chunk_size=1000, test
     if test:
         output_dir = os.path.dirname(cache_db)
         cache_db = os.path.join(output_dir, "test.sqlite")
-        print("** test is True therefore cache_db set to {}".format(cache_db))
+        logger.info("** test is True therefore cache_db set to {}".format(cache_db))
 
-    print("Making cache file: {}".format(cache_db), flush=True)
+    logger.info("Making cache file: {}".format(cache_db))
     t0 = time.time()
 
     # Create database
@@ -62,10 +62,10 @@ def build_cache(constructors, cache_db, cache_fields, sha, chunk_size=1000, test
                  "session_log": session_log_fields, "user_fields":user_fields}
 
     if os.path.isfile(cache_db):
-        print("Database file {} already exists, attempting to update. Delete file for a fresh start".format(cache_db))
+        logger.info("Database file {} already exists, attempting to update. Delete file for a fresh start".format(cache_db))
         configure_db(cache_db, db_fields, tables = list(db_fields.keys()))
     else:
-        print("Creating database at {}".format(cache_db), flush=True)
+        logger.info("Creating database at {}".format(cache_db))
         configure_db(cache_db, db_fields, tables = list(db_fields.keys()))
 
     # Loop over the constructors
@@ -76,16 +76,16 @@ def build_cache(constructors, cache_db, cache_fields, sha, chunk_size=1000, test
 
         stage_status = check_stage_status(key_generator, make_row_method, cache_db)
         if stage_status == "Complete":
-            print("Flatfile db already updated with {}, continuing to next stage".format(make_row_method_name), flush=True)
+            logger.info("Flatfile db already updated with {}, continuing to next stage".format(make_row_method_name))
             continue
         elif stage_status == "Not started":
             finish_time = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
             metadata = [(id_, key_generator_name, make_row_method_name, "Started", "{:.2f}".format(0), 0, finish_time, 0)]
-            print("Trying to add metadata line: {}".format(metadata), flush=True)
+            logger.info("Trying to add metadata line: {}".format(metadata))
             write_to_db(metadata, cache_db, db_fields["metadata"], table="metadata")
             
         t_update0 = time.time()
-        print("\nUpdating flatfile db with {}".format(make_row_method_name), flush=True)
+        logger.info("\nUpdating flatfile db with {}".format(make_row_method_name))
         # This is where we make the data
         line_count = updater(id_, key_generator, key_count, make_row_method, cache_db, db_fields, sha, chunk_size)
         # 
@@ -94,7 +94,7 @@ def build_cache(constructors, cache_db, cache_fields, sha, chunk_size=1000, test
         t_update1 = time.time()
         elapsed = t_update1 - t_update0
         finish_time = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        print("Wrote {0} '{1}' records to {2} in {3:.2f}s".format(line_count, make_row_method_name, os.path.basename(cache_db), elapsed), flush=True)
+        logger.info("Wrote {0} '{1}' records to {2} in {3:.2f}s".format(line_count, make_row_method_name, os.path.basename(cache_db), elapsed))
         metadata = [(id_, key_generator_name, make_row_method_name, "Complete", "{:.2f}".format(elapsed), line_count, finish_time)]
         update_fields = [x for x in db_fields["metadata"].keys()]
         update_to_db(metadata, cache_db, update_fields, table="metadata", key="SequenceNumber")
@@ -104,7 +104,7 @@ def build_cache(constructors, cache_db, cache_fields, sha, chunk_size=1000, test
     # Write final report
     t1 = time.time()
     elapsed = t1 - t0
-    print("\nWrote a total {0} records to {1} in {2:.2f}s".format(total_line_count, os.path.basename(cache_db), elapsed), flush=True)
+    logger.info("\nWrote a total {0} records to {1} in {2:.2f}s".format(total_line_count, os.path.basename(cache_db), elapsed))
 
     return cache_db
 
@@ -115,7 +115,7 @@ def updater(id_, key_method, get_key_count, make_row_method, cache_db, db_fields
     # Get a bunch of UPRNs
     key_count = get_key_count()
     # uprn_cursor = get_uprn_cursor(data_source_dictionary[uprn_method])
-    print("Found {} keys in {}".format(key_count, key_method_name), flush=True)
+    logger.info("Found {} keys in {}".format(key_count, key_method_name))
     # Set loop control variables
     # chunk_size = 1000 #100000 #1000 #100000 for production, 1000 for test
     line_count = 0
@@ -123,18 +123,18 @@ def updater(id_, key_method, get_key_count, make_row_method, cache_db, db_fields
     test_limit = float('inf') # 10000 # float('inf')
     uprn_types = 1
     line_count_offset = 0
-    print("Test_limit set to {}".format(test_limit), flush=True)
+    logger.info("Test_limit set to {}".format(test_limit))
 
     
     # Fetch chunk progress
     chunk_skip = get_chunk_count(id_, cache_db)
-    print("Skipping {} chunks".format(chunk_skip), flush=True)
+    logger.info("Skipping {} chunks".format(chunk_skip))
     # ** Skip chunks
     key_chunks = key_method(chunk_size)
 
     if chunk_skip != 0:
         for i in range(0, chunk_skip):
-            print("Skipping chunk {} in ({}, {})".format(i, key_method_name, make_row_method_name), flush=True) 
+            logger.info("Skipping chunk {} in ({}, {})".format(i, key_method_name, make_row_method_name)) 
             key_chunks.__next__()
             line_count_offset = chunk_size * chunk_skip
             chunk_count = chunk_skip
@@ -164,7 +164,7 @@ def updater(id_, key_method, get_key_count, make_row_method, cache_db, db_fields
     
         for key in keys:
             if key in ['', None]:
-                print("key is blank so continuing",flush=True)
+                logger.info("key is blank so continuing")
                 continue
             
             
@@ -201,14 +201,14 @@ def updater(id_, key_method, get_key_count, make_row_method, cache_db, db_fields
             
         total_runtime = ((time.time() - t0) + est_completion_time) / (60 * 60 * 24)
         completion_str = (datetime.datetime.now() + datetime.timedelta(seconds=est_completion_time)).strftime("%Y-%m-%d %H:%M:%S")
-        print("{}: {}/{} at {}. Est. completion time: {}. Est. total runtime = {:.2f} days".format(
+        logger.info("{}: {}/{} at {}. Est. completion time: {}. Est. total runtime = {:.2f} days".format(
             make_row_method_name,
             line_count + line_count_offset, 
             key_count,
             datetime.datetime.now().strftime("%H:%M:%S"),
             completion_str,
             total_runtime
-            ), flush=True)
+            ))
 
         #time.sleep(5)
         
