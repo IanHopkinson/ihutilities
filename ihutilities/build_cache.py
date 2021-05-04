@@ -187,7 +187,14 @@ def updater(id_, key_method, get_key_count, make_row_method, cache_db, db_fields
                 
         # Insert record batch
         if len(data) != 0:
-            write_to_db(data, cache_db, db_fields["property_data"])
+            try:
+                write_to_db(data, cache_db, db_fields["property_data"])
+            except sqlite3.OperationalError as err:
+                logger.info("Caught exception write_to_db, trying again once after 10 seconds")
+                time.sleep(5)
+                write_to_db(data, cache_db, db_fields["property_data"])
+                
+
         # Update chunk_count to db metadata
         update_to_db([(chunk_count, id_)], cache_db, ["chunk_count", "SequenceNumber"], table="metadata", key="SequenceNumber")
         # Update current time and chunk count to session log
