@@ -76,12 +76,12 @@ def calculate_file_sha(filepath:str):
         file_size = os.path.getsize(filepath)
     else:
         zip_path, name_in_zip = split_zipfile_path(filepath)
-        if (name_in_zip is not None) and (zip_path is not None) and len(name_in_zip) != 0:
+        if (name_in_zip is not None) and (zip_path is not None) and len(name_in_zip) != 0 and "*" not in name_in_zip:
             zf = zipfile.ZipFile(zip_path)
             file_size = zf.getinfo(name_in_zip).file_size
         else: # if no name in zip is specified then calculate the sha of the zip file as a whole
-            file_size = os.path.getsize(filepath)
-            fh = open(filepath, "rb")   
+            file_size = os.path.getsize(zip_path)
+            fh = open(zip_path, "rb")   
 
     
     #This magic should make our sha match the git sha
