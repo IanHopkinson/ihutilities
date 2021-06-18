@@ -1,5 +1,11 @@
 # ihutilities - miscellaneous useful things
 
+Ian Hopkinson 2021-06-18
+
+This module is installed with:
+
+`python setup.py develop`
+
 # Functions
 
 ## Database utilities
