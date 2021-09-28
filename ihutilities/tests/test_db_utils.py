@@ -21,7 +21,7 @@ from ihutilities.db_utils import (db_config_template, configure_db, write_to_db,
                                   _make_connection, read_db,
                                   update_to_db, finalise_db,
                                   check_mysql_database_exists,
-                                  delete_from_db)
+                                  delete_from_db, delete_db)
 
 # @unittest.skipIf(not mysql_connector_installed, "MariaDB/MySQL connector is not installed so skipping MySQL/MariaDB tests")
 class MariaDBUtilitiesTests(unittest.TestCase):
@@ -65,6 +65,26 @@ class MariaDBUtilitiesTests(unittest.TestCase):
         exp_columns = set([x for x in self.db_fields.keys()]) 
         obs_columns = set([x["COLUMN_NAME"] for x in rows])
         assert_equal(exp_columns, obs_columns)
+
+    def test_delete_mariadb_database(self):
+        db_config = db_config_template.copy()
+        db_config["db_name"] = "test"
+        configure_db(db_config, self.db_fields, tables="test")
+
+        delete_db(db_config)
+
+        self.assertFalse(check_mysql_database_exists(db_config))
+
+    def test_delete_sqlite_database(self):
+        db_filename = "test_config_db.sqlite"
+        db_file_path = os.path.join(self.db_dir, db_filename)
+        if os.path.isfile(db_file_path):
+            os.remove(db_file_path)
+        configure_db(db_file_path, self.db_fields, tables="test")
+
+        delete_db(db_file_path)
+
+        self.assertFalse(os.path.isfile(db_file_path))
 
     def test_write_to_mariadb(self):
         db_config = db_config_template.copy()

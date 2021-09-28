@@ -484,6 +484,18 @@ def delete_from_db(sql_query, db_config):
         conn.commit()
         conn.close()
 
+def delete_db(db_config):
+    db_config = _normalise_config(db_config)
+    if db_config["db_type"] == "sqlite" and os.path.isfile(db_config["db_path"]):
+        os.remove(db_config["db_path"])
+    elif db_config["db_type"] == "mysql":
+        conn = _make_connection(db_config)
+        cursor = conn.cursor()
+        cursor.execute("DROP DATABASE IF EXISTS {}".format(db_config["db_name"]))
+        conn.commit()
+
+
+
 def _normalise_config(db_config):
     """
     This is a private function which will expand a db_config string into 
