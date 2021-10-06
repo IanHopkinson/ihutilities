@@ -62,12 +62,12 @@ def write_dictionary(filename: str, data: List[Dict[str,Any]], append:Optional[b
             dict_writer.writeheader()
         dict_writer.writerows(data)
 
-def calculate_file_sha(filepath:str):
+def calculate_file_sha(filepath:str, encoding="utf-8-sig"):
     file_sha = hashlib.sha1()
 
     # Switched this to get sha calculation for files within zip files working
     #fh = file_handle_or_none(filepath, encoding=None, mode="rb")
-    fh = get_a_file_handle(filepath, encoding="utf-8-sig", mode="rb", zip_guess=True)
+    fh = get_a_file_handle(filepath, encoding=encoding, mode="rb", zip_guess=True)
 
     if fh is None:
         return None

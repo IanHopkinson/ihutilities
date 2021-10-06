@@ -236,7 +236,7 @@ def do_etl(db_fields, db_config, data_path, data_field_lookup,
 
     logger.info("Calculating file sha...")
     t0 = time.time()
-    datafile_sha = calculate_file_sha(data_path)
+    datafile_sha = calculate_file_sha(data_path, encoding=encoding)
     if datafile_sha is None:
         datafile_sha = rowsource.__name__
     t1 = time.time()
