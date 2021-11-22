@@ -250,6 +250,7 @@ def do_etl(db_fields, db_config, data_path, data_field_lookup,
 
     # Calculating file lengths can be slow so we leave doing it as late as possible
     file_length = get_input_file_length(mode, rowsource, test_line_limit, data_path, headers, separator, encoding)
+    log_report_size = int(round(file_length / 10, 0))
     
 
     # If the table argument is None we assume we are writing to the property_data table and that db_fields describes one flat level table
@@ -506,11 +507,21 @@ def do_etl(db_fields, db_config, data_path, data_field_lookup,
                     logger.warning("Lines dropped = {}, do not use resume".format(lines_dropped))
                     #print("UPRN = {} has already been seen".format(row[0])) 
 
-            # Write an interim report
+            # Print an interim report
             if (line_count % report_size) == 0 and line_count != 0:
                 est_completion_time = ((time.time() - t0) / line_count) * (min(file_length, test_line_limit) - (line_count + line_count_offset))
                 completion_str = (datetime.datetime.now() + datetime.timedelta(seconds=est_completion_time)).strftime("%Y-%m-%d %H:%M:%S")
-                logger.info("Wrote {}/{} at ({}). Estimated completion time: {}".format(
+                print("Wrote {}/{} at ({}). Estimated completion time: {}".format(
+                        line_count + line_count_offset, 
+                        file_length,
+                        datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                        completion_str), end="\r", flush=True)
+                t_last = time.time()
+            
+            if (line_count % log_report_size) == 0 and line_count != 0:
+                est_completion_time = ((time.time() - t0) / line_count) * (min(file_length, test_line_limit) - (line_count + line_count_offset))
+                completion_str = (datetime.datetime.now() + datetime.timedelta(seconds=est_completion_time)).strftime("%Y-%m-%d %H:%M:%S")
+                logging.info("Wrote {}/{} at ({}). Estimated completion time: {}".format(
                         line_count + line_count_offset, 
                         file_length,
                         datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
