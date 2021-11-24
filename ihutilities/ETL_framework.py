@@ -251,6 +251,8 @@ def do_etl(db_fields, db_config, data_path, data_field_lookup,
     # Calculating file lengths can be slow so we leave doing it as late as possible
     file_length = get_input_file_length(mode, rowsource, test_line_limit, data_path, headers, separator, encoding)
     log_report_size = int(round(file_length / 10, 0))
+    if log_report_size == 0:
+        log_report_size = 1
     
 
     # If the table argument is None we assume we are writing to the property_data table and that db_fields describes one flat level table

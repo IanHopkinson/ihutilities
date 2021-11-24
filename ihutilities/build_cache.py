@@ -130,6 +130,7 @@ def updater(id_, key_method, get_key_count, make_row_method, cache_db, db_fields
     chunk_skip = get_chunk_count(id_, cache_db)
     logger.info("Skipping {} chunks".format(chunk_skip))
     # ** Skip chunks
+    n_key_chunks = len(list(key_method(chunk_size)))
     key_chunks = key_method(chunk_size)
 
     if chunk_skip != 0:
@@ -151,7 +152,12 @@ def updater(id_, key_method, get_key_count, make_row_method, cache_db, db_fields
     
     t0 = time.time()
 
-    for keys in key_chunks:
+    log_report_size = int(round(n_key_chunks / 10, 0))
+    if log_report_size == 0:
+        log_report_size = 1
+
+    logger.info("Chunk size {}, writing to log every {} chunks".format(chunk_size, log_report_size))
+    for i, keys in enumerate(key_chunks, start=1):
     # for uprns in uprn_source(uprn_method, chunk_size): 
         chunk_count += 1
         # Break for testing
@@ -208,14 +214,24 @@ def updater(id_, key_method, get_key_count, make_row_method, cache_db, db_fields
             
         total_runtime = ((time.time() - t0) + est_completion_time) / (60 * 60 * 24)
         completion_str = (datetime.datetime.now() + datetime.timedelta(seconds=est_completion_time)).strftime("%Y-%m-%d %H:%M:%S")
-        logger.info("{}: {}/{} at {}. Est. completion time: {}. Est. total runtime = {:.2f} days".format(
+        print("{}: {}/{} at {}. Est. completion time: {}. Est. total runtime = {:.2f} days".format(
             make_row_method_name,
             line_count + line_count_offset, 
             key_count,
             datetime.datetime.now().strftime("%H:%M:%S"),
             completion_str,
             total_runtime
-            ))
+            ), end="\r", flush=True)
+
+        if (i % log_report_size) == 0 and i != 0:
+            logger.info("{}: {}/{} at {}. Est. completion time: {}. Est. total runtime = {:.2f} days".format(
+                make_row_method_name,
+                line_count + line_count_offset, 
+                key_count,
+                datetime.datetime.now().strftime("%H:%M:%S"),
+                completion_str,
+                total_runtime
+                ))
 
         #time.sleep(5)
         
