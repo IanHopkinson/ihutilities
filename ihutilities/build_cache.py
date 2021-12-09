@@ -135,7 +135,7 @@ def updater(id_, key_method, get_key_count, make_row_method, cache_db, db_fields
 
     if chunk_skip != 0:
         for i in range(0, chunk_skip):
-            logger.info("Skipping chunk {} in ({}, {})".format(i, key_method_name, make_row_method_name)) 
+            print("Skipping chunk {} in ({}, {})".format(i, key_method_name, make_row_method_name), flush=True, end="\r") 
             key_chunks.__next__()
             line_count_offset = chunk_size * chunk_skip
             chunk_count = chunk_skip
