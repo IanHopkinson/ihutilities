@@ -38,7 +38,7 @@ logger = logging.getLogger(__name__)
 sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 result = sock.connect_ex(('localhost',9200))
 if result == 0:
-   es = elasticsearch.Elasticsearch(sniff_on_start=True)
+   es = elasticsearch.Elasticsearch(["localhost"], sniff_on_start=True)
 
 def is_elasticsearch_running():
     answer = False
