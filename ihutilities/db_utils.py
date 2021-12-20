@@ -415,7 +415,8 @@ def read_db(sql_query, db_config):
         cursor.execute(sql_query)
     except pymysql.Error as err:
         if err.args[0] == pymysql.constants.CR.CR_CONN_HOST_ERROR:
-            logger.warning("Caught exception '{}'. errno = '{}', waiting {} seconds and having another go".format(err, err.args[0], err_wait))
+            timestamp = datetime.datetime.now().isoformat()
+            logger.warning("{}:read_db Caught exception '{}'. errno = '{}', retry in {}seconds".format(timestamp, err, err.args[0], err_wait))
             time.sleep(err_wait)
             conn = _make_connection(db_config)
             cursor = conn.cursor()
