@@ -47,7 +47,7 @@ user_fields = OrderedDict([
 
 logger = logging.getLogger(__name__)
 
-def build_cache(constructors, cache_db, cache_fields, sha, chunk_size=1000, test=True):
+def build_cache(constructors, cache_db, cache_fields, sha, chunk_size=1000, report_frequency=10, test=True):
     if test:
         output_dir = os.path.dirname(cache_db)
         cache_db = os.path.join(output_dir, "test.sqlite")
@@ -87,7 +87,7 @@ def build_cache(constructors, cache_db, cache_fields, sha, chunk_size=1000, test
         t_update0 = time.time()
         logger.info("\nUpdating flatfile db with {}".format(make_row_method_name))
         # This is where we make the data
-        line_count = updater(id_, key_generator, key_count, make_row_method, cache_db, db_fields, sha, chunk_size)
+        line_count = updater(id_, key_generator, key_count, make_row_method, cache_db, db_fields, sha, chunk_size, report_frequency)
         # 
         total_line_count += line_count
         # Write final report
@@ -108,7 +108,7 @@ def build_cache(constructors, cache_db, cache_fields, sha, chunk_size=1000, test
 
     return cache_db
 
-def updater(id_, key_method, get_key_count, make_row_method, cache_db, db_fields, sha, chunk_size):
+def updater(id_, key_method, get_key_count, make_row_method, cache_db, db_fields, sha, chunk_size, report_frequency):
     key_method_name = get_function_name(key_method)
     make_row_method_name = get_function_name(make_row_method)
     
@@ -152,7 +152,7 @@ def updater(id_, key_method, get_key_count, make_row_method, cache_db, db_fields
     
     t0 = time.time()
 
-    log_report_size = int(round(n_key_chunks / 10, 0))
+    log_report_size = int(round(n_key_chunks / report_frequency, 0))
     if log_report_size == 0:
         log_report_size = 1
 
@@ -222,7 +222,7 @@ def updater(id_, key_method, get_key_count, make_row_method, cache_db, db_fields
             completion_str,
             total_runtime
             ), end="\r", flush=True)
-
+            
         if (i % log_report_size) == 0 and i != 0:
             logger.info("{}: {}/{} at {}. Est. completion time: {}. Est. total runtime = {:.2f} days".format(
                 make_row_method_name,
