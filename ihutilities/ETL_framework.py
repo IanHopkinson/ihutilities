@@ -136,7 +136,11 @@ def get_source_generator(data_path, headers, separator, encoding):
         if headers:
             rows = csv.DictReader(fh, delimiter=separator)
         else:
-            rows = csv.reader(fh, delimiter=separator)
+            # This handles a creditsafe instance where the delimiter was | and there was an instance of an unbalanced "
+            if separator == "|":
+                rows = csv.reader(fh, delimiter=separator, quoting=csv.QUOTE_NONE)
+            else:
+                rows = csv.reader(fh, delimiter=separator)
 
         for row in rows:
             yield row
