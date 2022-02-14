@@ -22,7 +22,7 @@ import requests
 logger = logging.getLogger(__name__)
 
 
-def write_dictionary(filename: str, data: List[Dict[str,Any]], append:Optional[bool]=True, delimiter:Optional[str]=",") -> None:
+def write_dictionary(filename: str, data: List[Dict[str,Any]], append:Optional[bool]=True, delimiter:Optional[str]=",", quoting:Optional[int]=csv.QUOTE_MINIMAL) -> None:
     """This function writes a list of dictionaries to a CSV file
 
     Args:
@@ -57,7 +57,7 @@ def write_dictionary(filename: str, data: List[Dict[str,Any]], append:Optional[b
         logging.info("New file {} is being created".format(filename))
 
     with open(filename, 'a', encoding="utf-8") as output_file:
-        dict_writer = csv.DictWriter(output_file, keys, lineterminator='\n', delimiter=delimiter)
+        dict_writer = csv.DictWriter(output_file, keys, lineterminator='\n', delimiter=delimiter, quoting=quoting, escapechar="\\")
         if newfile:
             dict_writer.writeheader()
         dict_writer.writerows(data)
