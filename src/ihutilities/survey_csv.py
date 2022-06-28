@@ -11,10 +11,16 @@ import dateutil.parser as parser
 
 from collections import Counter
 
+
 def survey_csv(file_path, line_limit=1000, encoding=None):
     if encoding is None:
-        encoding = 'utf-8-sig'
-    print("\nStarting surveying {} at {}".format(file_path, datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")), flush=True)
+        encoding = "utf-8-sig"
+    print(
+        "\nStarting surveying {} at {}".format(
+            file_path, datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        ),
+        flush=True,
+    )
     t0 = time.time()
     # Count the lines in a CSV
     # List the fields in a CSV (so they can be copy pasted)
@@ -25,7 +31,7 @@ def survey_csv(file_path, line_limit=1000, encoding=None):
     report_size = 1000000
 
     filled_count = Counter()
-    
+
     with open(file_path, encoding=encoding) as f:
         rows = csv.reader(f)
         headers = next(rows)
@@ -33,7 +39,6 @@ def survey_csv(file_path, line_limit=1000, encoding=None):
     field_set = {}
     for field in headers:
         field_set[field] = set()
-
 
     with open(file_path, encoding=encoding) as f:
         rows = csv.DictReader(f)
@@ -52,15 +57,16 @@ def survey_csv(file_path, line_limit=1000, encoding=None):
                     break
 
                 if (line_count % report_size) == 0:
-                        print("\nSurvey interim results")
-                        print("==============")
-                        t1 = time.time()
-                        elapsed = t1 - t0
-                        print_report(file_path, elapsed, line_limit, line_count, headers, filled_count, field_set)
+                    print("\nSurvey interim results")
+                    print("==============")
+                    t1 = time.time()
+                    elapsed = t1 - t0
+                    print_report(
+                        file_path, elapsed, line_limit, line_count, headers, filled_count, field_set
+                    )
         except Exception as ex:
             print("Encountered exception '{}' at line_count = {}".format(ex, line_count))
             print("Aborting")
-
 
     print("\nSurvey final results")
     print("==============")
@@ -68,6 +74,7 @@ def survey_csv(file_path, line_limit=1000, encoding=None):
     elapsed = t1 - t0
     line_count = line_count - 2
     print_report(file_path, elapsed, line_limit, line_count, headers, filled_count, field_set)
+
 
 def print_report(file_path, elapsed, line_limit, line_count, headers, filled_count, field_set):
 
@@ -99,16 +106,22 @@ def print_report(file_path, elapsed, line_limit, line_count, headers, filled_cou
                     array.append(convfunc(x))
                 except:
                     pass
-        #array = [convfunc(x) for x in field_set[field] if x not in ["", None]]
-        if len(array) != 0: 
+        # array = [convfunc(x) for x in field_set[field] if x not in ["", None]]
+        if len(array) != 0:
             minimum = min(array)
             maximum = max(array)
         else:
             minimum = None
             maximum = None
-        print("{0: <3}, {1: <30}, {2: <10}, {3: <10}, {4:}, {5:}, {6:}".format(i,field, filled_count[field], distinct_count, type_, minimum, maximum), flush=True)
+        print(
+            "{0: <3}, {1: <30}, {2: <10}, {3: <10}, {4:}, {5:}, {6:}".format(
+                i, field, filled_count[field], distinct_count, type_, minimum, maximum
+            ),
+            flush=True,
+        )
 
     return
+
 
 def type_sniff(field_set, field):
     data_set = field_set[field]
@@ -146,14 +159,15 @@ def type_sniff(field_set, field):
         type_scores["StringType"] += 1
 
     try:
-        type_ = type_scores.most_common(1)[0][0] 
-        #type_ = type_scores.most_common(5)
+        type_ = type_scores.most_common(1)[0][0]
+        # type_ = type_scores.most_common(5)
         anti_type = fail_scores.most_common(5)
     except:
         type_ = "NoneType"
         anti_type = "NoneType"
 
-    return type_ #, anti_type
+    return type_  # , anti_type
+
 
 if __name__ == "__main__":
     arg = sys.argv[1:]
@@ -162,7 +176,9 @@ if __name__ == "__main__":
         print("Available commandlines:")
         print("survey_csv.py file_path")
         print("survey_csv.py file_path [line_limit = {integer or all}] [encoding]")
-        print("\n Default file encoding is utf-8-sig, cp1252 is Windows default so worth a try, and iso-8859-1 encodes all bytes so at least it won't barf")
+        print(
+            "\n Default file encoding is utf-8-sig, cp1252 is Windows default so worth a try, and iso-8859-1 encodes all bytes so at least it won't barf"
+        )
         sys.exit()
     elif len(arg) == 1:
         file_path = arg[0]
@@ -182,4 +198,3 @@ if __name__ == "__main__":
         encoding = arg[2]
 
     survey_csv(file_path, line_limit, encoding)
-    

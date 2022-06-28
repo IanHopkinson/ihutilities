@@ -12,62 +12,85 @@ import time
 import zipfile
 
 from collections import OrderedDict
-from ihutilities import (configure_db, write_to_db, update_to_db, read_db, 
-                        calculate_file_sha, _normalise_config, check_mysql_database_exists,
-                        get_a_file_handle, split_zipfile_path)
+from ihutilities import (
+    configure_db,
+    write_to_db,
+    update_to_db,
+    read_db,
+    calculate_file_sha,
+    _normalise_config,
+    check_mysql_database_exists,
+    get_a_file_handle,
+    split_zipfile_path,
+)
 
 # from ihutilities.es_utils import check_es_database_exists
 
-# This dictionary has field names and field types. It should be reuseable between the configure_db and 
+# This dictionary has field names and field types. It should be reuseable between the configure_db and
 # write_to_db functions
 
-metadata_fields = OrderedDict([
-    ("SequenceNumber", "INTEGER PRIMARY KEY"),
-    ("data_path", "TEXT"),
-    ("datafile_sha", "TEXT"),
-    ("status", "TEXT"),
-    ("start_time", "TEXT"),
-    ("finish_time", "TEXT"),
-    ("last_write_time", "TEXT"),
-    ("chunk_count", "INTEGER")
-    ])
+metadata_fields = OrderedDict(
+    [
+        ("SequenceNumber", "INTEGER PRIMARY KEY"),
+        ("data_path", "TEXT"),
+        ("datafile_sha", "TEXT"),
+        ("status", "TEXT"),
+        ("start_time", "TEXT"),
+        ("finish_time", "TEXT"),
+        ("last_write_time", "TEXT"),
+        ("chunk_count", "INTEGER"),
+    ]
+)
 
-session_log_fields = OrderedDict([
-    ("ID", "INTEGER PRIMARY KEY"),
-    ("make_row_method", "TEXT"),
-    ("start_time", "TEXT"),
-    ("end_time", "TEXT"),
-    ("datafile_sha", "TEXT"),
-    ("first_chunk", "TEXT"),
-    ("last_chunk", "FLOAT"),
-    ])
+session_log_fields = OrderedDict(
+    [
+        ("ID", "INTEGER PRIMARY KEY"),
+        ("make_row_method", "TEXT"),
+        ("start_time", "TEXT"),
+        ("end_time", "TEXT"),
+        ("datafile_sha", "TEXT"),
+        ("first_chunk", "TEXT"),
+        ("last_chunk", "FLOAT"),
+    ]
+)
 
-metadata_fields_es = {"metadata": {"properties": {
-    "SequenceNumber": {"type": "integer"},
-    "data_path": {"type": "string"},
-    "datafile_sha": {"type": "string"},
-    "status": {"type": "string"},
-    "start_time": {"type": "string"},
-    "finish_time": {"type": "string"},
-    "last_write_time": {"type": "string"},
-    "chunk_count": {"type": "integer"},
-}}}
+metadata_fields_es = {
+    "metadata": {
+        "properties": {
+            "SequenceNumber": {"type": "integer"},
+            "data_path": {"type": "string"},
+            "datafile_sha": {"type": "string"},
+            "status": {"type": "string"},
+            "start_time": {"type": "string"},
+            "finish_time": {"type": "string"},
+            "last_write_time": {"type": "string"},
+            "chunk_count": {"type": "integer"},
+        }
+    }
+}
 
-session_log_fields_es = {"session_log": {"properties": {
-    "ID": {"type": "integer"},
-    "make_row_method": {"type": "string"},
-    "start_time": {"type": "string"},
-    "end_time": {"type": "string"},
-    "datafile_sha": {"type": "string"},
-    "first_chunk": {"type": "integer"},
-    "last_chunk": {"type": "integer"},
-}}}
+session_log_fields_es = {
+    "session_log": {
+        "properties": {
+            "ID": {"type": "integer"},
+            "make_row_method": {"type": "string"},
+            "start_time": {"type": "string"},
+            "end_time": {"type": "string"},
+            "datafile_sha": {"type": "string"},
+            "first_chunk": {"type": "integer"},
+            "last_chunk": {"type": "integer"},
+        }
+    }
+}
 
 logger = logging.getLogger(__name__)
 
-def make_row(input_row, data_path, data_field_lookup, db_fields, null_equivalents, autoinc, primary_key):
+
+def make_row(
+    input_row, data_path, data_field_lookup, db_fields, null_equivalents, autoinc, primary_key
+):
     new_row = OrderedDict([(x, None) for x in db_fields.keys()])
-     # zip input row into output row
+    # zip input row into output row
     for output_key in new_row.keys():
         # This inserts blank fields
         value = None
@@ -76,10 +99,18 @@ def make_row(input_row, data_path, data_field_lookup, db_fields, null_equivalent
                 try:
                     value = input_row[data_field_lookup[output_key]]
                 except IndexError:
-                    logger.warning("Required element number '{}' not found in input data list = {}".format(data_field_lookup[output_key], input_row))
+                    logger.warning(
+                        "Required element number '{}' not found in input data list = {}".format(
+                            data_field_lookup[output_key], input_row
+                        )
+                    )
                     return None
                 except KeyError:
-                    logger.warning("Required data field '{}' not found in input data = {}".format(data_field_lookup[output_key], input_row))
+                    logger.warning(
+                        "Required data field '{}' not found in input data = {}".format(
+                            data_field_lookup[output_key], input_row
+                        )
+                    )
                     raise
                 if value in null_equivalents:
                     value = None
@@ -98,9 +129,12 @@ def make_row(input_row, data_path, data_field_lookup, db_fields, null_equivalent
 
     return new_row
 
-def make_row_es(input_row, data_path, data_field_lookup, db_fields, null_equivalents, autoinc, primary_key):
-    new_row = OrderedDict([(x,None) for x in data_field_lookup.keys()])
-     # zip input row into output row
+
+def make_row_es(
+    input_row, data_path, data_field_lookup, db_fields, null_equivalents, autoinc, primary_key
+):
+    new_row = OrderedDict([(x, None) for x in data_field_lookup.keys()])
+    # zip input row into output row
     for output_key in new_row.keys():
         # This inserts blank fields
         value = None
@@ -109,14 +143,22 @@ def make_row_es(input_row, data_path, data_field_lookup, db_fields, null_equival
                 try:
                     value = input_row[data_field_lookup[output_key]]
                 except IndexError:
-                    logger.warning("Required element number '{}' not found in input data list = {}".format(data_field_lookup[output_key], input_row))
+                    logger.warning(
+                        "Required element number '{}' not found in input data list = {}".format(
+                            data_field_lookup[output_key], input_row
+                        )
+                    )
                     return None
                 except KeyError:
-                    logger.warning("Required data field '{}' not found in input data = {}".format(data_field_lookup[output_key], input_row))
+                    logger.warning(
+                        "Required data field '{}' not found in input data = {}".format(
+                            data_field_lookup[output_key], input_row
+                        )
+                    )
                     raise
                 if value in null_equivalents:
                     value = None
-        
+
             new_row[output_key] = value
     # If we have a field called ID as Primary Key and there is no lookup
     # for it we assume it is a synthetic key and put in an autoincrement value
@@ -124,6 +166,7 @@ def make_row_es(input_row, data_path, data_field_lookup, db_fields, null_equival
         new_row[primary_key] = None
 
     return new_row
+
 
 def get_source_generator(data_path, headers, separator, encoding):
     # See data manager for detecting zip files, and then picking up the right part
@@ -145,11 +188,27 @@ def get_source_generator(data_path, headers, separator, encoding):
         for row in rows:
             yield row
 
-def do_etl(db_fields, db_config, data_path, data_field_lookup,
-           mode="production", headers=True, null_equivalents=[""], force=False,
-           separator=",", encoding="utf-8-sig", table=None,
-           rowmaker=make_row, rowmaker_es=make_row_es, rowsource=get_source_generator,
-           test_line_limit=10000, chunk_size=None, skip=None, chaos_monkey=False):
+
+def do_etl(
+    db_fields,
+    db_config,
+    data_path,
+    data_field_lookup,
+    mode="production",
+    headers=True,
+    null_equivalents=[""],
+    force=False,
+    separator=",",
+    encoding="utf-8-sig",
+    table=None,
+    rowmaker=make_row,
+    rowmaker_es=make_row_es,
+    rowsource=get_source_generator,
+    test_line_limit=10000,
+    chunk_size=None,
+    skip=None,
+    chaos_monkey=False,
+):
     """This function uploads CSV files to a sqlite or MariaDB/MySQL database
 
     Args:
@@ -162,7 +221,7 @@ def do_etl(db_fields, db_config, data_path, data_field_lookup,
             A file path to the input CSV data or a zip file containing a CSV file with the same name
        data_field_lookup (dict):
             A dictionary linking database fields (as the key) to CSV columns (the value),
-            if headers exist the values are column names. If headers do not exist then the 
+            if headers exist the values are column names. If headers do not exist then the
             values are column numbers. If a field ID is specified with value None then it creates
             autoincrement unique key
 
@@ -170,7 +229,7 @@ def do_etl(db_fields, db_config, data_path, data_field_lookup,
        mode (str):
             "production" or "test".
             "test" loads 10000 lines to the database in 1000 line chunks.
-       headers (bool): 
+       headers (bool):
             Indicates whether headers are present in the input CSV file
             True indicates headers are present, DictReader is used for import and the data_field_lookup is to field names
             False indicates no headers, csvreader is used for import and the data_field_lookup lookup is to column numbers
@@ -200,41 +259,63 @@ def do_etl(db_fields, db_config, data_path, data_field_lookup,
             "Completed" if the ETL runs to completion, "Already done" if ETL has already been done
 
     """
-    logger.info("Starting ETL to database at {}".format(datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")))
+    logger.info(
+        "Starting ETL to database at {}".format(
+            datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        )
+    )
     logger.info("Input file is {}".format(data_path))
 
     # Scan parameters
     if mode == "production":
-        test_line_limit = float('inf') # float('inf')
+        test_line_limit = float("inf")  # float('inf')
         if chunk_size is None:
-            chunk_size = 10000 # 10000
-            report_size = 10000 # 10000
-        else:
-            report_size = chunk_size   
-    elif mode == "test":
-        test_line_limit = test_line_limit # float('inf')
-        if chunk_size is None:
-            chunk_size = 1000 # 10000
-            report_size = 1000 # 10000
+            chunk_size = 10000  # 10000
+            report_size = 10000  # 10000
         else:
             report_size = chunk_size
-        logger.info("Test mode so file_length is set to test_line_limit of {}".format(test_line_limit))
+    elif mode == "test":
+        test_line_limit = test_line_limit  # float('inf')
+        if chunk_size is None:
+            chunk_size = 1000  # 10000
+            report_size = 1000  # 10000
+        else:
+            report_size = chunk_size
+        logger.info(
+            "Test mode so file_length is set to test_line_limit of {}".format(test_line_limit)
+        )
         # Rename output database if we are in test mode but not if it already ends with test
         if isinstance(db_config, str) and not db_config.endswith("-test.sqlite"):
             db_config = db_config.replace(".sqlite", "-test.sqlite")
-            logger.info("Renamed output database to {} because we are in test mode".format(db_config))
-        elif (db_config["db_type"] == "mysql" or db_config["db_type"] == "mariadb") and not db_config["db_name"].endswith("_test"):
+            logger.info(
+                "Renamed output database to {} because we are in test mode".format(db_config)
+            )
+        elif (
+            db_config["db_type"] == "mysql" or db_config["db_type"] == "mariadb"
+        ) and not db_config["db_name"].endswith("_test"):
             db_config["db_name"] = db_config["db_name"] + "_test"
-            logger.info("Renamed output database to {} because we are in test mode".format(db_config["db_name"]))
-        elif (db_config["db_type"] == "elasticsearch") and not db_config["db_name"].endswith("-test"):
+            logger.info(
+                "Renamed output database to {} because we are in test mode".format(
+                    db_config["db_name"]
+                )
+            )
+        elif (db_config["db_type"] == "elasticsearch") and not db_config["db_name"].endswith(
+            "-test"
+        ):
             db_config["db_name"] = db_config["db_name"] + "-test"
-            logger.info("Renamed output database to {} because we are in test mode".format(db_config["db_name"]))
+            logger.info(
+                "Renamed output database to {} because we are in test mode".format(
+                    db_config["db_name"]
+                )
+            )
     else:
-        logger.critical("Mode should be either 'test' or 'production', mode supplied was '{}'".format(mode))
+        logger.critical(
+            "Mode should be either 'test' or 'production', mode supplied was '{}'".format(mode)
+        )
         sys.exit()
 
     db_config = _normalise_config(db_config)
-    
+
     # If force is false then return if ETL on this file has already been done
     zip_path, name_in_zip = split_zipfile_path(data_path)
 
@@ -245,19 +326,20 @@ def do_etl(db_fields, db_config, data_path, data_field_lookup,
         datafile_sha = rowsource.__name__
     t1 = time.time()
     logger.info("Calculating file sha took {:.2} seconds".format(t1 - t0))
-    
+
     already_done = check_if_already_done(data_path, db_config, datafile_sha)
-    
+
     if already_done and not force:
         logger.info("Data file has already been uploaded to database.")
         return db_config, "Already done"
 
     # Calculating file lengths can be slow so we leave doing it as late as possible
-    file_length = get_input_file_length(mode, rowsource, test_line_limit, data_path, headers, separator, encoding)
+    file_length = get_input_file_length(
+        mode, rowsource, test_line_limit, data_path, headers, separator, encoding
+    )
     log_report_size = int(round(file_length / 10, 0))
     if log_report_size == 0:
         log_report_size = 1
-    
 
     # If the table argument is None we assume we are writing to the property_data table and that db_fields describes one flat level table
     if db_config["db_type"] == "elasticsearch":
@@ -269,7 +351,7 @@ def do_etl(db_fields, db_config, data_path, data_field_lookup,
             revised_db_fields["session_log"] = {}
             revised_db_fields["property_data"]["mappings"] = db_fields
             revised_db_fields["metadata"]["mappings"] = metadata_fields_es
-            revised_db_fields["session_log"]["mappings"] = session_log_fields_es   
+            revised_db_fields["session_log"]["mappings"] = session_log_fields_es
             tables = ["property_data", "metadata", "session_log"]
         else:
             revised_db_fields = db_fields.copy()
@@ -292,11 +374,11 @@ def do_etl(db_fields, db_config, data_path, data_field_lookup,
             revised_db_fields = {}
             revised_db_fields["property_data"] = db_fields
             revised_db_fields["metadata"] = metadata_fields
-            revised_db_fields["session_log"] = session_log_fields   
+            revised_db_fields["session_log"] = session_log_fields
             tables = ["property_data", "metadata", "session_log"]
         else:
             revised_db_fields = db_fields.copy()
-            revised_db_fields["metadata"] = metadata_fields   
+            revised_db_fields["metadata"] = metadata_fields
             revised_db_fields["session_log"] = session_log_fields
             tables = list(db_fields.keys())
             tables.append("metadata")
@@ -323,30 +405,32 @@ def do_etl(db_fields, db_config, data_path, data_field_lookup,
     else:
         autoinc = False
 
-    # 
-    
+    #
 
     # Find out if we have already uploaded this file
     if db_config["db_type"] != "elasticsearch":
-        sql_query = "select * from metadata where datafile_sha = '{}' order by SequenceNumber desc;".format(datafile_sha)
+        sql_query = (
+            "select * from metadata where datafile_sha = '{}' order by SequenceNumber desc;".format(
+                datafile_sha
+            )
+        )
     else:
-        sql_query = {"sort" : [
-        { "SequenceNumber" : {"order" : "desc"}}
-                        ],
-                        "query": {
-                        "bool" : {
-                            "must" : [
-                                {"term" : { "datafile_sha" : datafile_sha }},
-                                {"term" : { "_type": "metadata"}}
-                                    ]
-                                    }
-                                }
-                            }
+        sql_query = {
+            "sort": [{"SequenceNumber": {"order": "desc"}}],
+            "query": {
+                "bool": {
+                    "must": [
+                        {"term": {"datafile_sha": datafile_sha}},
+                        {"term": {"_type": "metadata"}},
+                    ]
+                }
+            },
+        }
 
     results = list(read_db(sql_query, db_config))
 
     if len(results) == 0:
-    # Write start to metadata table
+        # Write start to metadata table
         last_id = get_current_sequencenumber(db_config)
         if last_id is None:
             id_ = 1
@@ -355,31 +439,34 @@ def do_etl(db_fields, db_config, data_path, data_field_lookup,
         start_time = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         # metadata = [(id_, data_path, datafile_sha,"Started", start_time, "", "", 0)]
 
-        metadata = [OrderedDict([
-            ("SequenceNumber", id_),
-            ("data_path", data_path),
-            ("datafile_sha", datafile_sha),
-            ("status", "Started"),
-            ("start_time", start_time),
-            ("finish_time", ""),
-            ("last_write_time", ""),
-            ("chunk_count", 0)])
-            ]
+        metadata = [
+            OrderedDict(
+                [
+                    ("SequenceNumber", id_),
+                    ("data_path", data_path),
+                    ("datafile_sha", datafile_sha),
+                    ("status", "Started"),
+                    ("start_time", start_time),
+                    ("finish_time", ""),
+                    ("last_write_time", ""),
+                    ("chunk_count", 0),
+                ]
+            )
+        ]
 
         write_to_db(metadata, db_config, revised_db_fields["metadata"], table="metadata")
         # Elasticsearch needs a little sleep before we can query for the results
         if db_config["db_type"] == "elasticsearch":
             time.sleep(2)
-        #sql_query = "select * from metadata where datafile_sha = '{}' order by SequenceNumber desc;".format(datafile_sha)
-        #print(results, flush=True)
+        # sql_query = "select * from metadata where datafile_sha = '{}' order by SequenceNumber desc;".format(datafile_sha)
+        # print(results, flush=True)
         results = list(read_db(sql_query, db_config))
-        id_ = results[0]["SequenceNumber"] 
+        id_ = results[0]["SequenceNumber"]
     else:
         id_ = results[0]["SequenceNumber"]
         start_time = results[0]["start_time"]
 
-    #print(id_, start_time, flush=True)
-
+    # print(id_, start_time, flush=True)
 
     # ** Add in session log code
     # Fetch chunk progress
@@ -393,7 +480,7 @@ def do_etl(db_fields, db_config, data_path, data_field_lookup,
 
     chunk_count = chunk_skip
     if chunk_skip != 0:
-        line_count_offset = (chunk_size * chunk_skip)
+        line_count_offset = chunk_size * chunk_skip
         line_count = 0
     else:
         line_count_offset = 0
@@ -405,92 +492,119 @@ def do_etl(db_fields, db_config, data_path, data_field_lookup,
 
     # Update session log here
     time_ = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    #session_log_data = [(None, rowsource.__name__, time_, time_, datafile_sha, chunk_skip, chunk_skip)]
+    # session_log_data = [(None, rowsource.__name__, time_, time_, datafile_sha, chunk_skip, chunk_skip)]
 
     # We need to get the latest sessid here rather than using autoincrement
     if db_config["db_type"] != "elasticsearch":
         sql_query = "select max(ID) as ID from session_log;"
     else:
-        sql_query = {"sort" : [
-        { "ID" : {"order" : "desc"}}
-                        ],
-                        "query": {
-                        "bool" : {
-                            "must" : [
-                                {"term" : { "_type": "session_log"}}
-                                    ]
-                                    }
-                                }
-                            }
+        sql_query = {
+            "sort": [{"ID": {"order": "desc"}}],
+            "query": {"bool": {"must": [{"term": {"_type": "session_log"}}]}},
+        }
 
     results = list(read_db(sql_query, db_config))
-    
+
     if len(results) > 0 and results[0]["ID"] is not None:
         new_sessid = results[0]["ID"] + 1
     else:
         new_sessid = 1
-    
-    # We need 
-    session_log_data = [OrderedDict([
-    ("ID", new_sessid),
-    ("make_row_method", rowsource.__name__),
-    ("start_time", time_),
-    ("end_time", time_),
-    ("datafile_sha", datafile_sha),
-    ("first_chunk", chunk_skip),
-    ("last_chunk", chunk_skip),
-    ])]
+
+    # We need
+    session_log_data = [
+        OrderedDict(
+            [
+                ("ID", new_sessid),
+                ("make_row_method", rowsource.__name__),
+                ("start_time", time_),
+                ("end_time", time_),
+                ("datafile_sha", datafile_sha),
+                ("first_chunk", chunk_skip),
+                ("last_chunk", chunk_skip),
+            ]
+        )
+    ]
 
     write_to_db(session_log_data, db_config, revised_db_fields["session_log"], table="session_log")
     if db_config["db_type"] == "elasticsearch":
         time.sleep(2)
     # Pick up session log data
     if db_config["db_type"] != "elasticsearch":
-        sql_query = "select * from session_log where datafile_sha = '{}' order by ID desc;".format(datafile_sha)
+        sql_query = "select * from session_log where datafile_sha = '{}' order by ID desc;".format(
+            datafile_sha
+        )
     else:
-        sql_query = {"sort" : [
-        { "ID" : {"order" : "desc"}},
-                        ],
-                        "query": {
-                        "bool" : {
-                            "must" : [
-                                {"term" : { "datafile_sha" : datafile_sha }},
-                                {"term" : { "_type": "session_log"}}
-                                    ]
-                                    }
-                                }
-                            }
+        sql_query = {
+            "sort": [
+                {"ID": {"order": "desc"}},
+            ],
+            "query": {
+                "bool": {
+                    "must": [
+                        {"term": {"datafile_sha": datafile_sha}},
+                        {"term": {"_type": "session_log"}},
+                    ]
+                }
+            },
+        }
 
-    
     results = list(read_db(sql_query, db_config))
     sessid = results[0]["ID"]
 
-    #**End session log code
+    # **End session log code
 
     rows = rowsource(data_path, headers, separator, encoding)
-        # Loop over input rows
+    # Loop over input rows
     try:
         for i, row in enumerate(rows):
             if mode == "test" and chaos_monkey and (i > chunk_size + 1):
-                logger.critical("Chaos monkey invoked, hitting exit at input file line {}".format(i))
-                logger.critical("If you don't want this to happen don't set chaos_monkey=True in do_etl!")
+                logger.critical(
+                    "Chaos monkey invoked, hitting exit at input file line {}".format(i)
+                )
+                logger.critical(
+                    "If you don't want this to happen don't set chaos_monkey=True in do_etl!"
+                )
                 return db_config, "Chaos monkey invoked"
             # Line skipping code goes here
             if i < line_count_offset:
                 if (i % chunk_size) == 0:
-                    print("Skipping chunk {:.0f}, line = ({:d})".format(i/chunk_size, i), flush=True, end="\r")
+                    print(
+                        "Skipping chunk {:.0f}, line = ({:d})".format(i / chunk_size, i),
+                        flush=True,
+                        end="\r",
+                    )
                 continue
 
             line_count += 1
             # Zip the input data into a row for the database
             if db_config["db_type"] != "elasticsearch":
-                new_rows =  rowmaker(row, data_path, data_field_lookup, revised_db_fields[table], null_equivalents, autoinc, primary_key)
+                new_rows = rowmaker(
+                    row,
+                    data_path,
+                    data_field_lookup,
+                    revised_db_fields[table],
+                    null_equivalents,
+                    autoinc,
+                    primary_key,
+                )
             else:
-                new_rows =  rowmaker_es(row, data_path, data_field_lookup, revised_db_fields[table], null_equivalents, autoinc, primary_key)
-            
-                        # Drop a line if it is malformed
+                new_rows = rowmaker_es(
+                    row,
+                    data_path,
+                    data_field_lookup,
+                    revised_db_fields[table],
+                    null_equivalents,
+                    autoinc,
+                    primary_key,
+                )
+
+                # Drop a line if it is malformed
             if new_rows is None:
-                logger.debug("Dropped input line = {} because a valid row could not be made from it".format(row))
+                logger.debug(
+                    "Dropped input line = {} because a valid row could not be made from it".format(
+                        row
+                    )
+                )
                 malformed_lines += 1
                 continue
 
@@ -500,60 +614,96 @@ def do_etl(db_fields, db_config, data_path, data_field_lookup,
             # Drop row if it has a duplicate primary key
 
             for new_row in new_rows:
-                if autoinc or (primary_key is None) or (new_row[primary_key] not in primary_key_set):
-                    #data.append(([x for x in new_row.values()]))
+                if (
+                    autoinc
+                    or (primary_key is None)
+                    or (new_row[primary_key] not in primary_key_set)
+                ):
+                    # data.append(([x for x in new_row.values()]))
                     data.append(new_row)
                     if primary_key is not None:
                         primary_key_set.add(new_row[primary_key])
                 else:
-                    #print("UPRN is a duplicate: {}".format(new_row["UPRN"]))
+                    # print("UPRN is a duplicate: {}".format(new_row["UPRN"]))
                     duplicate_primary_keys.add(new_row[primary_key])
                     lines_dropped += 1
                     logger.warning("Lines dropped = {}, do not use resume".format(lines_dropped))
-                    #print("UPRN = {} has already been seen".format(row[0])) 
+                    # print("UPRN = {} has already been seen".format(row[0]))
 
             # Print an interim report
             if (line_count % report_size) == 0 and line_count != 0:
-                est_completion_time = ((time.time() - t0) / line_count) * (min(file_length, test_line_limit) - (line_count + line_count_offset))
-                completion_str = (datetime.datetime.now() + datetime.timedelta(seconds=est_completion_time)).strftime("%Y-%m-%d %H:%M:%S")
-                print("Wrote {}/{} at ({}). Estimated completion time: {}".format(
-                        line_count + line_count_offset, 
+                est_completion_time = ((time.time() - t0) / line_count) * (
+                    min(file_length, test_line_limit) - (line_count + line_count_offset)
+                )
+                completion_str = (
+                    datetime.datetime.now() + datetime.timedelta(seconds=est_completion_time)
+                ).strftime("%Y-%m-%d %H:%M:%S")
+                print(
+                    "Wrote {}/{} at ({}). Estimated completion time: {}".format(
+                        line_count + line_count_offset,
                         file_length,
                         datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-                        completion_str), end="\r", flush=True)
-                t_last = time.time()
-            
-            if (line_count % log_report_size) == 0 and line_count != 0:
-                est_completion_time = ((time.time() - t0) / line_count) * (min(file_length, test_line_limit) - (line_count + line_count_offset))
-                completion_str = (datetime.datetime.now() + datetime.timedelta(seconds=est_completion_time)).strftime("%Y-%m-%d %H:%M:%S")
-                logging.info("Wrote {}/{} at ({}). Estimated completion time: {}".format(
-                        line_count + line_count_offset, 
-                        file_length,
-                        datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-                        completion_str))
+                        completion_str,
+                    ),
+                    end="\r",
+                    flush=True,
+                )
                 t_last = time.time()
 
-            # Write a chunk to the database            
+            if (line_count % log_report_size) == 0 and line_count != 0:
+                est_completion_time = ((time.time() - t0) / line_count) * (
+                    min(file_length, test_line_limit) - (line_count + line_count_offset)
+                )
+                completion_str = (
+                    datetime.datetime.now() + datetime.timedelta(seconds=est_completion_time)
+                ).strftime("%Y-%m-%d %H:%M:%S")
+                logging.info(
+                    "Wrote {}/{} at ({}). Estimated completion time: {}".format(
+                        line_count + line_count_offset,
+                        file_length,
+                        datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                        completion_str,
+                    )
+                )
+                t_last = time.time()
+
+            # Write a chunk to the database
             if (line_count % chunk_size) == 0:
                 if len(data) != 0:
                     try:
                         write_to_db(data, db_config, revised_db_fields[table], table=table)
                     except:
-                        logger.warning("A bad thing happened on attempting to upload chunk to db, doing it line by line to find problem")
+                        logger.warning(
+                            "A bad thing happened on attempting to upload chunk to db, doing it line by line to find problem"
+                        )
                         logger.warning("If this succeeds likely problem is oversized chunk of data")
                         for i, d in enumerate(data):
                             logger.info("{}. About to upload {}".format(i, d))
                             write_to_db([d], db_config, revised_db_fields[table], table=table)
-                            
+
                 chunk_count += 1
                 # Update chunk_count to db metadata
-                metadata = [OrderedDict([("chunk_count", chunk_count), ("SequenceNumber",id_)])]
-                update_to_db(metadata, db_config, ["chunk_count", "SequenceNumber"], table="metadata", key="SequenceNumber")
+                metadata = [OrderedDict([("chunk_count", chunk_count), ("SequenceNumber", id_)])]
+                update_to_db(
+                    metadata,
+                    db_config,
+                    ["chunk_count", "SequenceNumber"],
+                    table="metadata",
+                    key="SequenceNumber",
+                )
                 # Update current time and chunk count to session log
                 time_ = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-                session_log = [OrderedDict([("last_chunk", chunk_count), ("end_time",time_), ("ID", sessid)])]
-                
-                update_to_db(session_log, db_config, ["last_chunk", "end_time", "ID"], table="session_log", key="ID")
+                session_log = [
+                    OrderedDict([("last_chunk", chunk_count), ("end_time", time_), ("ID", sessid)])
+                ]
+
+                update_to_db(
+                    session_log,
+                    db_config,
+                    ["last_chunk", "end_time", "ID"],
+                    table="session_log",
+                    key="ID",
+                )
                 data = []
 
             # Break if we have reached test_line_limit
@@ -561,24 +711,31 @@ def do_etl(db_fields, db_config, data_path, data_field_lookup,
                 break
     except Exception as ex:
         logger.critical("Encountered exception '{}' at line_count = {}".format(ex, line_count))
-        #print("Row: {}".format(row))
-        #for key in row.keys():
+        # print("Row: {}".format(row))
+        # for key in row.keys():
         #    print("Key: '{:30}', value: '{:}'".format(key, row[key]))
         # raise
         # print("Carrying on regardless", flush=True)
-        raise   
+        raise
 
     # Final write to database
     logging.info("Final write to database of {} lines".format(len(data)))
     write_to_db(data, db_config, revised_db_fields[table], whatever=True, table=table)
 
-
     # Write a final report
     t1 = time.time()
     elapsed = t1 - t0
-    logger.info("Wrote a total {} lines to the database in {:.2f}s".format(line_count + line_count_offset, elapsed))
+    logger.info(
+        "Wrote a total {} lines to the database in {:.2f}s".format(
+            line_count + line_count_offset, elapsed
+        )
+    )
     if lines_dropped > 0:
-        logger.warning("Dropped {} lines because they contained duplicate primary key ({})".format(lines_dropped, primary_key))
+        logger.warning(
+            "Dropped {} lines because they contained duplicate primary key ({})".format(
+                lines_dropped, primary_key
+            )
+        )
 
     if malformed_lines > 0:
         logger.warning("Dropped {} lines because they were malformed".format(malformed_lines))
@@ -589,41 +746,40 @@ def do_etl(db_fields, db_config, data_path, data_field_lookup,
     actual_id = get_current_sequencenumber(db_config)
 
     # Make a final write to the metadata table
-    metadata = [(actual_id, data_path, datafile_sha,"Complete", start_time, finish_time, finish_time)]
+    metadata = [
+        (actual_id, data_path, datafile_sha, "Complete", start_time, finish_time, finish_time)
+    ]
     update_fields = [x for x in revised_db_fields["metadata"].keys()]
-    metadata = [OrderedDict([
-            ("SequenceNumber", actual_id),
-            ("data_path", data_path),
-            ("datafile_sha", datafile_sha),
-            ("status", "Complete"),
-            ("start_time", start_time),
-            ("finish_time", finish_time),
-            ("last_write_time", finish_time),
-            ("chunk_count", chunk_count)])
+    metadata = [
+        OrderedDict(
+            [
+                ("SequenceNumber", actual_id),
+                ("data_path", data_path),
+                ("datafile_sha", datafile_sha),
+                ("status", "Complete"),
+                ("start_time", start_time),
+                ("finish_time", finish_time),
+                ("last_write_time", finish_time),
+                ("chunk_count", chunk_count),
             ]
+        )
+    ]
 
     update_to_db(metadata, db_config, update_fields, table="metadata", key="SequenceNumber")
 
     return db_config, "Completed"
+
 
 def get_current_sequencenumber(db_config):
     # Get metadata id_ back out of the database
     if db_config["db_type"] != "elasticsearch":
         sql_query = "select max(SequenceNumber) as SequenceNumber from metadata;"
     else:
-        sql_query = {"sort" : [
-        { "SequenceNumber" : {"order" : "desc"}}
-                        ],
-                        "query": {
-                        "bool" : {
-                            "must" : [
-                                {"term" : { "_type": "metadata"}}
-                                    ]
-                                    }
-                                }
-                            }
+        sql_query = {
+            "sort": [{"SequenceNumber": {"order": "desc"}}],
+            "query": {"bool": {"must": [{"term": {"_type": "metadata"}}]}},
+        }
 
-    
     results = list(read_db(sql_query, db_config))
     if len(results) != 0:
         actual_id = results[0]["SequenceNumber"]
@@ -632,17 +788,27 @@ def get_current_sequencenumber(db_config):
 
     return actual_id
 
-def get_input_file_length(mode, rowsource, test_line_limit, data_path, headers, separator, encoding):
+
+def get_input_file_length(
+    mode, rowsource, test_line_limit, data_path, headers, separator, encoding
+):
     if mode == "production":
         logger.info("Measuring length of input file...")
-        file_length = report_input_length(rowsource, test_line_limit, data_path, headers, separator, encoding)   
+        file_length = report_input_length(
+            rowsource, test_line_limit, data_path, headers, separator, encoding
+        )
     elif mode == "test":
-        logger.info("Test mode so file_length is set to test_line_limit of {}".format(test_line_limit))
+        logger.info(
+            "Test mode so file_length is set to test_line_limit of {}".format(test_line_limit)
+        )
         if test_line_limit == float("inf"):
-            file_length = report_input_length(rowsource, test_line_limit, data_path, headers, separator, encoding)
+            file_length = report_input_length(
+                rowsource, test_line_limit, data_path, headers, separator, encoding
+            )
         else:
             file_length = test_line_limit
     return file_length
+
 
 def check_if_already_done(data_path, db_config, datafile_sha):
     db_config = _normalise_config(db_config)
@@ -661,32 +827,38 @@ def check_if_already_done(data_path, db_config, datafile_sha):
 
     # Look for the datafile_sha in the metadata table and if it exists, return True
     if db_config["db_type"] != "elasticsearch":
-        sql_query = "select * from metadata where datafile_sha = '{}' and status = 'Complete'".format(datafile_sha)
+        sql_query = (
+            "select * from metadata where datafile_sha = '{}' and status = 'Complete'".format(
+                datafile_sha
+            )
+        )
     else:
-        sql_query = {   "query": {
-                        "bool" : {
-                            "must" : [
-                                {"term" : { "datafile_sha" : datafile_sha }},
-                                {"term" : { "_type": "metadata"}},
-                                {"term" : { "status": "complete"}}
-                                    ]
-                                    }
-                                }
-                            }
-    
+        sql_query = {
+            "query": {
+                "bool": {
+                    "must": [
+                        {"term": {"datafile_sha": datafile_sha}},
+                        {"term": {"_type": "metadata"}},
+                        {"term": {"status": "complete"}},
+                    ]
+                }
+            }
+        }
+
     results = list(read_db(sql_query, db_config))
-    
-    #sql_query = "select * from metadata where datafile_path = '{}' and status = 'Complete'".format(datafile_path)
+
+    # sql_query = "select * from metadata where datafile_path = '{}' and status = 'Complete'".format(datafile_path)
     logging.debug("Checking for completeness of {} with {}".format(db_config, sql_query))
-    
+
     # print(results, flush=True)
-    
+
     if len(results) == 1:
         return True
     else:
         return False
 
     return status
+
 
 def make_point(row, data_field_lookup):
     try:
@@ -700,24 +872,29 @@ def make_point(row, data_field_lookup):
     point = "POINT({} {})".format(easting, northing)
     return point
 
+
 def get_primary_key_from_db_fields(db_fields):
     primary_key = None
     for key, value in db_fields.items():
         if "PRIMARY KEY" in value.upper():
             primary_key = key
 
-    #if primary_key is None:
+    # if primary_key is None:
     #    raise RuntimeError("No primary key found")
 
     return primary_key
 
+
 def report_input_length(rowsource, test_line_limit, data_path, headers, separator, encoding):
     t0 = time.time()
 
-    file_length = sum(1 for row in rowsource(data_path, headers, separator, encoding)) - 1 #Take off the header line
+    file_length = (
+        sum(1 for row in rowsource(data_path, headers, separator, encoding)) - 1
+    )  # Take off the header line
     logger.info("{} lines available, limit set to {}".format(file_length, test_line_limit))
     logger.info("{:.2f}s taken to count lines\n".format(time.time() - t0))
     return file_length
+
 
 def make_dbfields(file_path):
     fh = get_a_file_handle(file_path)
@@ -731,7 +908,15 @@ def make_dbfields(file_path):
     data_field_lookup_array = []
 
     for source_field in headers:
-        destination_field = source_field.replace("-", "_").replace(" ", "_").replace("(", "_").replace(")", "_").replace(".", "_").replace("/", "_").replace(",", "_")
+        destination_field = (
+            source_field.replace("-", "_")
+            .replace(" ", "_")
+            .replace("(", "_")
+            .replace(")", "_")
+            .replace(".", "_")
+            .replace("/", "_")
+            .replace(",", "_")
+        )
         DB_FIELDS_ARRAY.append((destination_field, "TEXT"))
         data_field_lookup_array.append((destination_field, source_field))
 
@@ -740,10 +925,15 @@ def make_dbfields(file_path):
 
     return DB_FIELDS, data_field_lookup
 
+
 def get_chunk_count(id_, datafile_sha, cache_db):
-    sql_query = "select chunk_count from metadata where datafile_sha='{}' and SequenceNumber = {};".format(datafile_sha, id_) 
+    sql_query = (
+        "select chunk_count from metadata where datafile_sha='{}' and SequenceNumber = {};".format(
+            datafile_sha, id_
+        )
+    )
     result = list(read_db(sql_query, cache_db))
-    
+
     if len(result) == 1:
         chunk_count = result[0]["chunk_count"]
     else:
@@ -751,20 +941,22 @@ def get_chunk_count(id_, datafile_sha, cache_db):
 
     return chunk_count
 
+
 def get_chunk_count_es(id_, datafile_sha, cache_db):
-    sql_query = {"query": {
-                 "bool" : {
-                            "must" : [
-                                {"term" : { "datafile_sha" : datafile_sha }},
-                                {"term" : { "SequenceNumber" : id_ }},
-                                {"term" : { "_type": "metadata"}}
-                                    ]
-                                    }
-                                }
-                            }
+    sql_query = {
+        "query": {
+            "bool": {
+                "must": [
+                    {"term": {"datafile_sha": datafile_sha}},
+                    {"term": {"SequenceNumber": id_}},
+                    {"term": {"_type": "metadata"}},
+                ]
+            }
+        }
+    }
 
     result = list(read_db(sql_query, cache_db))
-    
+
     if len(result) == 1:
         chunk_count = result[0]["chunk_count"]
     else:

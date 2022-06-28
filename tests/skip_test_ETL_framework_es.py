@@ -8,19 +8,23 @@ import time
 
 from collections import OrderedDict
 
-from ihutilities.ETL_framework import (do_etl, check_if_already_done)
+from ihutilities.ETL_framework import do_etl, check_if_already_done
 
 sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-result = sock.connect_ex(('localhost',9200))
+result = sock.connect_ex(("localhost", 9200))
 if result == 0:
     elastic_search_not_running = False
     import elasticsearch
-    from ihutilities.es_utils import (es_config_template, delete_es,
-                                  check_es_database_exists, write_to_es)
+    from ihutilities.es_utils import (
+        es_config_template,
+        delete_es,
+        check_es_database_exists,
+        write_to_es,
+    )
 else:
     elastic_search_not_running = True
 
-#from ihutilities.es_utils import configure_es,  es_config_template, delete_es
+# from ihutilities.es_utils import configure_es,  es_config_template, delete_es
 
 
 @unittest.skipIf(elastic_search_not_running, "Elasticsearch is not running so skipping tests")
@@ -32,16 +36,18 @@ class TestETLFramework_es(unittest.TestCase):
                 "properties": {
                     "ID": {"type": "integer"},
                     "Letter": {"type": "string"},
-                    "Number": {"type": "string"}
+                    "Number": {"type": "string"},
                 }
             }
-            }
+        }
 
-        cls.data_field_lookup = OrderedDict([
-        ("ID"                               , "ID"),
-        ("Letter"                           , "Letter"),
-        ("Number"                           , "Number"),
-        ])
+        cls.data_field_lookup = OrderedDict(
+            [
+                ("ID", "ID"),
+                ("Letter", "Letter"),
+                ("Number", "Number"),
+            ]
+        )
 
         cls.test_root = os.path.dirname(__file__)
         cls.datapath = os.path.join(cls.test_root, "fixtures", "survey_csv.csv")
@@ -52,12 +58,33 @@ class TestETLFramework_es(unittest.TestCase):
         delete_es(cls.db_config)
 
     def test_do_etl_1(self):
-        _, status = do_etl(self.DB_FIELDS, self.db_config, self.datapath, self.data_field_lookup, mode="production", force=True)
+        _, status = do_etl(
+            self.DB_FIELDS,
+            self.db_config,
+            self.datapath,
+            self.data_field_lookup,
+            mode="production",
+            force=True,
+        )
         assert status == "Completed"
-    
+
     def test_do_etl_two_stage(self):
-        _, status = do_etl(self.DB_FIELDS, self.db_config, self.datapath, self.data_field_lookup, mode="production", force=True)
-        _, status = do_etl(self.DB_FIELDS, self.db_config, self.datapath2, self.data_field_lookup, mode="production", force=False)
+        _, status = do_etl(
+            self.DB_FIELDS,
+            self.db_config,
+            self.datapath,
+            self.data_field_lookup,
+            mode="production",
+            force=True,
+        )
+        _, status = do_etl(
+            self.DB_FIELDS,
+            self.db_config,
+            self.datapath2,
+            self.data_field_lookup,
+            mode="production",
+            force=False,
+        )
         assert status == "Completed"
         # Check for stages one and two in the metadata table
         # sql_query = "select SequenceNumber from metadata"
@@ -65,12 +92,30 @@ class TestETLFramework_es(unittest.TestCase):
         # sequence_numbers = {x["SequenceNumber"] for x in results}
 
         # assert sequence_numbers == set([1, 2])
-    
+
     def test_do_etl_session_log(self):
-        _, status = do_etl(self.DB_FIELDS, self.db_config, self.datapath, self.data_field_lookup, mode="test", chunk_size=10, force=True, chaos_monkey=True)
-        
-        mod_config, status = do_etl(self.DB_FIELDS, self.db_config, self.datapath, self.data_field_lookup, mode="test", chunk_size=10, force=False, chaos_monkey=False)
-        
+        _, status = do_etl(
+            self.DB_FIELDS,
+            self.db_config,
+            self.datapath,
+            self.data_field_lookup,
+            mode="test",
+            chunk_size=10,
+            force=True,
+            chaos_monkey=True,
+        )
+
+        mod_config, status = do_etl(
+            self.DB_FIELDS,
+            self.db_config,
+            self.datapath,
+            self.data_field_lookup,
+            mode="test",
+            chunk_size=10,
+            force=False,
+            chaos_monkey=False,
+        )
+
         assert status == "Completed"
         # check for sessions 1 and 2 in the session log, check we have 35 lines in the data table
         # Check for stages one and two in the metadata table
@@ -86,22 +131,39 @@ class TestETLFramework_es(unittest.TestCase):
         if os.path.isfile(db_config):
             os.remove(db_config)
 
-        data_field_lookup = OrderedDict([
-        ("ID"                               , 0),
-        ("Letter"                           , 1),
-        ("Number"                           , 2),
-        ])
+        data_field_lookup = OrderedDict(
+            [
+                ("ID", 0),
+                ("Letter", 1),
+                ("Number", 2),
+            ]
+        )
 
-        db_config, status = do_etl(self.DB_FIELDS, self.db_config, datapath, data_field_lookup, mode="production", force=True, headers=False)
+        db_config, status = do_etl(
+            self.DB_FIELDS,
+            self.db_config,
+            datapath,
+            data_field_lookup,
+            mode="production",
+            force=True,
+            headers=False,
+        )
         assert status == "Completed"
         # sql_query = "select * from property_data;"
         # results = list(read_db(sql_query, db_config))
         # self.assertEqual(len(results), 3)
 
-
     def test_check_if_already_done(self):
-        mod_config, status = do_etl(self.DB_FIELDS, self.db_config, self.datapath, self.data_field_lookup, mode="production", force=True)
+        mod_config, status = do_etl(
+            self.DB_FIELDS,
+            self.db_config,
+            self.datapath,
+            self.data_field_lookup,
+            mode="production",
+            force=True,
+        )
         time.sleep(2)
-        result = check_if_already_done(self.datapath, mod_config, "d607339fd4d5ecc01e26b18d86983f305533d20c")
+        result = check_if_already_done(
+            self.datapath, mod_config, "d607339fd4d5ecc01e26b18d86983f305533d20c"
+        )
         self.assertEqual(result, True)
-

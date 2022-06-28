@@ -6,30 +6,37 @@ import unittest
 
 from collections import OrderedDict
 
-from ihutilities.ETL_framework import (make_point, report_input_length,
-                                       get_primary_key_from_db_fields,
-                                       get_source_generator,
-                                       make_row)
-
+from ihutilities.ETL_framework import (
+    make_point,
+    report_input_length,
+    get_primary_key_from_db_fields,
+    get_source_generator,
+    make_row,
+)
 
 
 class TestETLUnits(unittest.TestCase):
     """
     Class containing tests for the units of do_etl
     """
+
     @classmethod
     def setUpClass(cls):
-        cls.DB_FIELDS = OrderedDict([
-        ("ID"                               , "INTEGER PRIMARY KEY"),
-        ("Letter"                           , "FLOAT"),
-        ("Number"                           , "FLOAT"),
-        ])
+        cls.DB_FIELDS = OrderedDict(
+            [
+                ("ID", "INTEGER PRIMARY KEY"),
+                ("Letter", "FLOAT"),
+                ("Number", "FLOAT"),
+            ]
+        )
 
-        cls.data_field_lookup = OrderedDict([
-        ("ID"                               , "ID"),
-        ("Letter"                           , "Letter"),
-        ("Number"                           , "Number"),
-        ])
+        cls.data_field_lookup = OrderedDict(
+            [
+                ("ID", "ID"),
+                ("Letter", "Letter"),
+                ("Number", "Number"),
+            ]
+        )
 
         cls.test_root = os.path.dirname(__file__)
         cls.datapath = os.path.join(cls.test_root, "fixtures", "survey_csv.csv")
@@ -46,7 +53,9 @@ class TestETLUnits(unittest.TestCase):
 
     def test_report_input_length(self):
         test_line_limit = 1000
-        file_length = report_input_length(get_source_generator, test_line_limit, self.datapath, False, ",", "utf-8-sig")
+        file_length = report_input_length(
+            get_source_generator, test_line_limit, self.datapath, False, ",", "utf-8-sig"
+        )
         self.assertEqual(file_length, 35)
 
     def test_get_primary_key_from_db_fields(self):
@@ -64,9 +73,11 @@ class TestETLUnits(unittest.TestCase):
         autoinc = True
         primary_key = "ID"
 
-        data_row = make_row(input_row, data_path, autoinc_lookup, db_fields, null_equivalents, autoinc, primary_key)
+        data_row = make_row(
+            input_row, data_path, autoinc_lookup, db_fields, null_equivalents, autoinc, primary_key
+        )
 
-        self.assertEqual(data_row, OrderedDict([('ID', None), ('Letter', 'A'), ('Number', 1)]))
+        self.assertEqual(data_row, OrderedDict([("ID", None), ("Letter", "A"), ("Number", 1)]))
 
     def test_make_row_raises_an_error_if_field_missing(self):
         input_row = {"Goblin": "A", "Number": 1}
@@ -78,4 +89,14 @@ class TestETLUnits(unittest.TestCase):
         autoinc = True
         primary_key = "ID"
 
-        self.assertRaises(KeyError, make_row, input_row, data_path, autoinc_lookup, db_fields, null_equivalents, autoinc, primary_key)
+        self.assertRaises(
+            KeyError,
+            make_row,
+            input_row,
+            data_path,
+            autoinc_lookup,
+            db_fields,
+            null_equivalents,
+            autoinc,
+            primary_key,
+        )

@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # encoding: utf-8
-    
+
 import sys
 from ihutilities import calculate_file_sha
 
@@ -14,4 +14,3 @@ if __name__ == "__main__":
         filepath = arg[0]
 
     print(calculate_file_sha(filepath))
-    

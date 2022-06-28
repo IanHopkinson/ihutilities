@@ -16,8 +16,13 @@ from pprint import pprint
 
 def survey_json(file_path, line_limit=1000, encoding=None):
     if encoding is None:
-        encoding = 'utf-8-sig'
-    print("\nStarting surveying {} at {}".format(file_path, datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")), flush=True)
+        encoding = "utf-8-sig"
+    print(
+        "\nStarting surveying {} at {}".format(
+            file_path, datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        ),
+        flush=True,
+    )
     t0 = time.time()
     # Count the lines in a CSV
     # List the fields in a CSV (so they can be copy pasted)
@@ -34,8 +39,8 @@ def survey_json(file_path, line_limit=1000, encoding=None):
         # try:
         r = requests.get(file_path)
         json_data = r.json()
-        #except:
-        #r = None
+        # except:
+        # r = None
     else:
         with open(file_path, encoding=encoding) as f:
             json_data = json.load(f)
@@ -44,10 +49,10 @@ def survey_json(file_path, line_limit=1000, encoding=None):
 
     pprint(flattened_data)
 
-        # for el in flattened_data.keys():
-        #     print(key, flattened_data, flush=True)
+    # for el in flattened_data.keys():
+    #     print(key, flattened_data, flush=True)
 
-        # print(json_data.keys(), flush=True)
+    # print(json_data.keys(), flush=True)
 
     # with open(file_path, encoding=encoding) as f:
     #     rows = csv.reader(f)
@@ -56,7 +61,6 @@ def survey_json(file_path, line_limit=1000, encoding=None):
     # field_set = {}
     # for field in headers:
     #     field_set[field] = set()
-
 
     # with open(file_path, encoding=encoding) as f:
     #     rows = csv.DictReader(f)
@@ -84,13 +88,13 @@ def survey_json(file_path, line_limit=1000, encoding=None):
     #         print("Encountered exception '{}' at line_count = {}".format(ex, line_count))
     #         print("Aborting")
 
-
     # print("\nSurvey final results")
     # print("==============")
     # t1 = time.time()
     # elapsed = t1 - t0
     # line_count = line_count - 2
     # print_report(file_path, elapsed, line_limit, line_count, headers, filled_count, field_set)
+
 
 def print_report(file_path, elapsed, line_limit, line_count, headers, filled_count, field_set):
 
@@ -122,16 +126,22 @@ def print_report(file_path, elapsed, line_limit, line_count, headers, filled_cou
                     array.append(convfunc(x))
                 except:
                     pass
-        #array = [convfunc(x) for x in field_set[field] if x not in ["", None]]
-        if len(array) != 0: 
+        # array = [convfunc(x) for x in field_set[field] if x not in ["", None]]
+        if len(array) != 0:
             minimum = min(array)
             maximum = max(array)
         else:
             minimum = None
             maximum = None
-        print("{0: <3}, {1: <30}, {2: <10}, {3: <10}, {4:}, {5:}, {6:}".format(i,field, filled_count[field], distinct_count, type_, minimum, maximum), flush=True)
+        print(
+            "{0: <3}, {1: <30}, {2: <10}, {3: <10}, {4:}, {5:}, {6:}".format(
+                i, field, filled_count[field], distinct_count, type_, minimum, maximum
+            ),
+            flush=True,
+        )
 
     return
+
 
 def type_sniff(field_set, field):
     data_set = field_set[field]
@@ -169,40 +179,43 @@ def type_sniff(field_set, field):
         type_scores["StringType"] += 1
 
     try:
-        type_ = type_scores.most_common(1)[0][0] 
-        #type_ = type_scores.most_common(5)
+        type_ = type_scores.most_common(1)[0][0]
+        # type_ = type_scores.most_common(5)
         anti_type = fail_scores.most_common(5)
     except:
         type_ = "NoneType"
         anti_type = "NoneType"
 
-    return type_ #, anti_type
+    return type_  # , anti_type
+
 
 def unwind_nested_dictionary(source, destination, root=""):
     if destination is None:
         destination = {}
 
-    #print(source, flush=True)
+    # print(source, flush=True)
     # if not isinstance(source, dict):
     #     print(type(source), source, flush=True)
     #     return destination
 
-    
     for k, v in source.items():
-        #print(k,v, type(v))
+        # print(k,v, type(v))
         if isinstance(v, dict):
-            unwind_nested_dictionary(v, destination, root=root+"-"+k)
+            unwind_nested_dictionary(v, destination, root=root + "-" + k)
         elif isinstance(v, list) and len(v) != 0:
             if isinstance(v[0], dict):
                 n = len(v)
-                unwind_nested_dictionary(v[0], destination, root=root+"-"+k+"[1of{}]".format(n))
+                unwind_nested_dictionary(
+                    v[0], destination, root=root + "-" + k + "[1of{}]".format(n)
+                )
             elif isinstance(v[0], str):
                 destination[root + "-" + k] = "|".join(v)
         else:
-        # print("{0} : {1}".format(k, v), flush=True)
+            # print("{0} : {1}".format(k, v), flush=True)
             destination[root + "-" + k] = v
 
     return destination
+
 
 if __name__ == "__main__":
     arg = sys.argv[1:]
@@ -211,8 +224,10 @@ if __name__ == "__main__":
         print("Available commandlines:")
         print("survey_json.py file_path")
         print("survey_json.py file_path [line_limit = {integer or all}] [encoding]")
-        print("\n Default file encoding is utf-8-sig, cp1252 is Windows default so worth a try, and iso-8859-1 encodes all bytes so at least it won't barf")
-        #sys.exit()
+        print(
+            "\n Default file encoding is utf-8-sig, cp1252 is Windows default so worth a try, and iso-8859-1 encodes all bytes so at least it won't barf"
+        )
+        # sys.exit()
         # file_path = "https://api.bankofscotland.co.uk/open-banking/v1.2/branches"
         # file_path = "https://openapi.bankofireland.com/open-banking/v1.2/branches" - doesn't work because of ssl problems
         file_path = "https://atlas.api.barclays/open-banking/v1.3/branches"
@@ -236,4 +251,3 @@ if __name__ == "__main__":
         encoding = arg[2]
 
     survey_json(file_path, line_limit, encoding)
-    

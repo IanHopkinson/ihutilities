@@ -2,7 +2,8 @@
 # encoding: utf-8
 
 import subprocess
-    
+
+
 def git_sha(repo_dir):
     """This function returns the short SHA-1 hash of a repo
 
@@ -18,18 +19,17 @@ def git_sha(repo_dir):
 
     """
 
-    cmd = ['git','rev-parse','--short', 'HEAD']
-    pr = subprocess.Popen(cmd,                  
-            cwd=repo_dir, 
-            stdout=subprocess.PIPE, 
-            stderr=subprocess.PIPE, 
-            shell=False)
+    cmd = ["git", "rev-parse", "--short", "HEAD"]
+    pr = subprocess.Popen(
+        cmd, cwd=repo_dir, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=False
+    )
     (out, error) = pr.communicate()
 
     if len(error) > 0:
         print(error)
 
     return out.strip().decode("utf-8")
+
 
 def git_uncommitted_changes(filename, repo_dir):
     """
@@ -50,14 +50,12 @@ def git_uncommitted_changes(filename, repo_dir):
 
     """
 
-    if filename == ' ' or filename == '':
-        filename = '--'
-    cmd = ['git', 'diff', filename]
-    pr = subprocess.Popen(cmd,                  
-            cwd=repo_dir, 
-            stdout=subprocess.PIPE, 
-            stderr=subprocess.PIPE, 
-            shell=False)
+    if filename == " " or filename == "":
+        filename = "--"
+    cmd = ["git", "diff", filename]
+    pr = subprocess.Popen(
+        cmd, cwd=repo_dir, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=False
+    )
     (out, error) = pr.communicate()
 
     if len(error) > 0:
@@ -67,6 +65,7 @@ def git_uncommitted_changes(filename, repo_dir):
         return True
     else:
         return False
+
 
 def git_calculate_file_sha(filepath):
     """This function returns the full SHA-1 hash of file, it does not require the file to be committed
@@ -83,17 +82,15 @@ def git_calculate_file_sha(filepath):
 
     """
 
-    cmd = ['git','hash-object',filepath]
-    pr = subprocess.Popen(cmd,                  
-            stdout=subprocess.PIPE, 
-            stderr=subprocess.PIPE, 
-            shell=False)
+    cmd = ["git", "hash-object", filepath]
+    pr = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=False)
     (out, error) = pr.communicate()
 
     if len(error) > 0:
         print(error)
 
     return out.strip().decode("utf-8")
+
 
 def git_describe(repo_dir):
     """This function returns the git describe --tags output
@@ -110,12 +107,10 @@ def git_describe(repo_dir):
 
     """
 
-    cmd = ['git','describe','--tags']
-    pr = subprocess.Popen(cmd,                  
-            cwd=repo_dir, 
-            stdout=subprocess.PIPE, 
-            stderr=subprocess.PIPE, 
-            shell=False)
+    cmd = ["git", "describe", "--tags"]
+    pr = subprocess.Popen(
+        cmd, cwd=repo_dir, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=False
+    )
     (out, error) = pr.communicate()
 
     if len(error) > 0:
@@ -123,14 +118,13 @@ def git_describe(repo_dir):
 
     return out.strip().decode("utf-8")
 
+
 def git_check_up_to_date(repo_dir):
     up_to_date = False
     cmd = ["git", "fetch", "--dry-run"]
-    pr = subprocess.Popen(cmd,                  
-            cwd=repo_dir, 
-            stdout=subprocess.PIPE, 
-            stderr=subprocess.PIPE, 
-            shell=False)
+    pr = subprocess.Popen(
+        cmd, cwd=repo_dir, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=False
+    )
     (out, error) = pr.communicate()
 
     if len(out) == 0 and len(error) == 0:
@@ -139,6 +133,5 @@ def git_check_up_to_date(repo_dir):
         print("Git repo not up to date", flush=True)
         print("Error: '{}'".format(error), flush=True)
         print("Message: '{}'".format(out), flush=True)
-
 
     return up_to_date

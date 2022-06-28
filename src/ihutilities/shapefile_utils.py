@@ -16,26 +16,29 @@ import math
 import logging
 
 # ShapeType lookup from here: https://en.wikipedia.org/wiki/Shapefile
-shapetype_lookup = {0: "Null shape",
-                    1: "Point",
-                    3: "Polyline",
-                    5: "Polygon",
-                    8: "Multipoint",
-                    11: "PointZ",
-                    13: "PolylineZ",
-                    15: "PolygonZ",
-                    18: "MultipointZ",
-                    21: "PointM",
-                    23: "PolylineM",
-                    25: "PolygonM",
-                    28: "MultipointM",
-                    31: "MultiPatch"}
+shapetype_lookup = {
+    0: "Null shape",
+    1: "Point",
+    3: "Polyline",
+    5: "Polygon",
+    8: "Multipoint",
+    11: "PointZ",
+    13: "PolylineZ",
+    15: "PolygonZ",
+    18: "MultipointZ",
+    21: "PointM",
+    23: "PolylineM",
+    25: "PolygonM",
+    28: "MultipointM",
+    31: "MultiPatch",
+}
+
 
 def load_shapefile_data(data_path):
     """This function loads a shapefile into a reader
 
     Args:
-        data_path (str): 
+        data_path (str):
             A file path to a shapefile
 
     Returns:
@@ -52,31 +55,39 @@ def load_shapefile_data(data_path):
     file_length = len(shapes)
     return sf, file_length
 
+
 def make_bbox_polygon(shp_bbox):
     """This function converts a shapefile array into a POLYGON string to load into MySQL/MariaDB
 
     Args:
-       shp_bbox (shapefile array): 
+       shp_bbox (shapefile array):
             An array containing upper left and lower right coordinates of a bounding box
 
     Returns:
        polygon (str):
 
     """
-    bb_str = [str(round(x,1)) for x in shp_bbox]
-    bb_polygon = (" ".join([bb_str[0], bb_str[1]]) + "," +
-                  " ".join([bb_str[2], bb_str[1]]) + "," +
-                  " ".join([bb_str[2], bb_str[3]]) + "," +
-                  " ".join([bb_str[0], bb_str[3]]) + "," +
-                  " ".join([bb_str[0], bb_str[1]]))
-    
+    bb_str = [str(round(x, 1)) for x in shp_bbox]
+    bb_polygon = (
+        " ".join([bb_str[0], bb_str[1]])
+        + ","
+        + " ".join([bb_str[2], bb_str[1]])
+        + ","
+        + " ".join([bb_str[2], bb_str[3]])
+        + ","
+        + " ".join([bb_str[0], bb_str[3]])
+        + ","
+        + " ".join([bb_str[0], bb_str[1]])
+    )
+
     polygon = "POLYGON(({}))".format(bb_polygon)
-    return polygon 
+    return polygon
+
 
 def make_multipolygon(points, parts, decimate_threshold=None):
     # MULTIPOLYGON(((0 0,10 0,10 10,0 10,0 0)),((5 5,7 5,7 7,5 7, 5 5)))
-    #print(parts, flush=True)
-    #print(points, flush=True)
+    # print(parts, flush=True)
+    # print(points, flush=True)
 
     prefix = "MULTIPOLYGON("
     suffix = ")"
@@ -90,22 +101,22 @@ def make_multipolygon(points, parts, decimate_threshold=None):
         polygon = "(("
         for i, point in enumerate(points):
             polygon = polygon + str(round(point[0], 0)) + " " + str(round(point[1], 0)) + ", "
-            
+
         polygon = polygon + str(round(origin[0], 0)) + " " + str(round(origin[1], 0)) + ")),"
 
         polygons = polygons + polygon
-            #print(polygon[:100], flush=True)
-        
-    
+        # print(polygon[:100], flush=True)
+
     output_polygon = prefix + polygons[:-1] + suffix
 
     # print(output_polygon)
     return output_polygon
 
+
 def make_polygon(points, parts, decimate_threshold=None):
     # POLYGON((0 0,10 0,10 10,0 10,0 0),(5 5,7 5,7 7,5 7, 5 5))
-    #print(parts, flush=True)
-    #print(points, flush=True)
+    # print(parts, flush=True)
+    # print(points, flush=True)
 
     prefix = "POLYGON("
     suffix = ")"
@@ -119,29 +130,31 @@ def make_polygon(points, parts, decimate_threshold=None):
         polygon = "("
         for i, point in enumerate(points):
             polygon = polygon + str(round(point[0], 0)) + " " + str(round(point[1], 0)) + ", "
-            
+
         polygon = polygon + str(round(origin[0], 0)) + " " + str(round(origin[1], 0)) + "),"
 
         polygons = polygons + polygon
-            #print(polygon[:100], flush=True)
-        
-    
+        # print(polygon[:100], flush=True)
+
     output_polygon = prefix + polygons[:-1] + suffix
 
     # print(output_polygon)
     return output_polygon
 
+
 def make_linestring(shp_points):
     linestring = "LineString("
     for point in shp_points:
-        linestring = linestring + "{} {},".format(point[0], point[1]) 
+        linestring = linestring + "{} {},".format(point[0], point[1])
     linestring = linestring[:-1] + ")"
 
     return linestring
 
+
 def make_point(shp_point):
     point = "POINT({} {})".format(shp_point[0], shp_point[1])
     return point
+
 
 def summarise_shapefile(sf, limit=9, to_screen=True):
     fieldnames = [x[0] for x in sf.fields[1:]]
@@ -158,7 +171,7 @@ def summarise_shapefile(sf, limit=9, to_screen=True):
 
     fieldnames_header = ",".join(fieldnames)
 
-    #print("{} {}".format("number", fieldnames_header))
+    # print("{} {}".format("number", fieldnames_header))
     for i, sr in enumerate(sf.iterShapeRecords()):
 
         # Populate from shape
@@ -186,7 +199,7 @@ def summarise_shapefile(sf, limit=9, to_screen=True):
         #         print(field, values, flush=True)
         if to_screen:
             print("{}. {}".format(i + 1, content_str))
-        if i >= limit: 
+        if i >= limit:
             break
 
     if to_screen:
@@ -196,6 +209,7 @@ def summarise_shapefile(sf, limit=9, to_screen=True):
         print("Shapetypes found: {}\n".format(shapetypes_str), flush=True)
 
     return fieldnames
+
 
 def plot_shapefile(sf, limit=9, bbox=False, label=None):
     fig = plt.figure(0)
@@ -207,16 +221,26 @@ def plot_shapefile(sf, limit=9, bbox=False, label=None):
 
     for i, sr in enumerate(sf.iterShapeRecords()):
         if sr.shape.shapeType not in [5, 15]:
-            print("ihutilities.plot_shapefile does not currently handle shapeType {} ({})".format(sr.shape.shapeType, shapetype_lookup[sr.shape.shapeType]), flush=True)
+            print(
+                "ihutilities.plot_shapefile does not currently handle shapeType {} ({})".format(
+                    sr.shape.shapeType, shapetype_lookup[sr.shape.shapeType]
+                ),
+                flush=True,
+            )
             break
 
         if bbox:
             list_of_polygons = _convert_bbox_to_coords(sr.shape.bbox)
         else:
-            list_of_polygons = _convert_parts(sr.shape.points, sr.shape.parts, shapetype=sr.shape.shapeType, decimate_threshold=10000)
+            list_of_polygons = _convert_parts(
+                sr.shape.points,
+                sr.shape.parts,
+                shapetype=sr.shape.shapeType,
+                decimate_threshold=10000,
+            )
 
         ps = []
-        for polygon in list_of_polygons:        
+        for polygon in list_of_polygons:
             x = []
             y = []
             for point in polygon:
@@ -224,9 +248,9 @@ def plot_shapefile(sf, limit=9, bbox=False, label=None):
                 y.append(point[1])
             # This ensures multipolygons are all plotted the same colour
             if len(ps) == 0:
-                ps = plt.plot(x,y)
+                ps = plt.plot(x, y)
             else:
-                ps = plt.plot(x,y, color=ps[0].get_color())   
+                ps = plt.plot(x, y, color=ps[0].get_color())
 
         if label is not None:
             label_text = sr.record[idx_label]
@@ -234,31 +258,34 @@ def plot_shapefile(sf, limit=9, bbox=False, label=None):
             x = (sr.shape.bbox[0] + sr.shape.bbox[2]) / 2
             y = (sr.shape.bbox[1] + sr.shape.bbox[3]) / 2
 
-            plt.text(x, y, label_text, color=ps[0].get_color(), 
-                                       verticalalignment='center', 
-                                       horizontalalignment='center')
+            plt.text(
+                x,
+                y,
+                label_text,
+                color=ps[0].get_color(),
+                verticalalignment="center",
+                horizontalalignment="center",
+            )
 
         if i > limit:
             break
 
-# Quick plot of bounding boxes
-    #for polygon in polygon_list:
+    # Quick plot of bounding boxes
+    # for polygon in polygon_list:
     #    x, y = convert_db_polygon_to_coords(polygon["bounding_box"])
-    #    plt.plot(x, y, 'k')        
+    #    plt.plot(x, y, 'k')
 
-    plt.axes().set_aspect('equal', 'datalim')
-    plt.xlabel('eastings')
-    plt.ylabel('northings')
+    plt.axes().set_aspect("equal", "datalim")
+    plt.xlabel("eastings")
+    plt.ylabel("northings")
     plt.show()
 
+
 def _convert_bbox_to_coords(bb):
-    coords = [[[bb[0], bb[1]], 
-              [bb[2], bb[1]], 
-              [bb[2], bb[3]], 
-              [bb[0], bb[3]], 
-              [bb[0], bb[1]]]]
+    coords = [[[bb[0], bb[1]], [bb[2], bb[1]], [bb[2], bb[3]], [bb[0], bb[3]], [bb[0], bb[1]]]]
 
     return coords
+
 
 def _convert_parts(points, parts, shapetype=15, decimate_threshold=None):
     # Takes a points array and a parts array and returns a list of lists of x,y coordinates
@@ -272,19 +299,24 @@ def _convert_parts(points, parts, shapetype=15, decimate_threshold=None):
             end_index = len(points)
         chunk = []
 
-        part_length = end_index - start_index 
+        part_length = end_index - start_index
         if decimate_threshold is not None and part_length > decimate_threshold:
             ratio = math.ceil(part_length / decimate_threshold)
-            print("Part size = {}, exceeds decimate_threshold = {}".format(part_length, decimate_threshold), flush=True)
+            print(
+                "Part size = {}, exceeds decimate_threshold = {}".format(
+                    part_length, decimate_threshold
+                ),
+                flush=True,
+            )
             print("Using ratio = {}".format(ratio), flush=True)
-            for i, point in enumerate(points[start_index: end_index]):
+            for i, point in enumerate(points[start_index:end_index]):
                 if i % ratio == 0:
                     chunk.append(point)
-                # chunk.append(points[end_index - 1])    
+                # chunk.append(points[end_index - 1])
         else:
-            for point in points[start_index: end_index]:
+            for point in points[start_index:end_index]:
                 chunk.append(point)
-        
+
         list_of_parts.append(chunk)
 
     return list_of_parts
