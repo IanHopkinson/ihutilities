@@ -122,3 +122,23 @@ def git_describe(repo_dir):
         print(error)
 
     return out.strip().decode("utf-8")
+
+def git_check_up_to_date(repo_dir):
+    up_to_date = False
+    cmd = ["git", "fetch", "--dry-run"]
+    pr = subprocess.Popen(cmd,                  
+            cwd=repo_dir, 
+            stdout=subprocess.PIPE, 
+            stderr=subprocess.PIPE, 
+            shell=False)
+    (out, error) = pr.communicate()
+
+    if len(out) == 0 and len(error) == 0:
+        up_to_date = True
+    else:
+        print("Git repo not up to date", flush=True)
+        print("Error: '{}'".format(error), flush=True)
+        print("Message: '{}'".format(out), flush=True)
+
+
+    return up_to_date

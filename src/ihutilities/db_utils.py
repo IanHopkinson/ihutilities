@@ -17,7 +17,7 @@ import pymysql
 from pymysql.constants.CR import *
 from pymysql.constants.ER import *
 
-from ihutilities.es_utils import read_es, configure_es, write_to_es, update_to_es
+# from ihutilities.es_utils import read_es, configure_es, write_to_es, update_to_es
 
 from collections import OrderedDict
 
@@ -526,10 +526,12 @@ def _make_connection(db_config):
         # I was getting pool exhaustion because I wasn't closing connections, this should now be fixed (fingers crossed)
         #if db_config["db_conn"] is None or True:
         password = os.environ[db_config["db_pw_environ"]]
+        # port = int(os.getenv("MARIA_DB_PORT", "3306"))
         conn = pymysql.connect( database=db_config["db_name"],
                                         user=db_config["db_user"], 
                                         password=password,
                                         host=db_config["db_host"])
+                                        #port=port)
                                         #pool_name=db_config["db_name"],
                                         #pool_size=10)
         db_config["db_conn"] = conn

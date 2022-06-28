@@ -16,7 +16,7 @@ from ihutilities import (configure_db, write_to_db, update_to_db, read_db,
                         calculate_file_sha, _normalise_config, check_mysql_database_exists,
                         get_a_file_handle, split_zipfile_path)
 
-from ihutilities.es_utils import check_es_database_exists
+# from ihutilities.es_utils import check_es_database_exists
 
 # This dictionary has field names and field types. It should be reuseable between the configure_db and 
 # write_to_db functions
@@ -301,7 +301,6 @@ def do_etl(db_fields, db_config, data_path, data_field_lookup,
             tables = list(db_fields.keys())
             tables.append("metadata")
             tables.append("session_log")
-
 
         configure_db(db_config, revised_db_fields, tables=tables, force=force)
 
