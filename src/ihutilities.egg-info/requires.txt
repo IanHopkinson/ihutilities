@@ -1,5 +1,0 @@
-pyshp
-elasticsearch
-requests
-matplotlib
-pymysql

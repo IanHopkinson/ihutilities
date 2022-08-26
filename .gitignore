@@ -7,3 +7,5 @@ doc/build
 \.vscode/\.ropeproject/config\.py
 
 *.pyc
+
+src/ihutilities.egg-info/
