@@ -12,7 +12,7 @@ resources:
     type: git
     ref: main
 jobs:
-- job: Publish_to_pypi
+- job: Publish_ihutilities_to_pypi
   displayName: Publish ihutilties
   pool:
     vmImage: ubuntu-latest
