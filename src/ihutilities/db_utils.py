@@ -11,8 +11,6 @@ import socket
 import sqlite3
 import logging
 
-# import mysql.connector
-# from mysql.connector import errorcode
 import pymysql
 
 from pymysql.constants.CR import *
