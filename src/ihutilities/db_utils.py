@@ -446,17 +446,8 @@ def read_db(sql_query: str, db_config: Union[str, Dict]) -> Iterable[Dict]:
         print("Caught exception {} on query '{}'".format(err, sql_query), flush=True)
         raise
 
-    colnames = [x[0] for x in cursor.description]
-
-    # rows = cursor.fetchall()
-    # conn.close()
-
-    # for row in rows:
-    #     if row is not None:
-    #         labelled_row = OrderedDict(zip(colnames, row))
-    #         yield labelled_row
-
     if cursor.description is not None:
+        colnames = [x[0] for x in cursor.description]
         while True:
             row = cursor.fetchone()
             if row is not None:
