@@ -1,7 +1,33 @@
 # As per https://github.com/pypa/setuptools/blob/main/docs/userguide/quickstart.rst
+[project]
+name = "ihutilities"
+version = "2023.03.2"
+description = "A package os miscellaneous utilities for file, database and print functions"
+readme = "README.md"
+requires-python = ">=3.7"
+authors = [
+  {email = "ian.hopkinson@gbgplc.com"},
+  {name = "Ian Hopkinson"}
+]
+
+dependencies = [
+    "pyshp",
+    "elasticsearch", 
+    "requests", 
+    "matplotlib", 
+    "pymysql"
+]
+
+[project.urls]
+repository = "https://github.com/gbgplc-internal/gbgplc-ihutilities-utility"
+
+
 [build-system]
 requires = ["setuptools"]
 build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["src"]
 
 [tool.black]
 line-length = 100

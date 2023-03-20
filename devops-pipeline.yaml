@@ -1,0 +1,28 @@
+trigger:
+  - main
+
+jobs:
+  - job: RunTests
+    pool:
+      vmImage: 'ubuntu-latest'
+    strategy:
+      matrix:
+        # Python37:
+        #   python.version: '3.7'
+        Python39:
+          python.version: '3.9'
+        # Python311:
+        #   python.version: '3.11'
+    steps:
+      - task: UsePythonVersion@0
+        inputs:
+          versionSpec: '$(python.version)'
+      - script: make install
+        condition: always()
+        displayName: "Install Python dependencies"
+      # - script: make unit_tests
+      #   condition: always()
+      #   displayName: "Run unit tests"
+      - script: make lint
+        condition: always()
+        displayName: "Run linters"

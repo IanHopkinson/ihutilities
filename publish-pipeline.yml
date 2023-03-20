@@ -1,0 +1,31 @@
+# Variable 'python.version' was defined in the Variables tab
+# Multi-job configuration must be converted to matrix strategy: https://docs.microsoft.com/en-us/azure/devops/pipelines/process/phases?view=azure-devops&tabs=yaml#multi-job-configuration
+pr: none
+trigger:
+  branches:
+    include:
+    - main
+name: $(date:yyyyMMdd)$(rev:.r)
+resources:
+  repositories:
+  - repository: self
+    type: git
+    ref: main
+jobs:
+- job: Publish_ihutilities_to_pypi
+  displayName: Publish ihutilties
+  pool:
+    vmImage: ubuntu-latest
+  steps:
+  - checkout: self
+    clean: true
+    fetchTags: false
+  - task: UsePythonVersion@0
+    inputs:
+      versionSpec: '3.9'
+  - task: TwineAuthenticate@1
+    displayName: 'Twine Authenticate '
+    inputs:
+      artifactFeed: datamesh/project_scoped
+  - script: make publish
+    displayName: "Publish ihutilties to private PyPi"

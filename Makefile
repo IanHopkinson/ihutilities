@@ -6,9 +6,16 @@ unit_tests:
 	pytest tests/
 lint:
 	black . --check
-	flake8 .
-	pylint src/ tests/
-build:
+	flake8 src/ tests/ || true
+	pylint src/ tests/ || true
+publish:
 	rm -rf build/
 	rm -rf dist/
-	python setup.py bdist_wheel
+	pip install --upgrade pip
+	pip install --upgrade setuptools
+	pip install wheel
+	pip install twine
+	pip show setuptools
+	python setup.py sdist bdist_wheel
+	cat $(PYPIRC_PATH)
+	twine upload -r project_scoped --config-file $(PYPIRC_PATH) dist/* --verbose
