@@ -13,7 +13,7 @@ resources:
     ref: main
 jobs:
 - job: Publish_to_pypi
-  displayName: Publish datamesh_helpers
+  displayName: Publish ihutilties
   pool:
     vmImage: ubuntu-latest
   steps:
@@ -28,4 +28,4 @@ jobs:
     inputs:
       artifactFeed: datamesh/project_scoped
   - script: make publish
-    displayName: "Publish datamesh_helpers to private PyPi"
+    displayName: "Publish ihutilties to private PyPi"

@@ -8,7 +8,7 @@ lint:
 	black . --check
 	flake8 .
 	pylint src/ tests/
-build:
+publish:
 	rm -rf build/
 	rm -rf dist/
 	pip install --upgrade pip
