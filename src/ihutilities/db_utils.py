@@ -7,18 +7,17 @@ This package contains functions relating to databases
 import datetime
 import os
 import time
-import socket
 import sqlite3
 import logging
+from collections import OrderedDict
+from typing import Dict, Union, Iterable
 
 import pymysql
 
-from pymysql.constants.CR import *
-from pymysql.constants.ER import *
 
-# from ihutilities.es_utils import read_es, configure_es, write_to_es, update_to_es
+from pymysql.constants.CR import CR_CONN_HOST_ERROR
+from pymysql.constants.ER import BAD_DB_ERROR
 
-from collections import OrderedDict
 
 db_config_template = {
     "db_name": "test",
@@ -31,21 +30,6 @@ db_config_template = {
 }
 
 logger = logging.getLogger(__name__)
-
-# Conditional import if elasticsearch is running
-sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-result = sock.connect_ex(("localhost", 9200))
-# print(result, flush=True)
-if result != 0:
-    logger.warning("Elasticsearch not running, so ihutilities.es_util not imported")
-    # from ihutilities.es_utils import configure_es, write_to_es, read_es, update_to_es
-
-# Conditional import of mysql connector
-# try:
-#     import mysql.connector
-#     from mysql.connector import errorcode
-# except ImportError:
-#     logger.warning("MySQL/MariaDB connector is not present, so MariaDB/MySQL functionality not supported")
 
 
 def configure_db(db_config, db_fields, tables="property_data", force=False):
@@ -416,7 +400,7 @@ def finalise_db(
     conn.close()
 
 
-def read_db(sql_query, db_config):
+def read_db(sql_query: str, db_config: Union[str, Dict]) -> Iterable[Dict]:
     # For MariaDB we need to trap this error:
     # pymysql.connector.errors.InterfaceError: 2003: Can't connect to MySQL server on '127.0.0.1:3306'
     # (10055 An operation on a socket could not be performed because the system lacked sufficient buffer space or because a queue was full)
@@ -444,7 +428,7 @@ def read_db(sql_query, db_config):
         cursor = conn.cursor()
         cursor.execute(sql_query)
     except pymysql.Error as err:
-        if err.args[0] == pymysql.constants.CR.CR_CONN_HOST_ERROR:
+        if err.args[0] == CR_CONN_HOST_ERROR:
             timestamp = datetime.datetime.now().isoformat()
             logger.warning(
                 "{}|read_db in ihutilities Caught exception '{}'. errno = '{}', retry in {}seconds".format(
@@ -472,15 +456,20 @@ def read_db(sql_query, db_config):
     #         labelled_row = OrderedDict(zip(colnames, row))
     #         yield labelled_row
 
-    while True:
-        row = cursor.fetchone()
-        if row is not None:
-            labelled_row = OrderedDict(zip(colnames, row))
-            yield labelled_row
-        else:
-            conn.close()
-            # raise StopIteration # - this is depreciated in Python 3.5 onwards
-            return
+    if cursor.description is not None:
+        while True:
+            row = cursor.fetchone()
+            if row is not None:
+                labelled_row = OrderedDict(zip(colnames, row))
+                yield labelled_row
+            else:
+                conn.close()
+                # raise StopIteration # - this is depreciated in Python 3.5 onwards
+                return
+    else:
+        yield cursor.rowcount
+        conn.commit()
+        conn.close()
 
 
 def delete_from_db(sql_query, db_config):
@@ -503,7 +492,7 @@ def delete_from_db(sql_query, db_config):
         cursor = conn.cursor()
         cursor.execute(sql_query)
     except pymysql.Error as err:
-        if err.args[0] == pymysql.constants.CR.CR_CONN_HOST_ERROR:
+        if err.args[0] == CR_CONN_HOST_ERROR:
             logger.warning(
                 "Caught exception '{}'. errno = '{}', waiting {} seconds and having another go".format(
                     err, err.errno, err_wait
@@ -585,7 +574,7 @@ def _make_connection(db_config):
         try:
             conn.database = db_config["db_name"]
         except pymysql.Error as err:
-            if err.args[0] != pymysql.constants.ER.BAD_DB_ERROR:
+            if err.args[0] != BAD_DB_ERROR:
                 raise
 
     return db_config["db_conn"]
