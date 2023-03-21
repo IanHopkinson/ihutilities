@@ -4,23 +4,21 @@
 This package contains functions relating to databases
 """
 
+import dataclasses
 import datetime
 import os
 import time
-import socket
 import sqlite3
 import logging
+from collections import OrderedDict
+from typing import Dict, Union, Iterable, List, Any
 
-# import mysql.connector
-# from mysql.connector import errorcode
 import pymysql
 
-from pymysql.constants.CR import *
-from pymysql.constants.ER import *
 
-# from ihutilities.es_utils import read_es, configure_es, write_to_es, update_to_es
+from pymysql.constants.CR import CR_CONN_HOST_ERROR
+from pymysql.constants.ER import BAD_DB_ERROR
 
-from collections import OrderedDict
 
 db_config_template = {
     "db_name": "test",
@@ -34,23 +32,13 @@ db_config_template = {
 
 logger = logging.getLogger(__name__)
 
-# Conditional import if elasticsearch is running
-sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-result = sock.connect_ex(("localhost", 9200))
-# print(result, flush=True)
-if result != 0:
-    logger.warning("Elasticsearch not running, so ihutilities.es_util not imported")
-    # from ihutilities.es_utils import configure_es, write_to_es, read_es, update_to_es
 
-# Conditional import of mysql connector
-# try:
-#     import mysql.connector
-#     from mysql.connector import errorcode
-# except ImportError:
-#     logger.warning("MySQL/MariaDB connector is not present, so MariaDB/MySQL functionality not supported")
-
-
-def configure_db(db_config, db_fields, tables="property_data", force=False):
+def configure_db(
+    db_config: Union[str, Dict],
+    db_fields: Dict,
+    tables: Union[str, List[str]] = "property_data",
+    force: bool = False,
+):
     """This function sets up a sqlite or MariaDB/MySQL database
 
     Args:
@@ -80,52 +68,40 @@ def configure_db(db_config, db_fields, tables="property_data", force=False):
         >>> db_file_path = os.path.join(db_dir, db_filename)
         >>> configure_db(db_file_path, db_fields, tables="test")
     """
-    # Cunning polymorphism:
-    # If we get a list and string then we convert them to a dictionary and a list
-    # for backward compatibility
 
     db_config = _normalise_config(db_config)
-
-    if db_config["db_type"] == "elasticsearch":
-        db_config = configure_es(db_config, db_fields, tables=tables, force=force)
-        return db_config
 
     if isinstance(tables, str):
         tables = [tables]
         db_fields = {tables[0]: db_fields}
-    # Convert old db_path string to db_config dictionary
 
-    # Delete database if force is true
     if db_config["db_type"] == "sqlite":
         if os.path.isfile(db_config["db_path"]) and force:
             os.remove(db_config["db_path"])
-        # If the directory doesn't exist then create it
         if not os.path.isdir(os.path.dirname(db_config["db_path"])):
-            logger.warning(
-                "Path to requested database ({}) does not exist, creating".format(
-                    os.path.dirname(db_config["db_path"])
-                )
+            logging.debug(
+                f"Path to requested database ({os.path.dirname(db_config['db_path'])}) "
+                "does not exist, creating"
             )
             os.makedirs(os.path.dirname(db_config["db_path"]))
 
-        conn = _make_connection(db_config)
-    # Default behaviour for mysql/mariadb is not to drop database
+        _ = _make_connection(db_config)
+
     elif db_config["db_type"] == "mysql" or db_config["db_type"] == "mariadb":
-        # Make connection now wraps in creation of a new database if it doesn't exist
-        conn = _make_connection(db_config)
-        # cursor = conn.cursor()
+        _ = _make_connection(db_config)
 
-    # Create tables, as specified
     _create_tables_db(db_config, db_fields, tables, force)
-    # Close connection? or return db_config
-
-    # db_config["db_conn"].commit()
-    # db_config["db_conn"].close()
 
     return db_config
 
 
-def write_to_db(data, db_config, db_fields, table="property_data", whatever=False):
+def write_to_db(
+    data: List[Any],
+    db_config: Dict,
+    db_fields: Dict,
+    table: Union[List, str] = "property_data",
+    whatever: bool = False,
+) -> List[Dict]:
     """
     This function writes a list of rows to a sqlite or MariaDB/MySQL database
 
@@ -142,8 +118,8 @@ def write_to_db(data, db_config, db_fields, table="property_data", whatever=Fals
        table (str):
             name of table to which we are writing, key to db_fields
        whatever (bool):
-            If true each item is tried individually and only those accepted are written, list of those
-            not inserted is returned
+            If true each item is tried individually and only those accepted are written,
+            list of those not inserted is returned
 
     Returns:
        No return value
@@ -167,35 +143,34 @@ def write_to_db(data, db_config, db_fields, table="property_data", whatever=Fals
                     (3, 3, "Beans")]
         >>> write_to_db(data, db_file_path, db_fields, table="test")
     """
+    if len(data) == 0:
+        return
     db_config = _normalise_config(db_config)
 
-    if db_config["db_type"] == "elasticsearch":
-        rejected_data = write_to_es(data, db_config, db_fields, table=table, whatever=whatever)
-        return rejected_data
-
+    one_placeholder = ""
     if db_config["db_type"] == "sqlite":
-        ONE_PLACEHOLDER = "?,"
+        one_placeholder = "?,"
     elif db_config["db_type"] == "mariadb" or db_config["db_type"] == "mysql":
-        ONE_PLACEHOLDER = "%s,"
+        one_placeholder = "%s,"
 
     conn = _make_connection(db_config)
     cursor = conn.cursor()
 
-    DB_INSERT_ROOT = "INSERT INTO {} (".format(table)
-    DB_INSERT_MIDDLE = ") VALUES ("
-    DB_INSERT_TAIL = ")"
+    db_insert_root = f"INSERT INTO {table} ("
+    db_insert_middle = ") VALUES ("
+    db_insert_tail = ")"
 
-    DB_FIELDS = DB_INSERT_ROOT
-    DB_PLACEHOLDERS = DB_INSERT_MIDDLE
+    db_field_definitions = db_insert_root
+    db_placeholders = db_insert_middle
 
     for k in db_fields.keys():
-        DB_FIELDS = DB_FIELDS + k + ","
+        db_field_definitions = db_field_definitions + k + ","
         if db_fields[k] in ["POINT", "POLYGON", "LINESTRING", "MULTIPOLYGON", "GEOMETRY"]:
-            DB_PLACEHOLDERS = DB_PLACEHOLDERS + "GeomFromText(%s),"
+            db_placeholders = db_placeholders + "GeomFromText(%s),"
         else:
-            DB_PLACEHOLDERS = DB_PLACEHOLDERS + ONE_PLACEHOLDER
+            db_placeholders = db_placeholders + one_placeholder
 
-    INSERT_statement = DB_FIELDS[0:-1] + DB_PLACEHOLDERS[0:-1] + DB_INSERT_TAIL
+    insert_statement = db_field_definitions[0:-1] + db_placeholders[0:-1] + db_insert_tail
 
     rejected_data = []
 
@@ -205,30 +180,32 @@ def write_to_db(data, db_config, db_fields, table="property_data", whatever=Fals
     if len(data) > 0 and isinstance(data[0], dict):
         for row in data:
             converted_data.append([x for x in row.values()])
+    elif len(data) > 0 and dataclasses.is_dataclass(data[0]):
+        for row in data:
+            row_asdict = dataclasses.asdict(row)
+            converted_data.append([x for x in row_asdict.values()])
     else:
         converted_data = data
 
     if whatever:
         for row in converted_data:
             try:
-                cursor.execute(INSERT_statement, row)
+                cursor.execute(insert_statement, row)
             except (pymysql.err.IntegrityError, sqlite3.IntegrityError):
                 rejected_data.append(row)
 
     else:
         try:
-            logger.debug(
-                "Insert statement = {}\nData line 1 = {}".format(
-                    INSERT_statement, converted_data[0]
-                )
+            logging.debug(
+                f"Insert statement = {insert_statement}\nData line 1 = {converted_data[0]}"
             )
-            cursor.executemany(INSERT_statement, converted_data)
+            cursor.executemany(insert_statement, converted_data)
         except (pymysql.err.IntegrityError, sqlite3.IntegrityError):
             conn.close()
             raise
         except (pymysql.err.DataError):
             conn.close()
-            logger.info("write_to_db failed with {}".format(converted_data))
+            logging.info("write_to_db failed with {converted_data}")
             raise
 
     conn.commit()
@@ -280,10 +257,6 @@ def update_to_db(data, db_config, db_fields, table="property_data", key=["UPRN"]
         key = [key]
 
     db_config = _normalise_config(db_config)
-
-    if db_config["db_type"] == "elasticsearch":
-        update_to_es(data, db_config, db_fields, table=table, key=key)
-        return
 
     if db_config["db_type"] == "sqlite":
         # WHERE KEY1 = ?
@@ -418,7 +391,7 @@ def finalise_db(
     conn.close()
 
 
-def read_db(sql_query, db_config):
+def read_db(sql_query: str, db_config: Union[str, Dict]) -> Iterable[Dict]:
     # For MariaDB we need to trap this error:
     # pymysql.connector.errors.InterfaceError: 2003: Can't connect to MySQL server on '127.0.0.1:3306'
     # (10055 An operation on a socket could not be performed because the system lacked sufficient buffer space or because a queue was full)
@@ -426,11 +399,6 @@ def read_db(sql_query, db_config):
     # https://blogs.msdn.microsoft.com/sql_protocols/2009/03/09/understanding-the-error-an-operation-on-a-socket-could-not-be-performed-because-the-system-lacked-sufficient-buffer-space-or-because-a-queue-was-full/
     # At the moment we do this by just adding in a wait
     db_config = _normalise_config(db_config)
-
-    if db_config["db_type"] == "elasticsearch":
-        yield from read_es(sql_query, db_config)
-        return
-        # return results
 
     err_wait = 30.0
 
@@ -446,7 +414,7 @@ def read_db(sql_query, db_config):
         cursor = conn.cursor()
         cursor.execute(sql_query)
     except pymysql.Error as err:
-        if err.args[0] == pymysql.constants.CR.CR_CONN_HOST_ERROR:
+        if err.args[0] == CR_CONN_HOST_ERROR:
             timestamp = datetime.datetime.now().isoformat()
             logger.warning(
                 "{}|read_db in ihutilities Caught exception '{}'. errno = '{}', retry in {}seconds".format(
@@ -464,25 +432,21 @@ def read_db(sql_query, db_config):
         print("Caught exception {} on query '{}'".format(err, sql_query), flush=True)
         raise
 
-    colnames = [x[0] for x in cursor.description]
-
-    # rows = cursor.fetchall()
-    # conn.close()
-
-    # for row in rows:
-    #     if row is not None:
-    #         labelled_row = OrderedDict(zip(colnames, row))
-    #         yield labelled_row
-
-    while True:
-        row = cursor.fetchone()
-        if row is not None:
-            labelled_row = OrderedDict(zip(colnames, row))
-            yield labelled_row
-        else:
-            conn.close()
-            # raise StopIteration # - this is depreciated in Python 3.5 onwards
-            return
+    if cursor.description is not None:
+        colnames = [x[0] for x in cursor.description]
+        while True:
+            row = cursor.fetchone()
+            if row is not None:
+                labelled_row = OrderedDict(zip(colnames, row))
+                yield labelled_row
+            else:
+                conn.close()
+                # raise StopIteration # - this is depreciated in Python 3.5 onwards
+                return
+    else:
+        yield cursor.rowcount
+        conn.commit()
+        conn.close()
 
 
 def delete_from_db(sql_query, db_config):
@@ -505,7 +469,7 @@ def delete_from_db(sql_query, db_config):
         cursor = conn.cursor()
         cursor.execute(sql_query)
     except pymysql.Error as err:
-        if err.args[0] == pymysql.constants.CR.CR_CONN_HOST_ERROR:
+        if err.args[0] == CR_CONN_HOST_ERROR:
             logger.warning(
                 "Caught exception '{}'. errno = '{}', waiting {} seconds and having another go".format(
                     err, err.errno, err_wait
@@ -538,7 +502,7 @@ def delete_db(db_config):
         conn.commit()
 
 
-def _normalise_config(db_config):
+def _normalise_config(db_config: Union[str, Dict]) -> Dict:
     """
     This is a private function which will expand a db_config string into
     the dictionary format.
@@ -552,7 +516,7 @@ def _normalise_config(db_config):
     return db_config
 
 
-def _make_connection(db_config):
+def _make_connection(db_config: Dict) -> sqlite3.Connection:
     """
     This is a private function responsible for making a connection to the database
     """
@@ -587,7 +551,7 @@ def _make_connection(db_config):
         try:
             conn.database = db_config["db_name"]
         except pymysql.Error as err:
-            if err.args[0] != pymysql.constants.ER.BAD_DB_ERROR:
+            if err.args[0] != BAD_DB_ERROR:
                 raise
 
     return db_config["db_conn"]
@@ -669,7 +633,9 @@ def check_table_exists(db_config, table):
     return table_exists
 
 
-def _create_tables_db(db_config, db_fields, tables, force):
+def _create_tables_db(
+    db_config: Union[str, Dict], db_fields: Dict, tables: Dict, force: bool = False
+):
     """
     This is a private function responsible for creating a database table
     """

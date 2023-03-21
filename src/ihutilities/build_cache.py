@@ -8,16 +8,13 @@
 import functools
 import os
 import datetime
-import signal
 import sqlite3
-import subprocess
 import time
 import logging
 
 from collections import OrderedDict
 
-from ihutilities import write_dictionary, git_sha, git_uncommitted_changes
-from ihutilities import configure_db, write_to_db, update_to_db, drop_db_tables, read_db
+from ihutilities import configure_db, write_to_db, update_to_db, read_db
 
 metadata_fields = OrderedDict(
     [
@@ -71,9 +68,8 @@ def build_cache(
 
     if os.path.isfile(cache_db):
         logger.info(
-            "Database file {} already exists, attempting to update. Delete file for a fresh start".format(
-                cache_db
-            )
+            f"Database file {cache_db} already exists, "
+            "attempting to update. Delete file for a fresh start"
         )
         configure_db(cache_db, db_fields, tables=list(db_fields.keys()))
     else:
@@ -186,7 +182,6 @@ def updater(
     line_count = 0
     chunk_count = 0
     test_limit = float("inf")  # 10000 # float('inf')
-    uprn_types = 1
     line_count_offset = 0
     logger.info("Test_limit set to {}".format(test_limit))
 
@@ -262,7 +257,7 @@ def updater(
         if len(data) != 0:
             try:
                 write_to_db(data, cache_db, db_fields["property_data"])
-            except sqlite3.OperationalError as err:
+            except sqlite3.OperationalError:
                 logger.info("Caught exception write_to_db, trying again once after 10 seconds")
                 time.sleep(5)
                 write_to_db(data, cache_db, db_fields["property_data"])
@@ -311,7 +306,8 @@ def updater(
 
         if (i % log_report_size) == 0 and i != 0:
             logger.info(
-                "{}: {}/{} at {}. Est. completion time: {}. Est. total runtime = {:.2f} days".format(
+                "{}: {}/{} at {}. Est. completion time: {}. "
+                "Est. total runtime = {:.2f} days".format(
                     make_row_method_name,
                     line_count + line_count_offset,
                     key_count,
@@ -362,7 +358,3 @@ def get_function_name(a_function):
     else:
         function_name = a_function.__name__
     return function_name
-
-
-if __name__ == "__main__":
-    main()

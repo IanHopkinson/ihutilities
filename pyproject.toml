@@ -1,7 +1,7 @@
 # As per https://github.com/pypa/setuptools/blob/main/docs/userguide/quickstart.rst
 [project]
 name = "ihutilities"
-version = "2023.03.2"
+version = "2023.03.3"
 description = "A package os miscellaneous utilities for file, database and print functions"
 readme = "README.md"
 requires-python = ">=3.7"
@@ -31,7 +31,7 @@ where = ["src"]
 
 [tool.black]
 line-length = 100
-target-version = ['py39']
+target-version = ['py37']
 include = '\.pyi?$'
 extend-exclude = '''
 # A regex preceded with ^/ will apply only to files and directories

@@ -20,9 +20,9 @@ jobs:
       - script: make install
         condition: always()
         displayName: "Install Python dependencies"
-      # - script: make unit_tests
-      #   condition: always()
-      #   displayName: "Run unit tests"
+      - script: make unit_tests
+        condition: always()
+        displayName: "Run unit tests"
       - script: make lint
         condition: always()
         displayName: "Run linters"

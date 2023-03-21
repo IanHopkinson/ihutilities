@@ -7,6 +7,9 @@ import os
 import socket
 import time
 
+from collections import OrderedDict
+from ihutilities import configure_db, write_to_db, read_db, update_to_db
+
 sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 result = sock.connect_ex(("localhost", 9200))
 if result == 0:
@@ -16,21 +19,11 @@ if result == 0:
 else:
     elastic_search_not_running = True
 
-from ihutilities import configure_db, write_to_db, read_db, update_to_db
-
-# write_to_es,
-#   _make_connection, read_es,
-#   update_to_es, finalise_es,
-#   check_mysql_database_exists)
-
-from collections import OrderedDict
 
 logging.basicConfig(level=logging.INFO)
 
 
-# @unittest.skip("Elasticsearch is not running so skipping tests")
-# @unittest.expectedFailure
-@unittest.skipIf(elastic_search_not_running, "Elasticsearch is not running so skipping tests")
+@unittest.skip("Not running elasticsearch tests")
 class ElasticsearchUtilitiesTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):

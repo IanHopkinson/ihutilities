@@ -29,6 +29,9 @@ from ihutilities.db_utils import (
 )
 
 # @unittest.skipIf(not mysql_connector_installed, "MariaDB/MySQL connector is not installed so skipping MySQL/MariaDB tests")
+
+
+@unittest.skip("Not running MariaDB tests")
 class MariaDBUtilitiesTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
