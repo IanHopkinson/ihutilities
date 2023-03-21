@@ -1,7 +1,10 @@
 #!/usr/bin/env python
 # encoding: utf-8
 
-from typing import Any, List, Optional
+import operator
+
+from collections import OrderedDict
+from typing import Any, List, Optional, Dict
 from warnings import warn
 
 
@@ -54,3 +57,8 @@ def get_with_alts(
         )
 
     return value
+
+
+def sort_dict_by_value(unordered_dict: Dict) -> Dict:
+    sorted_dict = sorted(unordered_dict.items(), key=operator.itemgetter(1))
+    return OrderedDict(sorted_dict)

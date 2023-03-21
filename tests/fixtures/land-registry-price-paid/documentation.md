@@ -1,0 +1,11 @@
+##fixtures.land-registry.price-paid##
+The Land Registry Price Paid dataset contains the majority of domestic house sale transactions in England and Wales going back to 1995. It is Open Data provided under the Open Government License v3 (OGL) but the address fields contain intellectual property of Royal Mail and Ordnance Survey who must be consulted for certain uses. The conditions for re-publication of the non-address data are an attribution statement, for the address data conditions are slightly more restrictive. For each transaction there is a unique identifier, a number of address elements, details of the transaction and some details of the property sold, these are detailed here:https://www.gov.uk/guidance/about-the-price-paid-data. The data is available in a number of formats including a compendium of all data back to 1995, a monthly file and a yearly file. The data can be viewed as an in browser page (the "text" version) or downloaded as a CSV. The links to do the download are currently "broken" in Google Chrome because the host page is HTTPS whilst the file itself is hosted on HTTP. We use the "compendium" version of the file which is currently 4.3GB in size.
+
+The data are published monthly on the 20th working day of the month following the data period i.e. the data for November 2021 were published on 30th December 2021. The compendium dataset has an unchanging name, the existence of a new dataset can be inferred by the addition of a new "last updated" text at the top of the host web page and the presence of a subheading like "November 2021 data (current month)".
+
+##fixtures.land-registry.price-paid-address-matched##
+This is a version of the Land Registry Price Paid dataset, described elsewhere which has been address matched using the Loqate
+Verify engine, adding a set of fields prefixed PAF_ which contain address elements from Royal Mail's Postal Address File which
+match the address provided in the origin Land Registry Price Paid file. In addition a PAF_STATUS field contains a status code
+from Loqate Verify which describes the quality of the address match made. PAF_UDPRN and PAF_UMRRN contain the 
+Royal Mail Unique Delivery Point Reference Number and Royal Mail Unique Multiple Residence Reference Number respectively.
