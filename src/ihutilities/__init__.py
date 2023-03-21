@@ -19,13 +19,10 @@ from .db_utils import (
 from .git_utils import git_uncommitted_changes, git_sha, git_calculate_file_sha, git_describe
 from .io_utils import (
     write_dictionary,
-    pretty_print_dict,
-    sort_dict_by_value,
     calculate_file_sha,
     get_a_file_handle,
     split_zipfile_path,
     download_file_from_url,
-    colour_text,
 )
 
 from .shapefile_utils import (
@@ -37,5 +34,9 @@ from .shapefile_utils import (
     make_multipolygon,
     make_polygon,
 )
+
+from .print_utils import pretty_print_dict, colour_text
+
+from .misc_utils import sort_dict_by_value
 
 # from .ETL_framework import do_ETL

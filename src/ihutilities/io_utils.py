@@ -118,33 +118,6 @@ def calculate_file_sha(filepath: str, encoding="utf-8-sig"):
     return file_sha.hexdigest()
 
 
-def pretty_print_dict(dictionary):
-    # print("Feature names: {}\n".format(feature_names))
-    WIDTH = 160
-    # find longest feature_name
-    max_width = max([len(key) for key in dictionary.keys()]) + 2
-    # find out how many of longest feature name fit in 80 characters
-    n_columns = math.floor(WIDTH / (max_width + 7))
-    # Build format string
-    fmt = "%{}s:%3d".format(max_width)
-    # feed feature_names into format string
-    report = ""
-    i = 1
-    for key, value in dictionary.items():
-        report = report + fmt % (key, value)
-        if (i % n_columns) == 0:
-            report = report + "\n"
-        i = i + 1
-
-    print(report)
-    return report
-
-
-def sort_dict_by_value(unordered_dict):
-    sorted_dict = sorted(unordered_dict.items(), key=operator.itemgetter(1))
-    return OrderedDict(sorted_dict)
-
-
 def get_a_file_handle(
     file_path: str,
     encoding: Optional[str] = "utf-8-sig",
@@ -293,50 +266,3 @@ def download_file_from_url(url: str, local_filepath: str) -> str:
     logger.info("Download took {:.2f}seconds for {:.2f}mb\n".format(t1 - t0, chunk_count / 1024))
 
     return local_filepath
-
-
-def colour_text(text: str, colour: Optional[str] = "red") -> str:
-    """
-    Decorate a text string with ANSI escape codes for coloured text in bash-like shells
-
-    Args:
-        text (str): A list of addresses
-
-    Keyword arguments:
-        colour (str): the required colour (currently supported: red, green, blue, cyan, white, yellow, magenta, grey, black)
-
-    Returns:
-        coloured_text (str): a dictionary containing the answers
-
-    """
-    # Long list of colours/
-    # https://stackoverflow.com/questions/15580303/python-output-complex-line-with-floats-colored-by-value
-    # https://github.com/ryanoasis/public-bash-scripts/blob/master/unix-color-codes.sh
-    prefix_set = {}
-
-    prefix_set["red"] = "\033[91m"
-    prefix_set["green"] = "\033[92m"
-    prefix_set["blue"] = "\033[94m"
-    prefix_set["cyan"] = "\033[96m"
-    prefix_set["white"] = "\033[97m"
-    prefix_set["yellow"] = "\033[93m"
-    prefix_set["magenta"] = "\033[95m"
-    prefix_set["grey"] = "\033[90m"
-    prefix_set["black"] = "\033[30m"
-    prefix_set["default"] = "\033[99m"
-
-    prefix_set["light_red"] = "\033[31m"
-    prefix_set["light_green"] = "\033[32m"
-    prefix_set["light_yellow"] = "\033[33m"
-    prefix_set["light_blue"] = "\033[34m"
-    prefix_set["light_magenta"] = "\033[35m"
-    prefix_set["light_cyan"] = "\033[36m"
-    prefix_set["light_white"] = "\033[37m"
-
-    prefix = prefix_set.get(colour, prefix_set["default"])
-
-    suffix = "\033[0m"
-
-    coloured_text = prefix + text + suffix
-
-    return coloured_text
