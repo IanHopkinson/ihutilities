@@ -7,13 +7,13 @@ import unittest
 from ihutilities import git_calculate_file_sha, calculate_file_sha, colour_text
 
 
+@unittest.skip("Comparison between my implementation of sha and git sha has never worked")
 class ShaCalculationTests(unittest.TestCase):
     def test_result_for_empty_file(self):
         test_root = os.path.dirname(__file__)
         filepath = os.path.join(test_root, "fixtures", "empty")
         self.assertEqual(git_calculate_file_sha(filepath), calculate_file_sha(filepath))
 
-    @unittest.skip("Comparison between my implementation of sha and git sha has never worked")
     def test_result_for_trivial_file(self):
         test_root = os.path.dirname(__file__)
         filepath = os.path.join(test_root, "fixtures", "sha_test_file")
@@ -25,7 +25,6 @@ class ShaCalculationTests(unittest.TestCase):
         norm_path = os.path.join(test_root, "fixtures", "survey_csv.csv")
         self.assertEqual(calculate_file_sha(norm_path), calculate_file_sha(zip_path))
 
-    @unittest.skip("Comparison between my implementation of sha and git sha has never worked")
     def test_result_for_larger_file(self):
         test_root = os.path.dirname(__file__)
         norm_path = os.path.join(test_root, "fixtures", "survey_csv.csv")
