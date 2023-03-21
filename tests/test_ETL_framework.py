@@ -144,9 +144,10 @@ class TestETLFramework(unittest.TestCase):
             mode="production",
             force=True,
         )
-        result = check_if_already_done(
-            self.datapath, self.db_config, "d607339fd4d5ecc01e26b18d86983f305533d20c"
-        )
+        sql_query = "select datafile_sha from metadata"
+        results = list(read_db(sql_query, db_config))
+        datafile_sha = results[0]["datafile_sha"]
+        result = check_if_already_done(self.datapath, self.db_config, datafile_sha)
         self.assertEqual(result, True)
 
     def test_report_input_length(self):
