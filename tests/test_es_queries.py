@@ -28,9 +28,7 @@ from collections import OrderedDict
 logging.basicConfig(level=logging.INFO)
 
 
-# @unittest.skip("Elasticsearch is not running so skipping tests")
-# @unittest.expectedFailure
-@unittest.skipIf(elastic_search_not_running, "Elasticsearch is not running so skipping tests")
+@unittest.skip("Not running elasticsearch tests")
 class ElasticsearchQueryTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):

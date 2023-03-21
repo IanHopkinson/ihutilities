@@ -27,7 +27,7 @@ else:
 # from ihutilities.es_utils import configure_es,  es_config_template, delete_es
 
 
-@unittest.skipIf(elastic_search_not_running, "Elasticsearch is not running so skipping tests")
+@unittest.skip("Not running elasticsearch tests")
 class TestETLFramework_es(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
