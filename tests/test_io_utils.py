@@ -3,13 +3,12 @@
 
 import os
 import unittest
-
-import os
-import pytest
 import sys
 
 from pathlib import Path
 from unittest import TestCase
+
+import pytest
 
 from moto import mock_s3
 from ihutilities.io_utils import (
@@ -167,7 +166,7 @@ def test_list_files_local():
 
     files = list_files_local_or_s3(f"{file_directory}/*.py")
 
-    TestCase().assertEqual(len(files), 13)
+    TestCase().assertEqual(len(files), 10)
 
 
 @mock_s3

@@ -160,7 +160,8 @@ def colour_text(text: str, colour: Optional[str] = "red") -> str:
         text (str): A list of addresses
 
     Keyword arguments:
-        colour (str): the required colour (currently supported: red, green, blue, cyan, white, yellow, magenta, grey, black)
+        colour (str): the required colour (currently supported: red, green, blue, cyan,
+        white, yellow, magenta, grey, black)
 
     Returns:
         coloured_text (str): a dictionary containing the answers

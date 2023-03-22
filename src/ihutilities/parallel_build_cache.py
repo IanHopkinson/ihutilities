@@ -8,25 +8,22 @@
 import functools
 import os
 import datetime
-import signal
 import sqlite3
-import subprocess
 import time
 import logging
 
 from collections import OrderedDict
 
-from ihutilities import write_dictionary, git_sha, git_uncommitted_changes
+from dask.distributed import Client, as_completed
+
 from ihutilities import (
     configure_db,
     write_to_db,
     update_to_db,
-    drop_db_tables,
     read_db,
     delete_from_db,
 )
 
-from dask.distributed import Client, as_completed
 
 metadata_fields = OrderedDict(
     [
@@ -82,9 +79,8 @@ def build_cache(constructors, cache_db, cache_fields, sha, chunk_size=1000, test
 
     if os.path.isfile(cache_db):
         print(
-            "Database file {} already exists, attempting to update. Delete file for a fresh start".format(
-                cache_db
-            )
+            f"Database file {cache_db} already exists, attempting to update. "
+            "Delete file for a fresh start"
         )
         configure_db(cache_db, db_fields, tables=list(db_fields.keys()))
     else:
@@ -182,7 +178,6 @@ def updater(id_, key_method, get_key_count, make_row_method, cache_db, db_fields
     line_count = 0
     chunk_count = 0
     test_limit = float("inf")  # 10000 # float('inf')
-    uprn_types = 1
     line_count_offset = 0
     print("Test_limit set to {}".format(test_limit), flush=True)
 
@@ -213,7 +208,7 @@ def updater(id_, key_method, get_key_count, make_row_method, cache_db, db_fields
         if len(chunk_log) != 0:
             write_to_db(chunk_log, cache_db, db_fields["chunk_log"], table="chunk_log")
         n_key_chunks = i + 1
-        ### End chunk_log table generation
+        # End chunk_log table generation
         todo_chunk_list = [x for x in range(0, i + 1)]
     else:
         n_key_chunks = len(key_chunks)
@@ -278,7 +273,6 @@ def updater(id_, key_method, get_key_count, make_row_method, cache_db, db_fields
     # Receive and measure modelled rows
     t0 = time.time()
     n_chunks_received = 0
-    n_chunks = len(futures)
     for future in as_completed(futures):
         n_chunks_received += 1
         data = future.result()
@@ -287,7 +281,6 @@ def updater(id_, key_method, get_key_count, make_row_method, cache_db, db_fields
         chunk_id_umrrn = data[0][2]
         chunk_loc = chunk_lookup[(chunk_id_udprn, chunk_id_umrrn)]
         elapsed = time.time() - t0
-        # logger.info("Received chunk {} of {} commencing {} at {:.1f} seconds".format(n_chunks_received, n_chunks, chunk_loc, elapsed))
         # Insert record batch
         if len(data) != 0:
             write_to_db(data, cache_db, db_fields["property_data"])
@@ -399,7 +392,3 @@ def get_function_name(a_function):
     else:
         function_name = a_function.__name__
     return function_name
-
-
-if __name__ == "__main__":
-    main()

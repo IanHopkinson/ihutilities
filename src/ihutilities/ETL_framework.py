@@ -3,13 +3,11 @@
 
 import csv
 import datetime
-import io
 import logging
 import os
-import sqlite3
 import sys
 import time
-import zipfile
+
 
 from collections import OrderedDict
 from ihutilities import (
@@ -24,10 +22,8 @@ from ihutilities import (
     split_zipfile_path,
 )
 
-# from ihutilities.es_utils import check_es_database_exists
-
-# This dictionary has field names and field types. It should be reuseable between the configure_db and
-# write_to_db functions
+# This dictionary has field names and field types. It should be reuseable between the configure_db
+# and write_to_db functions
 
 metadata_fields = OrderedDict(
     [
@@ -54,34 +50,6 @@ session_log_fields = OrderedDict(
     ]
 )
 
-metadata_fields_es = {
-    "metadata": {
-        "properties": {
-            "SequenceNumber": {"type": "integer"},
-            "data_path": {"type": "string"},
-            "datafile_sha": {"type": "string"},
-            "status": {"type": "string"},
-            "start_time": {"type": "string"},
-            "finish_time": {"type": "string"},
-            "last_write_time": {"type": "string"},
-            "chunk_count": {"type": "integer"},
-        }
-    }
-}
-
-session_log_fields_es = {
-    "session_log": {
-        "properties": {
-            "ID": {"type": "integer"},
-            "make_row_method": {"type": "string"},
-            "start_time": {"type": "string"},
-            "end_time": {"type": "string"},
-            "datafile_sha": {"type": "string"},
-            "first_chunk": {"type": "integer"},
-            "last_chunk": {"type": "integer"},
-        }
-    }
-}
 
 logger = logging.getLogger(__name__)
 
@@ -130,44 +98,6 @@ def make_row(
     return new_row
 
 
-def make_row_es(
-    input_row, data_path, data_field_lookup, db_fields, null_equivalents, autoinc, primary_key
-):
-    new_row = OrderedDict([(x, None) for x in data_field_lookup.keys()])
-    # zip input row into output row
-    for output_key in new_row.keys():
-        # This inserts blank fields
-        value = None
-        if data_field_lookup[output_key] is not None:
-            if not isinstance(data_field_lookup[output_key], list):
-                try:
-                    value = input_row[data_field_lookup[output_key]]
-                except IndexError:
-                    logger.warning(
-                        "Required element number '{}' not found in input data list = {}".format(
-                            data_field_lookup[output_key], input_row
-                        )
-                    )
-                    return None
-                except KeyError:
-                    logger.warning(
-                        "Required data field '{}' not found in input data = {}".format(
-                            data_field_lookup[output_key], input_row
-                        )
-                    )
-                    raise
-                if value in null_equivalents:
-                    value = None
-
-            new_row[output_key] = value
-    # If we have a field called ID as Primary Key and there is no lookup
-    # for it we assume it is a synthetic key and put in an autoincrement value
-    if autoinc:
-        new_row[primary_key] = None
-
-    return new_row
-
-
 def get_source_generator(data_path, headers, separator, encoding):
     # See data manager for detecting zip files, and then picking up the right part
     #
@@ -179,7 +109,8 @@ def get_source_generator(data_path, headers, separator, encoding):
         if headers:
             rows = csv.DictReader(fh, delimiter=separator)
         else:
-            # This handles a creditsafe instance where the delimiter was | and there was an instance of an unbalanced "
+            # This handles a creditsafe instance where the delimiter was | and
+            # there was an instance of an unbalanced "
             if separator == "|":
                 rows = csv.reader(fh, delimiter=separator, quoting=csv.QUOTE_NONE)
             else:
@@ -202,7 +133,6 @@ def do_etl(
     encoding="utf-8-sig",
     table=None,
     rowmaker=make_row,
-    rowmaker_es=make_row_es,
     rowsource=get_source_generator,
     test_line_limit=10000,
     chunk_size=None,
@@ -231,30 +161,34 @@ def do_etl(
             "test" loads 10000 lines to the database in 1000 line chunks.
        headers (bool):
             Indicates whether headers are present in the input CSV file
-            True indicates headers are present, DictReader is used for import and the data_field_lookup is to field names
-            False indicates no headers, csvreader is used for import and the data_field_lookup lookup is to column numbers
+            True indicates headers are present, DictReader is used for import and the
+            data_field_lookup is to field names
+            False indicates no headers, csvreader is used for import and the
+            data_field_lookup lookup is to column numbers
        null_equivalents (list of strings):
             cell contents which should be considered equivalent of null i.e ["-"]
        separator (str):
             a separator for the CSV, default is comma
        force (bool):
-            if True then database dropped before ETL, if False then no op if data file has already been uploaded, data appended
+            if True then database dropped before ETL, if False then no op if data
+            file has already been uploaded, data appended
             if the file has not yet been uploaded.
        encoding (str):
             the character encoding for the input file
        rowmaker (function):
-            the rowmaker function takes an input data row and converts it to a line for the output database. The function call is:
-            rowmaker(row, data_path, data_field_lookup, db_fields, null_equivalents, autoinc, primary_key)
-       rowmaker_es (function):
-            the rowmaker function takes an input data row and converts it to a line for the output elasticsearch index. The function call is:
-            rowmaker_es(row, data_path, data_field_lookup, db_fields, null_equivalents, autoinc, primary_key)
+            the rowmaker function takes an input data row and converts it to a line for
+            the output database. The function call is:
+            rowmaker(row, data_path, data_field_lookup, db_fields,
+            null_equivalents, autoinc, primary_key)
        rowsource (function):
-            the rowsource function yields input data rows which are handed off to the rowmaker to make database rows. The function call is:
+            the rowsource function yields input data rows which are handed off to the rowmaker
+            to make database rows. The function call is:
             get_source_generator(data_path, headers, separator, encoding)
 
     Return:
        db_config (dict):
-            a db_config structure with, if in test mode this will contain the modified database name/path
+            a db_config structure with, if in test mode this will contain
+            the modified database name/path
        status (string):
             "Completed" if the ETL runs to completion, "Already done" if ETL has already been done
 
@@ -299,15 +233,6 @@ def do_etl(
                     db_config["db_name"]
                 )
             )
-        elif (db_config["db_type"] == "elasticsearch") and not db_config["db_name"].endswith(
-            "-test"
-        ):
-            db_config["db_name"] = db_config["db_name"] + "-test"
-            logger.info(
-                "Renamed output database to {} because we are in test mode".format(
-                    db_config["db_name"]
-                )
-            )
     else:
         logger.critical(
             "Mode should be either 'test' or 'production', mode supplied was '{}'".format(mode)
@@ -341,54 +266,28 @@ def do_etl(
     if log_report_size == 0:
         log_report_size = 1
 
-    # If the table argument is None we assume we are writing to the property_data table and that db_fields describes one flat level table
-    if db_config["db_type"] == "elasticsearch":
-        if table is None:
-            table = "property_data"
-            revised_db_fields = {}
-            revised_db_fields["property_data"] = {}
-            revised_db_fields["metadata"] = {}
-            revised_db_fields["session_log"] = {}
-            revised_db_fields["property_data"]["mappings"] = db_fields
-            revised_db_fields["metadata"]["mappings"] = metadata_fields_es
-            revised_db_fields["session_log"]["mappings"] = session_log_fields_es
-            tables = ["property_data", "metadata", "session_log"]
-        else:
-            revised_db_fields = db_fields.copy()
-            revised_db_fields[table] = {}
-            revised_db_fields["metadata"] = {}
-            revised_db_fields["session_log"] = {}
-            revised_db_fields[table]["mappings"] = db_fields
-            revised_db_fields["metadata"]["mappings"] = metadata_fields_es
-            revised_db_fields["session_log"]["mappings"] = session_log_fields_es
+    # If the table argument is None we assume we are writing to the property_data table and that
+    # db_fields describes one flat level table
 
-            tables = [table]
-            tables.append("metadata")
-            tables.append("session_log")
-
-        configure_db(db_config, revised_db_fields, tables=tables, force=force)
-        time.sleep(2)
+    if table is None:
+        table = "property_data"
+        revised_db_fields = {}
+        revised_db_fields["property_data"] = db_fields
+        revised_db_fields["metadata"] = metadata_fields
+        revised_db_fields["session_log"] = session_log_fields
+        tables = ["property_data", "metadata", "session_log"]
     else:
-        if table is None:
-            table = "property_data"
-            revised_db_fields = {}
-            revised_db_fields["property_data"] = db_fields
-            revised_db_fields["metadata"] = metadata_fields
-            revised_db_fields["session_log"] = session_log_fields
-            tables = ["property_data", "metadata", "session_log"]
-        else:
-            revised_db_fields = db_fields.copy()
-            revised_db_fields["metadata"] = metadata_fields
-            revised_db_fields["session_log"] = session_log_fields
-            tables = list(db_fields.keys())
-            tables.append("metadata")
-            tables.append("session_log")
+        revised_db_fields = db_fields.copy()
+        revised_db_fields["metadata"] = metadata_fields
+        revised_db_fields["session_log"] = session_log_fields
+        tables = list(db_fields.keys())
+        tables.append("metadata")
+        tables.append("session_log")
 
-        configure_db(db_config, revised_db_fields, tables=tables, force=force)
+    configure_db(db_config, revised_db_fields, tables=tables, force=force)
 
     # Get on with the main business
     t0 = time.time()
-    t_last = t0
     data = []
     line_count = 0
     lines_dropped = 0
@@ -396,9 +295,7 @@ def do_etl(
 
     primary_key_set = set()
     duplicate_primary_keys = set()
-    primary_key = None
-    if db_config["db_type"] != "elasticsearch":
-        primary_key = get_primary_key_from_db_fields(revised_db_fields[table])
+    primary_key = get_primary_key_from_db_fields(revised_db_fields[table])
 
     if primary_key == "ID" and data_field_lookup["ID"] is None:
         autoinc = True
@@ -408,24 +305,11 @@ def do_etl(
     #
 
     # Find out if we have already uploaded this file
-    if db_config["db_type"] != "elasticsearch":
-        sql_query = (
-            "select * from metadata where datafile_sha = '{}' order by SequenceNumber desc;".format(
-                datafile_sha
-            )
+    sql_query = (
+        "select * from metadata where datafile_sha = '{}' order by SequenceNumber desc;".format(
+            datafile_sha
         )
-    else:
-        sql_query = {
-            "sort": [{"SequenceNumber": {"order": "desc"}}],
-            "query": {
-                "bool": {
-                    "must": [
-                        {"term": {"datafile_sha": datafile_sha}},
-                        {"term": {"_type": "metadata"}},
-                    ]
-                }
-            },
-        }
+    )
 
     results = list(read_db(sql_query, db_config))
 
@@ -455,11 +339,6 @@ def do_etl(
         ]
 
         write_to_db(metadata, db_config, revised_db_fields["metadata"], table="metadata")
-        # Elasticsearch needs a little sleep before we can query for the results
-        if db_config["db_type"] == "elasticsearch":
-            time.sleep(2)
-        # sql_query = "select * from metadata where datafile_sha = '{}' order by SequenceNumber desc;".format(datafile_sha)
-        # print(results, flush=True)
         results = list(read_db(sql_query, db_config))
         id_ = results[0]["SequenceNumber"]
     else:
@@ -471,10 +350,7 @@ def do_etl(
     # ** Add in session log code
     # Fetch chunk progress
     if skip is None:
-        if db_config["db_type"] != "elasticsearch":
-            chunk_skip = get_chunk_count(id_, datafile_sha, db_config)
-        else:
-            chunk_skip = get_chunk_count_es(id_, datafile_sha, db_config)
+        chunk_skip = get_chunk_count(id_, datafile_sha, db_config)
     else:
         chunk_skip = skip
 
@@ -492,16 +368,9 @@ def do_etl(
 
     # Update session log here
     time_ = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    # session_log_data = [(None, rowsource.__name__, time_, time_, datafile_sha, chunk_skip, chunk_skip)]
 
     # We need to get the latest sessid here rather than using autoincrement
-    if db_config["db_type"] != "elasticsearch":
-        sql_query = "select max(ID) as ID from session_log;"
-    else:
-        sql_query = {
-            "sort": [{"ID": {"order": "desc"}}],
-            "query": {"bool": {"must": [{"term": {"_type": "session_log"}}]}},
-        }
+    sql_query = "select max(ID) as ID from session_log;"
 
     results = list(read_db(sql_query, db_config))
 
@@ -526,28 +395,10 @@ def do_etl(
     ]
 
     write_to_db(session_log_data, db_config, revised_db_fields["session_log"], table="session_log")
-    if db_config["db_type"] == "elasticsearch":
-        time.sleep(2)
     # Pick up session log data
-    if db_config["db_type"] != "elasticsearch":
-        sql_query = "select * from session_log where datafile_sha = '{}' order by ID desc;".format(
-            datafile_sha
-        )
-    else:
-        sql_query = {
-            "sort": [
-                {"ID": {"order": "desc"}},
-            ],
-            "query": {
-                "bool": {
-                    "must": [
-                        {"term": {"datafile_sha": datafile_sha}},
-                        {"term": {"_type": "session_log"}},
-                    ]
-                }
-            },
-        }
-
+    sql_query = "select * from session_log where datafile_sha = '{}' order by ID desc;".format(
+        datafile_sha
+    )
     results = list(read_db(sql_query, db_config))
     sessid = results[0]["ID"]
 
@@ -577,28 +428,17 @@ def do_etl(
 
             line_count += 1
             # Zip the input data into a row for the database
-            if db_config["db_type"] != "elasticsearch":
-                new_rows = rowmaker(
-                    row,
-                    data_path,
-                    data_field_lookup,
-                    revised_db_fields[table],
-                    null_equivalents,
-                    autoinc,
-                    primary_key,
-                )
-            else:
-                new_rows = rowmaker_es(
-                    row,
-                    data_path,
-                    data_field_lookup,
-                    revised_db_fields[table],
-                    null_equivalents,
-                    autoinc,
-                    primary_key,
-                )
+            new_rows = rowmaker(
+                row,
+                data_path,
+                data_field_lookup,
+                revised_db_fields[table],
+                null_equivalents,
+                autoinc,
+                primary_key,
+            )
 
-                # Drop a line if it is malformed
+            # Drop a line if it is malformed
             if new_rows is None:
                 logger.debug(
                     "Dropped input line = {} because a valid row could not be made from it".format(
@@ -648,7 +488,6 @@ def do_etl(
                     end="\r",
                     flush=True,
                 )
-                t_last = time.time()
 
             if (line_count % log_report_size) == 0 and line_count != 0:
                 est_completion_time = ((time.time() - t0) / line_count) * (
@@ -665,16 +504,16 @@ def do_etl(
                         completion_str,
                     )
                 )
-                t_last = time.time()
 
             # Write a chunk to the database
             if (line_count % chunk_size) == 0:
                 if len(data) != 0:
                     try:
                         write_to_db(data, db_config, revised_db_fields[table], table=table)
-                    except:
+                    except:  # noqa: E722 do not use bare 'except'
                         logger.warning(
-                            "A bad thing happened on attempting to upload chunk to db, doing it line by line to find problem"
+                            "A bad thing happened on attempting to upload chunk to db, "
+                            "doing it line by line to find problem"
                         )
                         logger.warning("If this succeeds likely problem is oversized chunk of data")
                         for i, d in enumerate(data):
@@ -742,7 +581,8 @@ def do_etl(
 
     finish_time = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
-    # Now we are autoincrementing the SequenceNumber field, we need to do a read_db to find the value
+    # Now we are autoincrementing the SequenceNumber field,
+    # we need to do a read_db to find the value
     actual_id = get_current_sequencenumber(db_config)
 
     # Make a final write to the metadata table
@@ -772,13 +612,7 @@ def do_etl(
 
 def get_current_sequencenumber(db_config):
     # Get metadata id_ back out of the database
-    if db_config["db_type"] != "elasticsearch":
-        sql_query = "select max(SequenceNumber) as SequenceNumber from metadata;"
-    else:
-        sql_query = {
-            "sort": [{"SequenceNumber": {"order": "desc"}}],
-            "query": {"bool": {"must": [{"term": {"_type": "metadata"}}]}},
-        }
+    sql_query = "select max(SequenceNumber) as SequenceNumber from metadata;"
 
     results = list(read_db(sql_query, db_config))
     if len(results) != 0:
@@ -820,34 +654,14 @@ def check_if_already_done(data_path, db_config, datafile_sha):
     elif db_config["db_type"] == "mysql" or db_config["db_type"] == "mariadb":
         if not check_mysql_database_exists(db_config):
             return False
-    elif db_config["db_type"] == "elasticsearch":
-        # print(check_es_database_exists(db_config), flush=True)
-        if not check_es_database_exists(db_config):
-            return False
 
     # Look for the datafile_sha in the metadata table and if it exists, return True
-    if db_config["db_type"] != "elasticsearch":
-        sql_query = (
-            "select * from metadata where datafile_sha = '{}' and status = 'Complete'".format(
-                datafile_sha
-            )
-        )
-    else:
-        sql_query = {
-            "query": {
-                "bool": {
-                    "must": [
-                        {"term": {"datafile_sha": datafile_sha}},
-                        {"term": {"_type": "metadata"}},
-                        {"term": {"status": "complete"}},
-                    ]
-                }
-            }
-        }
+    sql_query = "select * from metadata where datafile_sha = '{}' and status = 'Complete'".format(
+        datafile_sha
+    )
 
     results = list(read_db(sql_query, db_config))
 
-    # sql_query = "select * from metadata where datafile_path = '{}' and status = 'Complete'".format(datafile_path)
     logging.debug("Checking for completeness of {} with {}".format(db_config, sql_query))
 
     # print(results, flush=True)
@@ -932,29 +746,6 @@ def get_chunk_count(id_, datafile_sha, cache_db):
             datafile_sha, id_
         )
     )
-    result = list(read_db(sql_query, cache_db))
-
-    if len(result) == 1:
-        chunk_count = result[0]["chunk_count"]
-    else:
-        chunk_count = 0
-
-    return chunk_count
-
-
-def get_chunk_count_es(id_, datafile_sha, cache_db):
-    sql_query = {
-        "query": {
-            "bool": {
-                "must": [
-                    {"term": {"datafile_sha": datafile_sha}},
-                    {"term": {"SequenceNumber": id_}},
-                    {"term": {"_type": "metadata"}},
-                ]
-            }
-        }
-    }
-
     result = list(read_db(sql_query, cache_db))
 
     if len(result) == 1:

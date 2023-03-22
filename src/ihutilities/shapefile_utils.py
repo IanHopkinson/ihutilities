@@ -4,16 +4,11 @@
 This package contains functions relating to shapefiles
 """
 
-import os
 import shapefile
 
 from matplotlib import pyplot as plt
 
-from collections import OrderedDict
-
 import math
-
-import logging
 
 # ShapeType lookup from here: https://en.wikipedia.org/wiki/Shapefile
 shapetype_lookup = {
@@ -169,8 +164,6 @@ def summarise_shapefile(sf, limit=9, to_screen=True):
 
     shapetypes = set()
 
-    fieldnames_header = ",".join(fieldnames)
-
     # print("{} {}".format("number", fieldnames_header))
     for i, sr in enumerate(sf.iterShapeRecords()):
 
@@ -178,8 +171,6 @@ def summarise_shapefile(sf, limit=9, to_screen=True):
         fields = [f for f in dir(sr.shape) if not f.startswith("_")]
 
         shapetypes.add(sr.shape.shapeType)
-
-        data_dict = OrderedDict(zip(fieldnames, sr.record))
 
         content = []
         for item in sr.record:
@@ -212,7 +203,7 @@ def summarise_shapefile(sf, limit=9, to_screen=True):
 
 
 def plot_shapefile(sf, limit=9, bbox=False, label=None):
-    fig = plt.figure(0)
+    _ = plt.figure(0)
 
     fieldnames = [x[0] for x in sf.fields[1:]]
 
