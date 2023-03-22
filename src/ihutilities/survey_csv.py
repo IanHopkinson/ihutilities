@@ -104,7 +104,7 @@ def print_report(file_path, elapsed, line_limit, line_count, headers, filled_cou
             if x not in ["", None]:
                 try:
                     array.append(convfunc(x))
-                except:
+                except:  # noqa: E722 do not use bare 'except'
                     pass
         # array = [convfunc(x) for x in field_set[field] if x not in ["", None]]
         if len(array) != 0:
@@ -125,7 +125,7 @@ def print_report(file_path, elapsed, line_limit, line_count, headers, filled_cou
 
 def type_sniff(field_set, field):
     data_set = field_set[field]
-    types = ["StringType", "DecimalType", "IntegerType", "DateType"]
+    _ = ["StringType", "DecimalType", "IntegerType", "DateType"]
 
     type_scores = Counter()
     fail_scores = Counter()
@@ -136,23 +136,23 @@ def type_sniff(field_set, field):
             continue
         # Check for date
         try:
-            date_ = parser.parse(item)
+            _ = parser.parse(item)
             type_scores["DateType"] += 2
-        except:
+        except:  # noqa: E722 do not use bare 'except'
             fail_scores["DateType"] += 2
 
         # check for integer
         try:
-            value = int(item)
+            _ = int(item)
             type_scores["IntegerType"] += 3
-        except:
+        except:  # noqa: E722 do not use bare 'except'
             fail_scores["IntegerType"] += 3
 
         # check for float/decimal
         try:
-            value = decimal.Decimal(item)
+            _ = decimal.Decimal(item)
             type_scores["FloatType"] += 2
-        except:
+        except:  # noqa: E722 do not use bare 'except'
             fail_scores["FloatType"] += 2
 
         # check for string (string is the fallback)
@@ -161,12 +161,10 @@ def type_sniff(field_set, field):
     try:
         type_ = type_scores.most_common(1)[0][0]
         # type_ = type_scores.most_common(5)
-        anti_type = fail_scores.most_common(5)
-    except:
+    except:  # noqa: E722 do not use bare 'except'
         type_ = "NoneType"
-        anti_type = "NoneType"
 
-    return type_  # , anti_type
+    return type_
 
 
 if __name__ == "__main__":
@@ -177,7 +175,8 @@ if __name__ == "__main__":
         print("survey_csv.py file_path")
         print("survey_csv.py file_path [line_limit = {integer or all}] [encoding]")
         print(
-            "\n Default file encoding is utf-8-sig, cp1252 is Windows default so worth a try, and iso-8859-1 encodes all bytes so at least it won't barf"
+            "\n Default file encoding is utf-8-sig, cp1252 is Windows default so worth a try, "
+            "and iso-8859-1 encodes all bytes so at least it won't barf"
         )
         sys.exit()
     elif len(arg) == 1:
