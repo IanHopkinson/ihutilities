@@ -8,8 +8,6 @@ import shapefile
 
 from matplotlib import pyplot as plt
 
-from collections import OrderedDict
-
 import math
 
 # ShapeType lookup from here: https://en.wikipedia.org/wiki/Shapefile
