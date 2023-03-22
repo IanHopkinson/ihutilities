@@ -485,7 +485,7 @@ def download_file_from_url(url: str, local_filepath: str) -> str:
     # NOTE the stream=True parameter
     try:
         r = requests.get(url, stream=True, timeout=3.5)
-    except:
+    except:  # noqa: E722 do not use bare 'except'
         time.sleep(5)
         logger.warning("Connection to {} failed on first try, making second attempt".format(url))
         r = requests.get(url, stream=True, timeout=3.5)
