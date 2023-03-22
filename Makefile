@@ -6,7 +6,7 @@ unit_tests:
 	pytest tests/
 lint:
 	black . --check
-	flake8 src/ tests/ || true
+	flake8 src/ tests/
 	pylint src/ tests/ || true
 publish:
 	rm -rf build/
