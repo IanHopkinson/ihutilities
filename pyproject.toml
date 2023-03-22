@@ -1,8 +1,8 @@
 # As per https://github.com/pypa/setuptools/blob/main/docs/userguide/quickstart.rst
 [project]
 name = "ihutilities"
-version = "2023.03.4"
-description = "A package os miscellaneous utilities for file, database and print functions"
+version = "2023.03.5"
+description = "A package of miscellaneous utilities for file, database and print functions"
 readme = "README.md"
 requires-python = ">=3.7"
 authors = [
@@ -133,6 +133,7 @@ disable=['raw-checker-failed',
         'missing-module-docstring',
         'missing-class-docstring',
         'missing-function-docstring',
+        'logging-fstring-interpolation'
         ]
 
 # Enable the message, report, category or checker with the given id(s). You can
