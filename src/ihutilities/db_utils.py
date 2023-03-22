@@ -214,7 +214,13 @@ def write_to_db(
     return rejected_data
 
 
-def update_to_db(data, db_config, db_fields, table="property_data", key=["UPRN"]):
+def update_to_db(
+    data: List[Any],
+    db_config: Dict,
+    db_fields: Dict,
+    table: Union[List, str] = "property_data",
+    key: List[str] = ["UPRN"],
+):
     """
     This function updates rows in a sqlite or MariaDB/MySQL database
 
@@ -294,9 +300,8 @@ def update_to_db(data, db_config, db_fields, table="property_data", key=["UPRN"]
 
         if db_fields != list(data[0].keys()):
             raise KeyError(
-                "db_fields supplied to update_to_db ('{}') do not match fields in update dictionary {}".format(
-                    db_fields, list(data[0].keys())
-                )
+                f"db_fields supplied to update_to_db ('{db_fields}') "
+                f"do not match fields in update dictionary {list(data[0].keys())}"
             )
     else:
         converted_data = data
@@ -330,7 +335,7 @@ def update_to_db(data, db_config, db_fields, table="property_data", key=["UPRN"]
     conn.close()
 
 
-def drop_db_tables(file_path, tables):
+def drop_db_tables(file_path: str, tables: List[str]):
     conn = sqlite3.connect(file_path)
     for table in tables:
         conn.execute("DROP TABLE IF EXISTS {}".format(table))
@@ -393,9 +398,12 @@ def finalise_db(
 
 def read_db(sql_query: str, db_config: Union[str, Dict]) -> Iterable[Dict]:
     # For MariaDB we need to trap this error:
-    # pymysql.connector.errors.InterfaceError: 2003: Can't connect to MySQL server on '127.0.0.1:3306'
-    # (10055 An operation on a socket could not be performed because the system lacked sufficient buffer space or because a queue was full)
-    # This post explains the problem, we're creating too many ephemeral ports (and not discarding of them properly)
+    # pymysql.connector.errors.InterfaceError: 2003: Can't connect to MySQL server on
+    # '127.0.0.1:3306'
+    # (10055 An operation on a socket could not be performed because the system lacked sufficient
+    # buffer space or because a queue was full)
+    # This post explains the problem, we're creating too many ephemeral ports
+    # (and not discarding of them properly)
     # https://blogs.msdn.microsoft.com/sql_protocols/2009/03/09/understanding-the-error-an-operation-on-a-socket-could-not-be-performed-because-the-system-lacked-sufficient-buffer-space-or-because-a-queue-was-full/
     # At the moment we do this by just adding in a wait
     db_config = _normalise_config(db_config)
@@ -405,10 +413,6 @@ def read_db(sql_query: str, db_config: Union[str, Dict]) -> Iterable[Dict]:
     if db_config["db_type"] == "sqlite" and not os.path.isfile(db_config["db_path"]):
         raise IOError("Database file '{}' does not exist".format(db_config["db_path"]))
 
-    # if db_config["db_type"] == "mariadb" or db_config["db_type"] == "mysql":
-    #     if not check_mysql_database_exists(db_config):
-    #         raise IOError("{} database '{}' does not exist".format(db_config["db_type"], db_config["db_name"]))
-
     try:
         conn = _make_connection(db_config)
         cursor = conn.cursor()
@@ -417,9 +421,8 @@ def read_db(sql_query: str, db_config: Union[str, Dict]) -> Iterable[Dict]:
         if err.args[0] == CR_CONN_HOST_ERROR:
             timestamp = datetime.datetime.now().isoformat()
             logger.warning(
-                "{}|read_db in ihutilities Caught exception '{}'. errno = '{}', retry in {}seconds".format(
-                    timestamp, err, err.args[0], err_wait
-                )
+                f"{timestamp}|read_db in ihutilities Caught exception '{err}'. "
+                f"errno = '{err.args[0]}', retry in {err_wait}seconds"
             )
             time.sleep(err_wait)
             conn = _make_connection(db_config)
@@ -452,8 +455,10 @@ def read_db(sql_query: str, db_config: Union[str, Dict]) -> Iterable[Dict]:
 def delete_from_db(sql_query, db_config):
     # For MariaDB we need to trap this error:
     # mysql.connector.errors.InterfaceError: 2003: Can't connect to MySQL server on '127.0.0.1:3306'
-    # (10055 An operation on a socket could not be performed because the system lacked sufficient buffer space or because a queue was full)
-    # This post explains the problem, we're creating too many ephemeral ports (and not discarding of them properly)
+    # (10055 An operation on a socket could not be performed because the system lacked sufficient
+    # #buffer space or because a queue was full)
+    # This post explains the problem, we're creating too many ephemeral ports
+    # (and not discarding of them properly)
     # https://blogs.msdn.microsoft.com/sql_protocols/2009/03/09/understanding-the-error-an-operation-on-a-socket-could-not-be-performed-because-the-system-lacked-sufficient-buffer-space-or-because-a-queue-was-full/
     # At the moment we do this by just adding in a wait
 
@@ -471,9 +476,8 @@ def delete_from_db(sql_query, db_config):
     except pymysql.Error as err:
         if err.args[0] == CR_CONN_HOST_ERROR:
             logger.warning(
-                "Caught exception '{}'. errno = '{}', waiting {} seconds and having another go".format(
-                    err, err.errno, err_wait
-                )
+                f"Caught exception '{err}'. errno = '{err.errno}', "
+                f"waiting {err_wait} seconds and having another go"
             )
             time.sleep(err_wait)
             conn = _make_connection(db_config)
@@ -529,7 +533,8 @@ def _make_connection(db_config: Dict) -> sqlite3.Connection:
 
         # This code much fiddled with, essentially I was trying to do my own connection pooling
         # on top of the connectors pooling and it didn't work.
-        # I was getting pool exhaustion because I wasn't closing connections, this should now be fixed (fingers crossed)
+        # I was getting pool exhaustion because I wasn't closing connections,
+        # this should now be fixed (fingers crossed)
         # if db_config["db_conn"] is None or True:
         password = os.environ[db_config["db_pw_environ"]]
         # port = int(os.getenv("MARIA_DB_PORT", "3306"))
@@ -608,18 +613,11 @@ def check_table_exists(db_config, table):
 
     if db_config["db_type"] == "sqlite":
         table_check_query = "SELECT name FROM sqlite_master WHERE type='table' AND name='{}';"
-        DB_CREATE_TAIL = ")"
-        name = os.path.basename(db_config["db_path"])
     elif db_config["db_type"] == "mariadb" or db_config["db_type"] == "mysql":
         table_check_query = (
-            "SELECT table_name as name FROM information_schema.tables WHERE table_schema = '{}'".format(
-                db_config["db_name"]
-            )
-            + " AND table_name = '{}';"
+            "SELECT table_name as name FROM information_schema.tables "
+            f"WHERE table_schema = '{db_config['db_name']}'".format() + " AND table_name = '{}';"
         )
-        DB_CREATE_TAIL = ") ENGINE = MyISAM"
-        name = db_config["db_name"]
-
     cursor = conn.cursor()
 
     cursor.execute(table_check_query.format(table))
@@ -645,10 +643,8 @@ def _create_tables_db(
         name = os.path.basename(db_config["db_path"])
     elif db_config["db_type"] == "mariadb" or db_config["db_type"] == "mysql":
         table_check_query = (
-            "SELECT table_name as name FROM information_schema.tables WHERE table_schema = '{}'".format(
-                db_config["db_name"]
-            )
-            + " AND table_name = '{}';"
+            "SELECT table_name as name FROM information_schema.tables "
+            f"WHERE table_schema = '{db_config['db_name']}'" + " AND table_name = '{}';"
         )
         DB_CREATE_TAIL = ") ENGINE = MyISAM"
         name = db_config["db_name"]
@@ -676,9 +672,8 @@ def _create_tables_db(
 
             if v in ["POINT", "POLYGON", "LINESTRING", "MULTIPOLYGON", "GEOMETRY"]:
                 logger.debug(
-                    "Appending NOT NULL to {} in {} to allow spatial indexing in MariaDB/MySQL [_create_tables_db]".format(
-                        v, table
-                    )
+                    f"Appending NOT NULL to {v} in {table} to allow spatial indexing "
+                    "in MariaDB/MySQL [_create_tables_db]"
                 )
                 DB_CREATE = DB_CREATE + " ".join([k, v]) + " NOT NULL,"
             else:
@@ -717,7 +712,7 @@ def _create_tables_db(
             logger.debug("Creating table {} with statement: \n{}".format(table, DB_CREATE))
             try:
                 cursor.execute(DB_CREATE)
-            except:
+            except:  # noqa: E722 do not use bare 'except'
                 logger.debug(
                     "Database create statement failed: '{}' for database '{}'".format(
                         DB_CREATE, name
