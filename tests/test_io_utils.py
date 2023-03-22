@@ -167,7 +167,7 @@ def test_list_files_local():
 
     files = list_files_local_or_s3(f"{file_directory}/*.py")
 
-    TestCase().assertEqual(len(files), 13)
+    TestCase().assertEqual(len(files), 10)
 
 
 @mock_s3
