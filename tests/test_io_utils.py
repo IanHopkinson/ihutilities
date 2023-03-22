@@ -3,13 +3,12 @@
 
 import os
 import unittest
-
-import os
-import pytest
 import sys
 
 from pathlib import Path
 from unittest import TestCase
+
+import pytest
 
 from moto import mock_s3
 from ihutilities.io_utils import (

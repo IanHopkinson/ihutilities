@@ -1,17 +1,17 @@
 #!/usr/bin/env python
 # encoding: utf-8
 
-import csv
 import datetime
 import decimal
+import json
 import requests
 import sys
-import time
-
-import dateutil.parser as parser
 
 from collections import Counter
 from pprint import pprint
+
+
+import dateutil.parser as parser
 
 
 def survey_json(file_path, line_limit=1000, encoding=None):
@@ -23,16 +23,11 @@ def survey_json(file_path, line_limit=1000, encoding=None):
         ),
         flush=True,
     )
-    t0 = time.time()
     # Count the lines in a CSV
     # List the fields in a CSV (so they can be copy pasted)
     # Count the empty values for each field
     # Count the contents of each field
     # Guess the type of a field
-    line_count = 0
-    report_size = 1000000
-
-    filled_count = Counter()
 
     json_data = {}
     if file_path.startswith("http"):
@@ -83,7 +78,8 @@ def survey_json(file_path, line_limit=1000, encoding=None):
     #                     print("==============")
     #                     t1 = time.time()
     #                     elapsed = t1 - t0
-    #                     print_report(file_path, elapsed, line_limit, line_count, headers, filled_count)
+    #                     print_report(file_path, elapsed, line_limit, line_count, headers,
+    #                     filled_count)
     #     except Exception as ex:
     #         print("Encountered exception '{}' at line_count = {}".format(ex, line_count))
     #         print("Aborting")
@@ -124,7 +120,7 @@ def print_report(file_path, elapsed, line_limit, line_count, headers, filled_cou
             if x not in ["", None]:
                 try:
                     array.append(convfunc(x))
-                except:
+                except:  # noqa: E722 do not use bare 'except'
                     pass
         # array = [convfunc(x) for x in field_set[field] if x not in ["", None]]
         if len(array) != 0:
@@ -145,7 +141,7 @@ def print_report(file_path, elapsed, line_limit, line_count, headers, filled_cou
 
 def type_sniff(field_set, field):
     data_set = field_set[field]
-    types = ["StringType", "DecimalType", "IntegerType", "DateType"]
+    _ = ["StringType", "DecimalType", "IntegerType", "DateType"]
 
     type_scores = Counter()
     fail_scores = Counter()
@@ -156,23 +152,23 @@ def type_sniff(field_set, field):
             continue
         # Check for date
         try:
-            date_ = parser.parse(item)
+            _ = parser.parse(item)
             type_scores["DateType"] += 2
-        except:
+        except:  # noqa: E722 do not use bare 'except'
             fail_scores["DateType"] += 2
 
         # check for integer
         try:
-            value = int(item)
+            _ = int(item)
             type_scores["IntegerType"] += 3
-        except:
+        except:  # noqa: E722 do not use bare 'except'
             fail_scores["IntegerType"] += 3
 
         # check for float/decimal
         try:
-            value = decimal.Decimal(item)
+            _ = decimal.Decimal(item)
             type_scores["FloatType"] += 2
-        except:
+        except:  # noqa: E722 do not use bare 'except'
             fail_scores["FloatType"] += 2
 
         # check for string (string is the fallback)
@@ -181,12 +177,10 @@ def type_sniff(field_set, field):
     try:
         type_ = type_scores.most_common(1)[0][0]
         # type_ = type_scores.most_common(5)
-        anti_type = fail_scores.most_common(5)
-    except:
+    except:  # noqa: E722 do not use bare 'except'
         type_ = "NoneType"
-        anti_type = "NoneType"
 
-    return type_  # , anti_type
+    return type_
 
 
 def unwind_nested_dictionary(source, destination, root=""):
@@ -225,11 +219,13 @@ if __name__ == "__main__":
         print("survey_json.py file_path")
         print("survey_json.py file_path [line_limit = {integer or all}] [encoding]")
         print(
-            "\n Default file encoding is utf-8-sig, cp1252 is Windows default so worth a try, and iso-8859-1 encodes all bytes so at least it won't barf"
+            "\n Default file encoding is utf-8-sig, cp1252 is Windows default so worth a try, "
+            "and iso-8859-1 encodes all bytes so at least it won't barf"
         )
         # sys.exit()
         # file_path = "https://api.bankofscotland.co.uk/open-banking/v1.2/branches"
-        # file_path = "https://openapi.bankofireland.com/open-banking/v1.2/branches" - doesn't work because of ssl problems
+        # file_path = "https://openapi.bankofireland.com/open-banking/v1.2/branches"
+        # - doesn't work because of ssl problems
         file_path = "https://atlas.api.barclays/open-banking/v1.3/branches"
         line_limit = 1000
 

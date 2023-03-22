@@ -4,13 +4,6 @@
 import unittest
 import os
 import sqlite3
-
-# try:
-#     import mysql.connector
-#     from mysql.connector import errorcode
-#     mysql_connector_installed = True
-# except ImportError:
-#     mysql_connector_installed = False
 import pymysql
 
 from collections import OrderedDict
@@ -27,8 +20,6 @@ from ihutilities.db_utils import (
     delete_from_db,
     delete_db,
 )
-
-# @unittest.skipIf(not mysql_connector_installed, "MariaDB/MySQL connector is not installed so skipping MySQL/MariaDB tests")
 
 
 @unittest.skip("Not running MariaDB tests")
@@ -50,7 +41,7 @@ class MariaDBUtilitiesTests(unittest.TestCase):
         db_config = db_config_template.copy()
         db_config["db_name"] = "test"
         password = os.environ["MARIA_DB_PASSWORD"]
-        port = int(os.getenv("MARIA_DB_PORT", "3306"))
+        _ = int(os.getenv("MARIA_DB_PORT", "3306"))
 
         conn = pymysql.connect(host="127.0.0.1", user="root", password=password)
 
@@ -62,7 +53,7 @@ class MariaDBUtilitiesTests(unittest.TestCase):
         # Test database exists
         try:
             conn.database = db_config["db_name"]
-        except pymysql.Error as err:
+        except pymysql.Error:
             raise
         # Do a schema query
         conn.close()
@@ -495,7 +486,7 @@ class DatabaseUtilitiesTests(unittest.TestCase):
         sql_query = "select * from test;"
 
         try:
-            results = list(read_db(sql_query, db_config))
+            _ = list(read_db(sql_query, db_config))
         except IOError:
             pass
 
