@@ -93,7 +93,6 @@ def survey_json(file_path, line_limit=1000, encoding=None):
 
 
 def print_report(file_path, elapsed, line_limit, line_count, headers, filled_count, field_set):
-
     print("\nFile path: {}".format(file_path), flush=True)
     print("Time to survey: {0:.2f} seconds".format(elapsed), flush=True)
     if line_count <= line_limit:

@@ -69,7 +69,6 @@ def test_write_dictionary_raises_a_key_error():
 
 
 def test_write_dictionary_to_local_file():
-
     if os.path.isfile(TEMP_FILE_PATH):
         os.remove(TEMP_FILE_PATH)
 

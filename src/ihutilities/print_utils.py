@@ -92,7 +92,6 @@ def print_table_from_list_of_dicts(
     truncate_width: int = 130,
     max_total_width: int = 150,
 ) -> None:
-
     if (len(column_data_rows)) == 0:
         return
     if dataclasses.is_dataclass(column_data_rows[0]):

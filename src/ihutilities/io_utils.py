@@ -115,7 +115,6 @@ def write_to_file(
     aws_profile: Optional[str] = None,
     s3_session: Optional[boto3.session.Session] = None,
 ) -> str:
-
     status = ""
 
     if is_s3(file_uri):
@@ -141,7 +140,6 @@ def _write_file_to_local(
     content: str,
     encoding: str = "utf-8",
 ) -> str:
-
     status = ""
 
     if os.path.isfile(filepath):
@@ -163,7 +161,6 @@ def _write_file_to_s3(
     aws_profile: Optional[str] = None,
     s3_session: Optional[boto3.session.Session] = None,
 ) -> str:
-
     s3_bucket = s3_bucket.replace("s3://", "")
     s3_client = create_s3_client(profile_name=aws_profile, s3_session=s3_session)
     objs = list(s3_client.list_objects(Bucket=s3_bucket, Prefix=key))
@@ -189,7 +186,6 @@ def write_dictionary(
     quoting: int = csv.QUOTE_MINIMAL,
     encoding: str = "utf-8",
 ) -> str:
-
     status = ""
     if len(data) == 0:
         raise IndexError("write_dictionary was supplied with an empty list")
@@ -239,7 +235,6 @@ def _write_dictionary_to_local_file(
     quoting: int = csv.QUOTE_MINIMAL,
     encoding: str = "utf-8",
 ) -> str:
-
     status = ""
     keys = data[0].keys()
 
@@ -276,7 +271,6 @@ def _write_dictionary_to_s3(
     delimiter: str = ",",
     quoting: int = csv.QUOTE_MINIMAL,
 ) -> str:
-
     s3_bucket = s3_bucket.replace("s3://", "")
     s3_client = create_s3_client(profile_name=aws_profile, s3_session=s3_session)
     objs = list(s3_client.list_objects(Bucket=s3_bucket, Prefix=key))
@@ -576,7 +570,6 @@ def list_files_local_or_s3(
         if pattern.endswith("/"):
             subdirectory_search = True
             pattern += "*"
-
         s3_client = create_s3_client(profile_name=aws_profile, s3_session=s3_session)
         list_object_response = s3_client.list_objects_v2(Bucket=bucket_name)
         if list_object_response["IsTruncated"]:
@@ -585,7 +578,6 @@ def list_files_local_or_s3(
                 flush=True,
             )
         for object_key in list_object_response["Contents"]:
-
             if fnmatch.fnmatch(object_key["Key"], pattern):
                 if subdirectory_search:
                     full_path = join_paths_local_or_s3(s3_bucket, object_key["Key"].split("/")[0])

@@ -68,7 +68,8 @@ def git_uncommitted_changes(filename, repo_dir):
 
 
 def git_calculate_file_sha(filepath):
-    """This function returns the full SHA-1 hash of file, it does not require the file to be committed
+    """This function returns the full SHA-1 hash of file, it does not require the file to be
+    committed
 
     Args:
        filepath (str):
