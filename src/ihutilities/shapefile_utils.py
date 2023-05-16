@@ -166,7 +166,6 @@ def summarise_shapefile(sf, limit=9, to_screen=True):
 
     # print("{} {}".format("number", fieldnames_header))
     for i, sr in enumerate(sf.iterShapeRecords()):
-
         # Populate from shape
         fields = [f for f in dir(sr.shape) if not f.startswith("_")]
 

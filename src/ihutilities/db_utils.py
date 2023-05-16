@@ -203,7 +203,7 @@ def write_to_db(
         except (pymysql.err.IntegrityError, sqlite3.IntegrityError):
             conn.close()
             raise
-        except (pymysql.err.DataError):
+        except pymysql.err.DataError:
             conn.close()
             logging.info("write_to_db failed with {converted_data}")
             raise

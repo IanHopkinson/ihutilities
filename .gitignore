@@ -9,3 +9,5 @@ doc/build
 *.pyc
 
 src/ihutilities.egg-info/
+
+tests/temp/

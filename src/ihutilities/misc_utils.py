@@ -1,11 +1,50 @@
 #!/usr/bin/env python
 # encoding: utf-8
 
+import logging
 import operator
 
 from collections import OrderedDict
 from typing import Any, List, Optional, Dict
 from warnings import warn
+
+
+# Logging to file and console simultaneously
+# https://aykutakin.wordpress.com/2013/08/06/logging-to-console-and-file-in-python/
+def initialise_logger(
+    output_file: str,
+    mode: str = "both",
+    force: bool = False,
+    handler_mode: str = "w",
+    verbose: bool = False,
+):
+    if verbose:
+        formatter = logging.Formatter("%(asctime)s|%(module)s|%(funcName)s|%(lineno)d|%(message)s")
+    else:
+        formatter = logging.Formatter("%(message)s")
+    logger = logging.getLogger()
+
+    logger.setLevel(logging.INFO)
+    # This removes previously defined handlers before adding out own
+    if force:
+        logger.handlers.clear()
+
+    if mode == "both":
+        # create console handler and set level to info
+        # We infer that if there are any log handlers then there must be a StreamHandler
+        # which we don't want to duplicate
+        if len(logger.handlers) == 0:
+            handler = logging.StreamHandler()
+            handler.setLevel(logging.INFO)
+            handler.setFormatter(formatter)
+            logger.addHandler(handler)
+
+    if mode == "both" or mode == "file only":
+        # create error file handler and set level to info
+        handler = logging.FileHandler(output_file, handler_mode, encoding=None, delay="true")
+        handler.setLevel(logging.INFO)
+        handler.setFormatter(formatter)
+        logger.addHandler(handler)
 
 
 def get_with_alts(
