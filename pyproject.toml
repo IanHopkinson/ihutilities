@@ -13,7 +13,7 @@ authors = [
 dependencies = [
     "artifacts-keyring>=0.3.2",
     "black==23.3.0",
-    "boto3>=1.26.113",
+    "boto3",
     "flake8>=4.0.1",
     "keyring>=23.8.2",
     "matplotlib>=3.7.1",
