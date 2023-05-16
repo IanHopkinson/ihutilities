@@ -1,12 +1,14 @@
 #!/usr/bin/env python
 # encoding: utf-8
 
+import logging
+import os
 import warnings
 from unittest import TestCase
 
 import pytest
 
-from ihutilities.misc_utils import get_with_alts
+from ihutilities.misc_utils import get_with_alts, initialise_logger
 
 
 def test_get_with_alts_with_primary_key():
@@ -52,3 +54,17 @@ def test_get_with_alts_with_absent_key(capfd):
 
     printed, _ = capfd.readouterr()
     TestCase().assertEqual(printed, "")
+
+
+def test_initialise_logging(caplog):
+    logname = os.path.basename(__file__).replace(".py", "")
+    logfile_path = os.path.join("tests", "temp", "{}.log".format(logname))
+
+    if os.path.exists(logfile_path):
+        os.remove(logfile_path)
+    initialise_logger(logfile_path, mode="both")  # Supports modes "both" and "file only"
+
+    logging.info("Test message")
+    TestCase().assertIn("INFO     root:test_misc_utils.py:", caplog.text)
+    TestCase().assertIn("Test message", caplog.text)
+    TestCase().assertTrue(os.path.exists(logfile_path))
