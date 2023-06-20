@@ -8,7 +8,11 @@ from typing import Dict, List, Optional
 
 
 def print_dictionary_comparison(
-    dict1: Dict, dict2: Dict, name1: str = "first_dict", name2: str = "second_dict"
+    dict1: Dict,
+    dict2: Dict,
+    name1: str = "first_dict",
+    name2: str = "second_dict",
+    differences: bool = False,
 ) -> None:
     unified_keys = set(list(dict1.keys()))
     unified_keys.update(list(dict2.keys()))
@@ -28,12 +32,18 @@ def print_dictionary_comparison(
     print("-" * total_width, flush=True)
 
     for key in unified_keys:
-        print(
-            f"|{key:<{key_width}}"
-            f"|{str(dict1.get(key, 'Not present')):<{dict_one_width}.{dict_one_width}}"
-            f"|{str(dict2.get(key, 'Not present')):<{dict_two_width}.{dict_two_width}}|",
-            flush=True,
-        )
+        value1 = dict1.get(key, "Not present")
+        value2 = dict2.get(key, "Not present")
+
+        if differences and value1 == value2:
+            continue
+        else:
+            print(
+                f"|{key:<{key_width}}"
+                f"|{str(value1):<{dict_one_width}.{dict_one_width}}"
+                f"|{str(value2):<{dict_two_width}.{dict_two_width}}|",
+                flush=True,
+            )
     print("-" * total_width, flush=True)
 
 
